@@ -577,8 +577,34 @@
         <div class="deck-actions">
             <button class="btn-primary" onclick="openDeckStats()">Stats</button>
             <button class="btn-secondary" onclick="openDeckEditor()">Edit Words</button>
+            <button class="btn-secondary" onclick="openDeckMetaEditor()">Edit Name/Language</button>
             <button class="btn-secondary" onclick="exportDeck()">Export Deck</button>
             <button class="btn-secondary" style="color: var(--error); border-color: var(--error);" onclick="deleteDeck()">Delete Deck</button>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT DECK META MODAL -->
+<div id="deck-meta-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Edit Name/Language</h3>
+            <button class="btn-icon" onclick="closeDeckMetaModal()">✕</button>
+        </div>
+        <label for="edit-deck-name">Deck Name</label>
+        <input type="text" id="edit-deck-name" placeholder="Deck name">
+        <label for="edit-deck-lang">Language</label>
+        <select id="edit-deck-lang">
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="es-ES">Spanish</option>
+            <option value="fr-FR">French</option>
+            <option value="de-DE">German</option>
+            <option value="it-IT">Italian</option>
+        </select>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-secondary" onclick="closeDeckMetaModal()" style="flex:1">Cancel</button>
+            <button class="btn-primary" onclick="saveDeckMeta()" style="flex:1">Save</button>
         </div>
     </div>
 </div>
@@ -1391,6 +1417,41 @@ function openDeckEditor() {
 function openDeckStats() {
     closeDeckActionsModal();
     if (activeDeckIdForEdit) renderDeckProgress(activeDeckIdForEdit);
+}
+
+function openDeckMetaEditor() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    if (!deck) return;
+    document.getElementById('edit-deck-name').value = deck.name || '';
+    document.getElementById('edit-deck-lang').value = deck.lang || 'en-US';
+    closeDeckActionsModal();
+    document.getElementById('deck-meta-modal').classList.add('open');
+}
+
+function closeDeckMetaModal() {
+    document.getElementById('deck-meta-modal').classList.remove('open');
+}
+
+function saveDeckMeta() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    if (!deck) return;
+    const nameInput = document.getElementById('edit-deck-name');
+    const langSelect = document.getElementById('edit-deck-lang');
+    const newName = nameInput.value.trim();
+    if (!newName) {
+        alert("Deck name can't be empty.");
+        return;
+    }
+    deck.name = newName;
+    deck.lang = langSelect.value;
+    saveData();
+    closeDeckMetaModal();
+    renderDeckList();
+    renderPracticeHome();
+    renderProgress();
+    if (document.getElementById('view-deck-progress').classList.contains('active')) {
+        renderDeckProgress(deck.id);
+    }
 }
 
 function resetDeckStats() {
