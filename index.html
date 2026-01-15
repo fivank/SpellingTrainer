@@ -420,6 +420,10 @@
                     <span>Autoplay audio</span>
                     <label class="toggle"><input type="checkbox" id="setting-autoplay"><span class="slider"></span></label>
                 </label>
+                <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span>Block keyboard suggestions</span>
+                    <label class="toggle"><input type="checkbox" id="setting-block-suggestions"><span class="slider"></span></label>
+                </label>
                 <label style="display:block; margin-bottom:8px;">
                     Answer strictness
                     <select id="setting-strictness" style="width:100%; margin-top:4px;">
@@ -630,6 +634,8 @@ let app = {
         speed: 1.0,
         /* whether to automatically play audio when a card appears */
         autoplay: true,
+        /* whether to block keyboard suggestions on the practice input */
+        blockSuggestions: false,
         /* answer strictness: 'strict' = case-sensitive; 'lenient' = case-insensitive */
         strictness: 'strict',
         /* when to start timing user response: 'show' or 'audio' */
@@ -1074,7 +1080,7 @@ function nextCard() {
         
         <div class="feedback-area" id="feedback"></div>
         
-        <input type="text" id="p-input" class="word-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type word here">
+        <input type="text" id="p-input" class="word-input" placeholder="Type word here">
         
         <button id="btn-check" class="btn-primary" style="margin-top:20px" onclick="checkAnswer()">Check</button>
         
@@ -1089,6 +1095,7 @@ function nextCard() {
     document.getElementById('practice-container').innerHTML = html;
     
     const input = document.getElementById('p-input');
+    applySuggestionSettingToInput(input);
     input.focus();
     
     // Set timer if start on show
@@ -1110,6 +1117,24 @@ function nextCard() {
         e.stopPropagation();
         checkAnswer();
     });
+}
+
+function applySuggestionSettingToInput(input) {
+    if (!input) return;
+    const shouldBlock = Boolean(app.settings.blockSuggestions);
+    if (shouldBlock) {
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('autocapitalize', 'off');
+        input.setAttribute('spellcheck', 'false');
+        input.setAttribute('aria-autocomplete', 'none');
+    } else {
+        input.removeAttribute('autocomplete');
+        input.removeAttribute('autocorrect');
+        input.removeAttribute('autocapitalize');
+        input.removeAttribute('spellcheck');
+        input.removeAttribute('aria-autocomplete');
+    }
 }
 
 function playCurrent() {
@@ -1803,6 +1828,15 @@ function initSettingsListeners() {
         autoplayEl.checked = Boolean(app.settings.autoplay);
         autoplayEl.addEventListener('change', (e) => {
             app.settings.autoplay = e.target.checked;
+            saveData();
+        });
+    }
+    const blockSuggestionsEl = document.getElementById('setting-block-suggestions');
+    if (blockSuggestionsEl) {
+        blockSuggestionsEl.checked = Boolean(app.settings.blockSuggestions);
+        blockSuggestionsEl.addEventListener('change', (e) => {
+            app.settings.blockSuggestions = e.target.checked;
+            applySuggestionSettingToInput(document.getElementById('p-input'));
             saveData();
         });
     }
