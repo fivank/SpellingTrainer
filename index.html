@@ -441,6 +441,16 @@
             <p style="font-size:0.9rem; color: var(--text-sub);">If audio isn't working, check here.</p>
             <div id="audio-status" class="status-badge status-err">Checking...</div>
             <div style="margin-top:10px;">
+                <label>Voice mode</label>
+                <select id="setting-voice-mode">
+                    <option value="auto">Auto (match deck language)</option>
+                    <option value="fixed">Fixed (use selected voice)</option>
+                </select>
+                <p style="font-size:0.8rem; color: var(--text-sub); margin: 6px 0 12px;">
+                    Auto mode chooses a voice that matches the deck language (e.g., Spanish decks use Spanish voices).
+                </p>
+            </div>
+            <div>
                 <label>System Voice</label>
                 <select id="setting-voice"><option>Loading voices...</option></select>
             </div>
@@ -581,6 +591,7 @@ let app = {
     decks: [],
     settings: {
         voiceURI: null,
+        voiceMode: 'auto',
         speed: 1.0,
         /* whether to automatically play audio when a card appears */
         autoplay: true,
@@ -642,6 +653,23 @@ function initAudio() {
     setTimeout(loadVoices, 500);
 }
 
+function getBestVoiceForLang(lang) {
+    if (!lang) return null;
+    const baseLang = lang.split('-')[0];
+    const exactMatches = availableVoices.filter(v => v.lang === lang);
+    const baseMatches = availableVoices.filter(v => v.lang && v.lang.startsWith(baseLang));
+    const candidates = exactMatches.length ? exactMatches : baseMatches;
+    if (!candidates.length) return null;
+    return candidates.find(v => v.default) || candidates.find(v => v.localService) || candidates[0];
+}
+
+function updateVoiceModeUI() {
+    const modeEl = document.getElementById('setting-voice-mode');
+    const voiceSelect = document.getElementById('setting-voice');
+    if (!modeEl || !voiceSelect) return;
+    voiceSelect.disabled = modeEl.value === 'auto';
+}
+
 function populateVoiceSelect() {
     const select = document.getElementById('setting-voice');
     select.innerHTML = '';
@@ -660,6 +688,7 @@ function populateVoiceSelect() {
         const exists = availableVoices.find(v => v.voiceURI === app.settings.voiceURI);
         if (exists) select.value = app.settings.voiceURI;
     }
+    updateVoiceModeUI();
 }
 
 function speak(text, lang) {
@@ -676,17 +705,14 @@ function speak(text, lang) {
     // --- VOICE SELECTION LOGIC ---
     let voice = null;
     
-    // 1. Try User Preference
-    if (app.settings.voiceURI) {
+    // 1. Try User Preference when fixed mode is enabled
+    if (app.settings.voiceMode === 'fixed' && app.settings.voiceURI) {
         voice = availableVoices.find(v => v.voiceURI === app.settings.voiceURI);
     }
     
     // 2. If no preference or invalid, find best match for Deck Language
     if (!voice && lang) {
-        // Exact match (e.g., en-US)
-        voice = availableVoices.find(v => v.lang === lang);
-        // Fallback match (e.g., en)
-        if (!voice) voice = availableVoices.find(v => v.lang.startsWith(lang.split('-')[0]));
+        voice = getBestVoiceForLang(lang);
     }
 
     if (voice) {
@@ -711,10 +737,15 @@ function speak(text, lang) {
 }
 
 function testAudio() {
+    const modeEl = document.getElementById('setting-voice-mode');
     const s = document.getElementById('setting-voice');
-    // Use selected voice, or default English
-    const v = availableVoices.find(v => v.voiceURI === s.value);
-    const lang = v ? v.lang : 'en-US';
+    let lang = 'en-US';
+    if (modeEl && modeEl.value === 'fixed') {
+        const v = availableVoices.find(v => v.voiceURI === s.value);
+        lang = v ? v.lang : lang;
+    } else {
+        lang = app.decks.length > 0 ? app.decks[0].lang : lang;
+    }
     speak("This is a test of the audio system.", lang);
 }
 
@@ -1595,6 +1626,17 @@ function initSettingsListeners() {
         document.getElementById('speed-val').textContent = e.target.value;
         saveData();
     });
+
+    const voiceModeEl = document.getElementById('setting-voice-mode');
+    if (voiceModeEl) {
+        voiceModeEl.value = app.settings.voiceMode || 'auto';
+        updateVoiceModeUI();
+        voiceModeEl.addEventListener('change', (e) => {
+            app.settings.voiceMode = e.target.value;
+            updateVoiceModeUI();
+            saveData();
+        });
+    }
 
     document.getElementById('setting-voice').addEventListener('change', (e) => {
         app.settings.voiceURI = e.target.value;
