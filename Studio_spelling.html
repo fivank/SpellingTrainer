@@ -15,7 +15,7 @@
         --text-sub: #6b7280;
         --success: #10b981;
         --error: #ef4444;
-        --nav-height: 65px;
+        --nav-height: 72px;
         --radius: 16px;
         /* additional neutral colour used for toggles */
         --neutral-200: #e5e7eb;
@@ -51,7 +51,7 @@
         flex: 1;
         overflow-y: auto;
         padding: 1rem;
-        padding-bottom: 90px; /* Space for nav */
+        padding-bottom: calc(var(--nav-height) + 32px + env(safe-area-inset-bottom));
         max-width: 600px;
         width: 100%;
         margin: 0 auto;
@@ -90,7 +90,7 @@
         cursor: pointer;
     }
 
-    nav button svg { width: 24px; height: 24px; margin-bottom: 4px; fill: currentColor; }
+    nav button svg { width: 24px; height: 24px; margin-bottom: 4px; fill: currentColor; overflow: visible; }
     nav button.active { color: var(--primary); }
 
     /* --- COMPONENTS --- */
@@ -224,6 +224,27 @@
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     }
     .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-toggle {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 1rem;
+    }
+    .modal-toggle button {
+        padding: 10px;
+        border-radius: 10px;
+        border: 2px solid var(--primary);
+        background: transparent;
+        color: var(--primary);
+        font-weight: 600;
+    }
+    .modal-toggle button.active {
+        background: var(--primary);
+        color: white;
+    }
+    .modal-panel.hidden {
+        display: none;
+    }
     
     /* --- ANIMATIONS --- */
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(99, 102, 241, 0); } 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); } }
@@ -402,20 +423,36 @@
 <div id="deck-modal" class="modal-overlay">
     <div class="modal">
         <h3>New Deck</h3>
-        <label>Deck Name</label>
-        <input type="text" id="new-deck-name" placeholder="e.g. Spanish Basics">
-        <label>Language</label>
-        <select id="new-deck-lang">
-            <option value="en-US">English (US)</option>
-            <option value="en-GB">English (UK)</option>
-            <option value="es-ES">Spanish</option>
-            <option value="fr-FR">French</option>
-            <option value="de-DE">German</option>
-            <option value="it-IT">Italian</option>
-        </select>
-        <div style="display:flex; gap:10px; margin-top:1rem;">
-            <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
-            <button class="btn-primary" onclick="saveDeck()" style="flex:1">Create</button>
+        <div class="modal-toggle">
+            <button type="button" id="deck-toggle-create" class="active" onclick="showDeckPanel('create')">Create</button>
+            <button type="button" id="deck-toggle-import" onclick="showDeckPanel('import')">Import</button>
+        </div>
+        <div id="deck-panel-create" class="modal-panel">
+            <label>Deck Name</label>
+            <input type="text" id="new-deck-name" placeholder="e.g. Spanish Basics">
+            <label>Language</label>
+            <select id="new-deck-lang">
+                <option value="en-US">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="es-ES">Spanish</option>
+                <option value="fr-FR">French</option>
+                <option value="de-DE">German</option>
+                <option value="it-IT">Italian</option>
+            </select>
+            <div style="display:flex; gap:10px; margin-top:1rem;">
+                <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
+                <button class="btn-primary" onclick="saveDeck()" style="flex:1">Create</button>
+            </div>
+        </div>
+        <div id="deck-panel-import" class="modal-panel hidden">
+            <p style="font-size:0.95rem; color:var(--text-sub); margin-top:0;">
+                Import a compatible deck JSON file to add it to your collection.
+            </p>
+            <button class="btn-secondary" onclick="triggerDeckImport()" style="width:100%; margin-bottom:10px;">Choose Deck File</button>
+            <input type="file" id="import-deck-file" class="hidden" accept=".json,application/json">
+            <div style="display:flex; gap:10px;">
+                <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
+            </div>
         </div>
     </div>
 </div>
@@ -952,9 +989,30 @@ let activeDeckIdForEdit = null;
 function openDeckModal() {
     document.getElementById('deck-modal').classList.add('open');
     document.getElementById('new-deck-name').value = '';
+    showDeckPanel('create');
 }
 function closeDeckModal() {
     document.getElementById('deck-modal').classList.remove('open');
+}
+function showDeckPanel(panel) {
+    const createToggle = document.getElementById('deck-toggle-create');
+    const importToggle = document.getElementById('deck-toggle-import');
+    const createPanel = document.getElementById('deck-panel-create');
+    const importPanel = document.getElementById('deck-panel-import');
+    if (panel === 'import') {
+        createToggle.classList.remove('active');
+        importToggle.classList.add('active');
+        createPanel.classList.add('hidden');
+        importPanel.classList.remove('hidden');
+    } else {
+        importToggle.classList.remove('active');
+        createToggle.classList.add('active');
+        importPanel.classList.add('hidden');
+        createPanel.classList.remove('hidden');
+    }
+}
+function triggerDeckImport() {
+    document.getElementById('import-deck-file').click();
 }
 function saveDeck() {
     const name = document.getElementById('new-deck-name').value;
@@ -962,7 +1020,7 @@ function saveDeck() {
     if (!name) return;
     
     app.decks.push({
-        id: Date.now().toString(),
+        id: generateDeckId(),
         name,
         lang,
         cards: []
@@ -1042,6 +1100,41 @@ function deleteCard(index) {
 }
 
 // --- UTILS & INIT ---
+function generateDeckId() {
+    return `deck-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function normalizeImportedDecks(raw) {
+    let decks = [];
+    if (Array.isArray(raw)) {
+        decks = raw;
+    } else if (raw && Array.isArray(raw.decks)) {
+        decks = raw.decks;
+    } else if (raw && raw.name && Array.isArray(raw.cards)) {
+        decks = [raw];
+    }
+    return decks.map((deck) => {
+        const existingId = deck.id && !app.decks.some(d => d.id === deck.id);
+        const normalizedCards = Array.isArray(deck.cards) ? deck.cards.map(card => ({
+            word: String(card.word || '').trim(),
+            sentence: card.sentence ? String(card.sentence) : '',
+            audioUrl: card.audioUrl ? String(card.audioUrl) : '',
+            due: Number(card.due) || 0,
+            interval: Number(card.interval) || 0,
+            ease: typeof card.ease === 'number' ? card.ease : 2.5,
+            correctCount: Number(card.correctCount) || 0,
+            incorrectCount: Number(card.incorrectCount) || 0,
+            avgTime: Number(card.avgTime) || 0
+        })).filter(card => card.word) : [];
+        return {
+            id: existingId ? deck.id : generateDeckId(),
+            name: deck.name ? String(deck.name) : 'Imported Deck',
+            lang: deck.lang ? String(deck.lang) : 'en-US',
+            cards: normalizedCards
+        };
+    });
+}
+
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -1118,6 +1211,30 @@ document.getElementById('import-file').addEventListener('change', function(e) {
         } catch(err) { alert("Invalid file"); }
     };
     reader.readAsText(file);
+});
+
+document.getElementById('import-deck-file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        try {
+            const data = JSON.parse(event.target.result);
+            const decks = normalizeImportedDecks(data);
+            if (!decks.length) {
+                alert("Invalid deck file");
+                return;
+            }
+            app.decks.push(...decks);
+            saveData();
+            renderDeckList();
+            closeDeckModal();
+        } catch (err) {
+            alert("Invalid deck file");
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
 });
 
 function resetApp() {
