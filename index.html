@@ -539,6 +539,7 @@
                 Import a compatible deck JSON file to add it to your collection.
             </p>
             <button class="btn-secondary" onclick="triggerDeckImport()" style="width:100%; margin-bottom:10px;">Choose Deck File</button>
+            <button class="btn-secondary" onclick="focusDeckPaste()" style="width:100%; margin-bottom:10px;">Paste Deck as JSON</button>
             <input type="file" id="import-deck-file" class="hidden" accept=".json,application/json">
             <div style="margin-bottom:10px;">
                 <label for="import-deck-json" style="display:block; font-size:0.85rem; color:var(--text-sub); margin-bottom:6px;">
@@ -1379,6 +1380,12 @@ function showDeckPanel(panel) {
 function triggerDeckImport() {
     document.getElementById('import-deck-file').click();
 }
+function focusDeckPaste() {
+    const textArea = document.getElementById('import-deck-json');
+    if (!textArea) return;
+    textArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    textArea.focus();
+}
 function importDeckFromPaste() {
     const textArea = document.getElementById('import-deck-json');
     if (!textArea) return;
@@ -1485,6 +1492,23 @@ function saveDeckMeta() {
     }
 }
 
+function clearDeckCompletion(deckId) {
+    const deck = app.decks.find(d => d.id === deckId);
+    if (deck) deck.uncompleted = false;
+    if (Array.isArray(currentSession.decks)) {
+        currentSession.decks.forEach(sessionDeck => {
+            if (sessionDeck.id === deckId) sessionDeck.uncompleted = false;
+        });
+    }
+    if (Array.isArray(currentSession.queue)) {
+        currentSession.queue.forEach(entry => {
+            if (entry.deck && entry.deck.id === deckId) {
+                entry.deck.uncompleted = false;
+            }
+        });
+    }
+}
+
 function resetDeckStats() {
     const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
     if (!deck) return;
@@ -1497,7 +1521,7 @@ function resetDeckStats() {
         card.incorrectCount = 0;
         card.avgTime = 0;
     });
-    deck.uncompleted = false;
+    clearDeckCompletion(deck.id);
     saveData();
     renderDeckProgress(deck.id);
     renderProgress();
