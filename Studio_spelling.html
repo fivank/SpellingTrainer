@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SpellMaster</title>
+<style>
+    /* --- VARIABLES & RESET --- */
+    :root {
+        --primary: #6366f1;
+        --primary-dark: #4f46e5;
+        --bg-body: #f3f4f6;
+        --bg-card: #ffffff;
+        --text-main: #1f2937;
+        --text-sub: #6b7280;
+        --success: #10b981;
+        --error: #ef4444;
+        --nav-height: 65px;
+        --radius: 16px;
+        /* additional neutral colour used for toggles */
+        --neutral-200: #e5e7eb;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* --- LAYOUT --- */
+    header {
+        padding: 1rem;
+        background: var(--bg-card);
+        text-align: center;
+        font-weight: 800;
+        font-size: 1.2rem;
+        color: var(--primary);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        z-index: 10;
+        flex-shrink: 0;
+    }
+
+    main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        padding-bottom: 90px; /* Space for nav */
+        max-width: 600px;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    .view { display: none; height: 100%; }
+    .view.active { display: block; animation: fadeIn 0.3s ease; }
+
+    /* --- NAVIGATION --- */
+    nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: var(--nav-height);
+        background: var(--bg-card);
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        z-index: 20;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    nav button {
+        background: none;
+        border: none;
+        color: var(--text-sub);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.75rem;
+        width: 100%;
+        height: 100%;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    nav button svg { width: 24px; height: 24px; margin-bottom: 4px; fill: currentColor; }
+    nav button.active { color: var(--primary); }
+
+    /* --- COMPONENTS --- */
+    .card {
+        background: var(--bg-card);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        margin-bottom: 1rem;
+    }
+
+    button { cursor: pointer; border: none; font-family: inherit; font-weight: 600; transition: transform 0.1s; outline: none; }
+    button:active { transform: scale(0.96); }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        padding: 14px;
+        border-radius: 12px;
+        width: 100%;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+    }
+    
+    .btn-secondary {
+        background: transparent;
+        color: var(--primary);
+        border: 2px solid var(--primary);
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    
+    .btn-icon { background: #f3f4f6; padding: 8px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+
+    input, select {
+        width: 100%;
+        padding: 14px;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 1rem;
+        background: #f9fafb;
+        margin-bottom: 1rem;
+        -webkit-appearance: none; /* Fix for iOS input styles */
+    }
+    input:focus { border-color: var(--primary); outline: none; background: #fff; }
+
+    /* --- PRACTICE SCREEN --- */
+    .practice-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 80%;
+    }
+
+    .audio-trigger {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        margin-bottom: 2rem;
+        transition: transform 0.2s;
+        cursor: pointer;
+        position: relative;
+    }
+    .audio-trigger:active { transform: scale(0.95); }
+    .audio-trigger.playing { animation: pulse 1.5s infinite; }
+    .audio-trigger svg { width: 50px; height: 50px; fill: white; }
+
+    .word-input {
+        font-size: 2rem;
+        text-align: center;
+        border: none;
+        border-bottom: 3px solid #e5e7eb;
+        border-radius: 0;
+        background: transparent;
+        color: var(--primary);
+        letter-spacing: 1px;
+        font-weight: bold;
+    }
+    .word-input:focus { border-color: var(--primary); background: transparent; }
+    
+    .feedback-area { text-align: center; margin-bottom: 1rem; min-height: 24px; }
+    .diff-display span { font-size: 1.5rem; font-weight: 700; }
+    .diff-correct { color: var(--success); }
+    .diff-wrong { color: var(--error); text-decoration: line-through; margin-right: 8px; opacity: 0.7; }
+
+    .srs-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-top: 2rem; }
+    .srs-btn { padding: 16px; border-radius: 12px; font-size: 0.9rem; font-weight: 700; color: #333; }
+    .srs-again { background: #fee2e2; color: #991b1b; }
+    .srs-hard { background: #ffedd5; color: #9a3412; }
+    .srs-good { background: #dcfce7; color: #166534; }
+    .srs-easy { background: #dbeafe; color: #1e40af; }
+
+    /* --- DECK LIST --- */
+    .deck-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #f3f4f6;
+        margin-bottom: 1rem;
+    }
+    .deck-item:last-child { border: none; margin-bottom: 0; padding-bottom: 0; }
+    .deck-info h3 { margin: 0 0 4px 0; font-size: 1.1rem; }
+    .deck-info small { color: var(--text-sub); }
+    
+    /* --- MODAL --- */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5); z-index: 100;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        backdrop-filter: blur(2px);
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal {
+        background: white; width: 90%; max-width: 400px;
+        padding: 1.5rem; border-radius: var(--radius);
+        transform: translateY(20px); transition: transform 0.2s;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    
+    /* --- ANIMATIONS --- */
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(99, 102, 241, 0); } 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    .hidden { display: none !important; }
+    .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; margin-top: 5px; }
+    .status-ok { background: #dcfce7; color: #166534; }
+    .status-err { background: #fee2e2; color: #991b1b; }
+
+    /* Diff display styling for incorrect answers */
+    .diff-display {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 8px;
+        margin-bottom: 8px;
+        font-size: 1.2rem;
+    }
+    .diff-wrong { color: var(--error); text-decoration: line-through; }
+    .diff-correct { color: var(--success); font-weight: bold; }
+
+    /* Toggle switch styling (borrowed from improved version) */
+    .toggle {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+    }
+    .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--neutral-200);
+        transition: 0.4s;
+        border-radius: 24px;
+    }
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+    }
+    .toggle input:checked + .slider {
+        background-color: var(--primary);
+    }
+    .toggle input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+</style>
+</head>
+<body>
+
+<header>SpellMaster</header>
+
+<main>
+    <!-- PRACTICE SCREEN -->
+    <div id="view-practice" class="view active">
+        <div class="practice-wrapper" id="practice-container">
+            <!-- Dynamic Content -->
+            <div style="text-align: center; color: var(--text-sub);">
+                <h2>Ready to Practice?</h2>
+                <p>Select a deck from the Words tab to begin.</p>
+                <br>
+                <button class="btn-primary" onclick="navTo('words')">Go to Decks</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WORDS / DECKS SCREEN -->
+    <div id="view-words" class="view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2>My Decks</h2>
+            <button class="btn-secondary" onclick="openDeckModal()">+ New</button>
+        </div>
+        <div class="card" id="deck-list-container">
+            <div id="deck-list"></div>
+        </div>
+    </div>
+
+    <!-- SETTINGS SCREEN -->
+    <div id="view-settings" class="view">
+        <h2>Settings</h2>
+        
+        <!-- Learning Settings -->
+        <div class="card">
+            <h3>Learning</h3>
+            <div>
+                <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span>Autoplay audio</span>
+                    <label class="toggle"><input type="checkbox" id="setting-autoplay"><span class="slider"></span></label>
+                </label>
+                <label style="display:block; margin-bottom:8px;">
+                    Answer strictness
+                    <select id="setting-strictness" style="width:100%; margin-top:4px;">
+                        <option value="strict">Strict</option>
+                        <option value="lenient">Lenient</option>
+                    </select>
+                </label>
+                <label style="display:block;">
+                    Timer start
+                    <select id="setting-timerStart" style="width:100%; margin-top:4px;">
+                        <option value="show">On show</option>
+                        <option value="audio">On audio</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Audio Diagnostics</h3>
+            <p style="font-size:0.9rem; color: var(--text-sub);">If audio isn't working, check here.</p>
+            <div id="audio-status" class="status-badge status-err">Checking...</div>
+            <div style="margin-top:10px;">
+                <label>System Voice</label>
+                <select id="setting-voice"><option>Loading voices...</option></select>
+            </div>
+            <div>
+                <label>Speed: <span id="speed-val">1.0</span>x</label>
+                <input type="range" id="setting-speed" min="0.5" max="1.5" step="0.1" value="1">
+            </div>
+            <button class="btn-secondary" onclick="testAudio()">Test Audio</button>
+        </div>
+        
+        <div class="card">
+            <h3>Data Management</h3>
+            <button class="btn-secondary" onclick="exportData()" style="width:100%; margin-bottom:10px;">Export Backup</button>
+            <button class="btn-secondary" onclick="document.getElementById('import-file').click()" style="width:100%; margin-bottom:10px;">Import Backup</button>
+            <input type="file" id="import-file" class="hidden" accept=".json">
+            <button class="btn-secondary" style="color: var(--error); border-color: var(--error); width:100%;" onclick="resetApp()">Reset All Data</button>
+        </div>
+    </div>
+
+    <!-- PROGRESS SCREEN -->
+    <div id="view-progress" class="view">
+        <h2>Progress</h2>
+        <div class="card" id="progress-overview" style="margin-bottom:1rem;"></div>
+        <div class="card" id="progress-details"></div>
+    </div>
+</main>
+
+<nav>
+    <button onclick="navTo('practice')" id="nav-practice" class="active">
+        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        Practice
+    </button>
+    <button onclick="navTo('words')" id="nav-words">
+        <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+        Words
+    </button>
+    <button onclick="navTo('progress')" id="nav-progress">
+        <svg viewBox="0 0 24 24"><path d="M3 17h4V9H3v8zm6 0h4V5H9v12zm6 0h4V13h-4v4z"/></svg>
+        Progress
+    </button>
+
+    <button onclick="navTo('settings')" id="nav-settings">
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L5.09 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.58 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        Settings
+    </button>
+</nav>
+
+<!-- ADD DECK MODAL -->
+<div id="deck-modal" class="modal-overlay">
+    <div class="modal">
+        <h3>New Deck</h3>
+        <label>Deck Name</label>
+        <input type="text" id="new-deck-name" placeholder="e.g. Spanish Basics">
+        <label>Language</label>
+        <select id="new-deck-lang">
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="es-ES">Spanish</option>
+            <option value="fr-FR">French</option>
+            <option value="de-DE">German</option>
+            <option value="it-IT">Italian</option>
+        </select>
+        <div style="display:flex; gap:10px; margin-top:1rem;">
+            <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
+            <button class="btn-primary" onclick="saveDeck()" style="flex:1">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- MANAGE CARDS MODAL -->
+<div id="cards-modal" class="modal-overlay">
+    <div class="modal" style="max-height: 85vh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Manage Cards</h3>
+            <button class="btn-icon" onclick="closeCardsModal()">✕</button>
+        </div>
+        <div style="margin-bottom:1rem;">
+            <input type="text" id="new-card-word" placeholder="Word to spell" style="margin-bottom:8px;">
+            <input type="text" id="new-card-sentence" placeholder="Sentence (optional)" style="margin-bottom:8px;">
+            <!-- Optional audio URL input to support custom pronunciation files -->
+            <input type="text" id="new-card-audio" placeholder="Audio URL (optional)" style="margin-bottom:8px;">
+            <button class="btn-primary" onclick="addCardToDeck()">Add Card</button>
+        </div>
+        <div style="flex:1; overflow-y:auto; border-top:1px solid #eee; padding-top:10px;" id="cards-list-content">
+            <!-- Cards list -->
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * APP DATA
+ */
+let app = {
+    decks: [],
+    settings: {
+        voiceURI: null,
+        speed: 1.0,
+        /* whether to automatically play audio when a card appears */
+        autoplay: true,
+        /* answer strictness: 'strict' = case-sensitive; 'lenient' = case-insensitive */
+        strictness: 'strict',
+        /* when to start timing user response: 'show' or 'audio' */
+        timerStart: 'audio'
+    }
+};
+
+let currentSession = {
+    deck: null,
+    queue: [],
+    currentCard: null,
+    isAnswered: false,
+    startTime: null
+};
+
+// --- AUDIO ENGINE (ROBUST VERSION) ---
+let availableVoices = [];
+
+function initAudio() {
+    const statusEl = document.getElementById('audio-status');
+    const select = document.getElementById('setting-voice');
+
+    if (!('speechSynthesis' in window)) {
+        statusEl.className = 'status-badge status-err';
+        statusEl.textContent = 'Not Supported in this Browser';
+        select.innerHTML = '<option>Not available</option>';
+        return;
+    }
+
+    // Attempt to load voices
+    const loadVoices = () => {
+        availableVoices = window.speechSynthesis.getVoices();
+        if (availableVoices.length > 0) {
+            statusEl.className = 'status-badge status-ok';
+            statusEl.textContent = 'Engine Ready';
+            populateVoiceSelect();
+        } else {
+            // Keep waiting or show warning
+            statusEl.className = 'status-badge status-err';
+            statusEl.textContent = 'Voices Empty (Try Chrome/Safari)';
+        }
+    };
+
+    // Modern browsers load async
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    
+    // Initial attempt
+    loadVoices();
+    
+    // Some browsers need a kick
+    setTimeout(loadVoices, 500);
+}
+
+function populateVoiceSelect() {
+    const select = document.getElementById('setting-voice');
+    select.innerHTML = '';
+    
+    // Group by language
+    availableVoices.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.voiceURI;
+        opt.textContent = `${v.name} (${v.lang})`;
+        select.appendChild(opt);
+    });
+
+    // Restore saved choice
+    if (app.settings.voiceURI) {
+        // Verify it still exists
+        const exists = availableVoices.find(v => v.voiceURI === app.settings.voiceURI);
+        if (exists) select.value = app.settings.voiceURI;
+    }
+}
+
+function speak(text, lang) {
+    if (!('speechSynthesis' in window)) {
+        alert("Your browser does not support Audio. Please try Chrome or Safari.");
+        return;
+    }
+    
+    window.speechSynthesis.cancel(); // Stop current
+
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = parseFloat(app.settings.speed) || 1.0;
+    
+    // --- VOICE SELECTION LOGIC ---
+    let voice = null;
+    
+    // 1. Try User Preference
+    if (app.settings.voiceURI) {
+        voice = availableVoices.find(v => v.voiceURI === app.settings.voiceURI);
+    }
+    
+    // 2. If no preference or invalid, find best match for Deck Language
+    if (!voice && lang) {
+        // Exact match (e.g., en-US)
+        voice = availableVoices.find(v => v.lang === lang);
+        // Fallback match (e.g., en)
+        if (!voice) voice = availableVoices.find(v => v.lang.startsWith(lang.split('-')[0]));
+    }
+
+    if (voice) {
+        u.voice = voice;
+        u.lang = voice.lang; // Ensure lang matches voice
+    } else {
+        // 3. Last Resort: Let browser decide based on lang code
+        u.lang = lang || 'en-US';
+    }
+
+    // Visual Feedback
+    const btn = document.querySelector('.audio-trigger');
+    if(btn) btn.classList.add('playing');
+
+    u.onend = () => { if(btn) btn.classList.remove('playing'); };
+    u.onerror = (e) => { 
+        if(btn) btn.classList.remove('playing');
+        console.warn("Audio Error:", e);
+    };
+
+    window.speechSynthesis.speak(u);
+}
+
+function testAudio() {
+    const s = document.getElementById('setting-voice');
+    // Use selected voice, or default English
+    const v = availableVoices.find(v => v.voiceURI === s.value);
+    const lang = v ? v.lang : 'en-US';
+    speak("This is a test of the audio system.", lang);
+}
+
+// --- PERSISTENCE ---
+function loadData() {
+    const raw = localStorage.getItem('spellmaster_data_v2');
+    if (raw) {
+        try {
+            const data = JSON.parse(raw);
+            app.decks = data.decks || [];
+            app.settings = { ...app.settings, ...data.settings };
+        } catch(e) { console.error("Data load error", e); }
+    }
+    // Ensure all cards have expected properties (migration for newer versions)
+    app.decks.forEach(deck => {
+        deck.cards.forEach(card => {
+            if (card.audioUrl === undefined) card.audioUrl = '';
+            if (card.correctCount === undefined) card.correctCount = 0;
+            if (card.incorrectCount === undefined) card.incorrectCount = 0;
+            if (card.avgTime === undefined) card.avgTime = 0;
+            if (card.interval === undefined) card.interval = 0;
+            if (card.ease === undefined) card.ease = 2.5;
+            if (card.due === undefined) card.due = 0;
+        });
+    });
+    renderDeckList();
+    initSettingsListeners();
+}
+
+function saveData() {
+    localStorage.setItem('spellmaster_data_v2', JSON.stringify(app));
+}
+
+// --- NAV ---
+function navTo(screen) {
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.getElementById('view-' + screen).classList.add('active');
+    
+    document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+    document.getElementById('nav-' + screen).classList.add('active');
+    
+    if (screen === 'words') {
+        renderDeckList();
+    } else if (screen === 'progress') {
+        renderProgress();
+    }
+}
+
+// --- PRACTICE ---
+function startPractice(deckId) {
+    const deck = app.decks.find(d => d.id === deckId);
+    if (!deck) return;
+    
+    // Sort by due date
+    const now = Date.now();
+    currentSession.queue = deck.cards.filter(c => c.due <= now).sort((a,b) => a.due - b.due);
+    
+    // If no due cards, practice all
+    if (currentSession.queue.length === 0) {
+        if(confirm("No cards due. Practice all cards in this deck?")) {
+            currentSession.queue = [...deck.cards]; // Copy all
+        } else {
+            return;
+        }
+    }
+    
+    currentSession.deck = deck;
+    navTo('practice');
+    nextCard();
+}
+
+function nextCard() {
+    if (currentSession.queue.length === 0) {
+        document.getElementById('practice-container').innerHTML = `
+            <div style="text-align:center">
+                <h2>Session Complete!</h2>
+                <p>Great job.</p>
+                <button class="btn-primary" onclick="navTo('words')">Back to Decks</button>
+            </div>`;
+        return;
+    }
+
+    currentSession.currentCard = currentSession.queue[0];
+    currentSession.isAnswered = false;
+    // Reset timer
+    currentSession.startTime = null;
+    
+    const c = currentSession.currentCard;
+    const hasSentence = c.sentence && c.sentence.trim() !== "";
+    
+    // Hide target word in sentence
+    let sentenceDisplay = "";
+    if (hasSentence) {
+        // Regex to match word case-insensitive
+        const regex = new RegExp(`\\b${escapeRegExp(c.word)}\\b`, 'gi');
+        sentenceDisplay = c.sentence.replace(regex, "____");
+    }
+
+    const html = `
+        <div class="audio-trigger" onclick="playCurrent()">
+            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </div>
+        ${hasSentence ? `<p style="font-size:1.2rem; color:var(--text-sub); margin-bottom:2rem; text-align:center; padding:0 20px; line-height:1.5;">${sentenceDisplay}</p>` : ''}
+        
+        <div class="feedback-area" id="feedback"></div>
+        
+        <input type="text" id="p-input" class="word-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type word here">
+        
+        <button id="btn-check" class="btn-primary" style="margin-top:20px" onclick="checkAnswer()">Check</button>
+        
+        <div id="srs-area" class="srs-controls hidden">
+            <button class="srs-btn srs-again" onclick="rateCard(1)">Again</button>
+            <button class="srs-btn srs-hard" onclick="rateCard(2)">Hard</button>
+            <button class="srs-btn srs-good" onclick="rateCard(3)">Good</button>
+            <button class="srs-btn srs-easy" onclick="rateCard(4)">Easy</button>
+        </div>
+    `;
+    
+    document.getElementById('practice-container').innerHTML = html;
+    
+    const input = document.getElementById('p-input');
+    input.focus();
+    
+    // Set timer if start on show
+    if (app.settings.timerStart === 'show') {
+        currentSession.startTime = Date.now();
+    }
+    // Autoplay audio if enabled
+    if (app.settings.autoplay) {
+        setTimeout(() => {
+            playCurrent();
+        }, 300);
+    }
+
+    // Keyboard support
+    input.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" && !currentSession.isAnswered) checkAnswer();
+    });
+}
+
+function playCurrent() {
+    if (!currentSession.currentCard) return;
+    const card = currentSession.currentCard;
+    // Play custom audio if URL exists
+    if (card.audioUrl) {
+        try {
+            const audio = new Audio(card.audioUrl);
+            const btn = document.querySelector('.audio-trigger');
+            if (btn) btn.classList.add('playing');
+            audio.onplay = () => {
+                if (app.settings.timerStart === 'audio') {
+                    currentSession.startTime = Date.now();
+                }
+            };
+            audio.onended = () => { if (btn) btn.classList.remove('playing'); };
+            audio.onerror = () => {
+                if (btn) btn.classList.remove('playing');
+                // fallback to TTS if audio fails
+                speakCard();
+            };
+            audio.play().catch((err) => {
+                if (btn) btn.classList.remove('playing');
+                speakCard();
+            });
+            return;
+        } catch(e) {
+            // fallback to speech synthesis
+            speakCard();
+            return;
+        }
+    }
+    // Fallback to TTS
+    speakCard();
+    function speakCard() {
+        // If timing starts on audio, start timer now
+        if (app.settings.timerStart === 'audio') {
+            currentSession.startTime = Date.now();
+        }
+        const lang = currentSession.deck.lang;
+        // If card has a sentence, speak word, sentence, word for context
+        if (card.sentence && card.sentence.trim() !== '') {
+            const phrase = `${card.word}. ${card.sentence}. ${card.word}`;
+            speak(phrase, lang);
+        } else {
+            speak(card.word, lang);
+        }
+    }
+}
+
+function checkAnswer() {
+    const input = document.getElementById('p-input');
+    const userRaw = input.value.trim();
+    const userValLower = userRaw.toLowerCase();
+    const correctRaw = currentSession.currentCard.word;
+    const correctLower = correctRaw.toLowerCase();
+    // Determine correctness based on strictness
+    let isCorrect = false;
+    if (app.settings.strictness === 'strict') {
+        isCorrect = userRaw === correctRaw;
+    } else {
+        isCorrect = userValLower === correctLower;
+    }
+    currentSession.isAnswered = true;
+    document.getElementById('btn-check').classList.add('hidden');
+    document.getElementById('srs-area').classList.remove('hidden');
+    input.disabled = true;
+    const feedback = document.getElementById('feedback');
+    // Update performance statistics
+    const card = currentSession.currentCard;
+    const now = Date.now();
+    let elapsed = 0;
+    if (currentSession.startTime) {
+        elapsed = (now - currentSession.startTime) / 1000;
+    }
+    // Compute average time (running average)
+    const prevAttempts = (card.correctCount || 0) + (card.incorrectCount || 0);
+    if (prevAttempts === 0) {
+        card.avgTime = elapsed;
+    } else {
+        card.avgTime = ((card.avgTime || 0) * prevAttempts + elapsed) / (prevAttempts + 1);
+    }
+    if (isCorrect) {
+        card.correctCount = (card.correctCount || 0) + 1;
+    } else {
+        card.incorrectCount = (card.incorrectCount || 0) + 1;
+    }
+    saveData();
+    // Provide feedback
+    if (isCorrect) {
+        input.style.color = 'var(--success)';
+        feedback.innerHTML = `<span style="color:var(--success); font-weight:bold;">Correct!</span>`;
+    } else {
+        input.style.color = 'var(--error)';
+        // Show Diff
+        feedback.innerHTML = `<div class="diff-display">
+            <span class="diff-wrong">${input.value}</span>
+            <span class="diff-correct">${currentSession.currentCard.word}</span>
+        </div>`;
+    }
+}
+
+function rateCard(quality) {
+    const card = currentSession.currentCard;
+    
+    // Simple SRS Logic
+    if (quality < 3) {
+        card.interval = 1;
+        card.ease = Math.max(1.3, card.ease - 0.2);
+    } else {
+        if (card.interval === 0) card.interval = 1;
+        else if (card.interval === 1) card.interval = 3;
+        else card.interval = Math.ceil(card.interval * card.ease);
+        
+        card.ease = card.ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+        if (card.ease < 1.3) card.ease = 1.3;
+    }
+
+    // Set Due Date
+    const DAY_MS = 86400000;
+    card.due = Date.now() + (quality < 3 ? 0 : card.interval * DAY_MS);
+
+    saveData();
+    
+    currentSession.queue.shift(); // Remove current
+    if (quality < 3) {
+        currentSession.queue.push(card); // Re-queue if wrong
+    }
+    
+    nextCard();
+}
+
+// --- DECK MANAGEMENT ---
+function renderDeckList() {
+    const list = document.getElementById('deck-list');
+    list.innerHTML = '';
+    
+    if (app.decks.length === 0) {
+        list.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--text-sub);">
+            No decks yet.<br>Click "+ New" to create one.
+        </div>`;
+        return;
+    }
+
+    app.decks.forEach(deck => {
+        const div = document.createElement('div');
+        div.className = 'deck-item';
+        div.innerHTML = `
+            <div class="deck-info">
+                <h3>${deck.name}</h3>
+                <small>${deck.lang} • ${deck.cards.length} cards</small>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-secondary" onclick="manageCards('${deck.id}')">Edit</button>
+                <button class="btn-primary" style="padding: 10px 20px;" onclick="startPractice('${deck.id}')">Play</button>
+            </div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+// --- PROGRESS RENDERING ---
+function renderProgress() {
+    const overviewEl = document.getElementById('progress-overview');
+    const detailsEl = document.getElementById('progress-details');
+    if (!overviewEl || !detailsEl) return;
+    overviewEl.innerHTML = '';
+    detailsEl.innerHTML = '';
+    if (app.decks.length === 0) {
+        overviewEl.innerHTML = '<div style="padding:1rem; color:var(--text-sub); text-align:center;">No data yet.</div>';
+        return;
+    }
+    let total = 0;
+    let newWords = 0;
+    let learning = 0;
+    let mastered = 0;
+    let sumTime = 0;
+    let countTime = 0;
+    const troubleList = [];
+    app.decks.forEach(deck => {
+        deck.cards.forEach(card => {
+            total++;
+            if (card.interval === 0) {
+                newWords++;
+            } else if (card.interval > 15) {
+                mastered++;
+            } else {
+                learning++;
+            }
+            if (card.avgTime && card.avgTime > 0) {
+                sumTime += card.avgTime;
+                countTime++;
+            }
+            troubleList.push({
+                word: card.word,
+                deck: deck.name,
+                incorrect: card.incorrectCount || 0,
+                avgTime: card.avgTime || 0
+            });
+        });
+    });
+    const avgTime = countTime > 0 ? (sumTime / countTime).toFixed(1) : 'N/A';
+    // Overview table
+    let overviewHTML = '<table style="width:100%; border-collapse:collapse; font-size:0.95rem;">';
+    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Total words</th><td style="padding:6px 4px; text-align:right;">${total}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">New</th><td style="padding:6px 4px; text-align:right;">${newWords}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Learning</th><td style="padding:6px 4px; text-align:right;">${learning}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Mastered</th><td style="padding:6px 4px; text-align:right;">${mastered}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Average response time (s)</th><td style="padding:6px 4px; text-align:right;">${avgTime}</td></tr>`;
+    overviewHTML += '</table>';
+    overviewEl.innerHTML = overviewHTML;
+    // Trouble words
+    troubleList.sort((a,b) => {
+        if (b.incorrect !== a.incorrect) return b.incorrect - a.incorrect;
+        return b.avgTime - a.avgTime;
+    });
+    const topTrouble = troubleList.filter(t => t.incorrect > 0 || t.avgTime > 0).slice(0,10);
+    if (topTrouble.length > 0) {
+        let detailsHTML = '<h3 style="margin-top:0;">Trouble Words</h3>';
+        detailsHTML += '<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">';
+        detailsHTML += '<tr><th style="text-align:left; padding:4px;">Word</th><th style="text-align:left; padding:4px;">Deck</th><th style="text-align:right; padding:4px;">Errors</th><th style="text-align:right; padding:4px;">Avg time (s)</th></tr>';
+        topTrouble.forEach(item => {
+            detailsHTML += `<tr><td style="padding:4px;">${item.word}</td><td style="padding:4px;">${item.deck}</td><td style="padding:4px; text-align:right;">${item.incorrect}</td><td style="padding:4px; text-align:right;">${item.avgTime.toFixed ? item.avgTime.toFixed(1) : item.avgTime}</td></tr>`;
+        });
+        detailsHTML += '</table>';
+        detailsEl.innerHTML = detailsHTML;
+    } else {
+        detailsEl.innerHTML = '<div style="padding:1rem; color:var(--text-sub);">No trouble words yet. Keep practicing!</div>';
+    }
+}
+
+// Modal Logic
+let activeDeckIdForEdit = null;
+function openDeckModal() {
+    document.getElementById('deck-modal').classList.add('open');
+    document.getElementById('new-deck-name').value = '';
+}
+function closeDeckModal() {
+    document.getElementById('deck-modal').classList.remove('open');
+}
+function saveDeck() {
+    const name = document.getElementById('new-deck-name').value;
+    const lang = document.getElementById('new-deck-lang').value;
+    if (!name) return;
+    
+    app.decks.push({
+        id: Date.now().toString(),
+        name,
+        lang,
+        cards: []
+    });
+    saveData();
+    closeDeckModal();
+    renderDeckList();
+}
+
+function manageCards(deckId) {
+    activeDeckIdForEdit = deckId;
+    document.getElementById('cards-modal').classList.add('open');
+    renderCardList();
+}
+function closeCardsModal() {
+    document.getElementById('cards-modal').classList.remove('open');
+}
+
+function renderCardList() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    const container = document.getElementById('cards-list-content');
+    container.innerHTML = '';
+    
+    if(deck.cards.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">No cards yet</div>';
+        return;
+    }
+
+    deck.cards.slice().reverse().forEach((card, index) => {
+        const div = document.createElement('div');
+        div.style = "display:flex; justify-content:space-between; align-items:center; padding: 12px 0; border-bottom:1px solid #f3f4f6;";
+        const realIndex = deck.cards.length - 1 - index;
+        div.innerHTML = `
+            <div>
+                <strong style="font-size:1.1rem;">${card.word}</strong>
+                ${card.sentence ? `<div style="font-size:0.85rem; color:#666; margin-top:4px;">${card.sentence}</div>` : ''}
+            </div>
+            <button class="btn-icon" style="background:#fee2e2; color:var(--error); width:32px; height:32px;" onclick="deleteCard(${realIndex})">✕</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function addCardToDeck() {
+    const w = document.getElementById('new-card-word');
+    const s = document.getElementById('new-card-sentence');
+    const a = document.getElementById('new-card-audio');
+    if (!w.value) return;
+    
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    deck.cards.push({
+        word: w.value.trim(),
+        sentence: s.value.trim(),
+        audioUrl: a.value.trim() || '',
+        due: 0,
+        interval: 0,
+        ease: 2.5,
+        correctCount: 0,
+        incorrectCount: 0,
+        avgTime: 0
+    });
+    w.value = '';
+    s.value = '';
+    a.value = '';
+    w.focus();
+    saveData();
+    renderCardList();
+    renderDeckList();
+}
+
+function deleteCard(index) {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    deck.cards.splice(index, 1);
+    saveData();
+    renderCardList();
+    renderDeckList();
+}
+
+// --- UTILS & INIT ---
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function initSettingsListeners() {
+    const speed = document.getElementById('setting-speed');
+    speed.value = app.settings.speed || 1.0;
+    document.getElementById('speed-val').textContent = speed.value;
+
+    speed.addEventListener('input', (e) => {
+        app.settings.speed = e.target.value;
+        document.getElementById('speed-val').textContent = e.target.value;
+        saveData();
+    });
+
+    document.getElementById('setting-voice').addEventListener('change', (e) => {
+        app.settings.voiceURI = e.target.value;
+        saveData();
+    });
+
+    // Autoplay toggle
+    const autoplayEl = document.getElementById('setting-autoplay');
+    if (autoplayEl) {
+        autoplayEl.checked = Boolean(app.settings.autoplay);
+        autoplayEl.addEventListener('change', (e) => {
+            app.settings.autoplay = e.target.checked;
+            saveData();
+        });
+    }
+    // Strictness select
+    const strictEl = document.getElementById('setting-strictness');
+    if (strictEl) {
+        strictEl.value = app.settings.strictness || 'strict';
+        strictEl.addEventListener('change', (e) => {
+            app.settings.strictness = e.target.value;
+            saveData();
+        });
+    }
+    // Timer start select
+    const timerEl = document.getElementById('setting-timerStart');
+    if (timerEl) {
+        timerEl.value = app.settings.timerStart || 'audio';
+        timerEl.addEventListener('change', (e) => {
+            app.settings.timerStart = e.target.value;
+            saveData();
+        });
+    }
+}
+
+function exportData() {
+    const str = JSON.stringify(app);
+    const blob = new Blob([str], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "spellmaster_backup.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+document.getElementById('import-file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.decks) {
+                app = data;
+                saveData();
+                location.reload();
+            }
+        } catch(err) { alert("Invalid file"); }
+    };
+    reader.readAsText(file);
+});
+
+function resetApp() {
+    if(confirm("Delete all data? This cannot be undone.")) {
+        localStorage.removeItem('spellmaster_data_v2');
+        location.reload();
+    }
+}
+
+// --- BOOTSTRAP ---
+initAudio();
+loadData();
+
+// Add some demo data if empty
+if(app.decks.length === 0) {
+    app.decks.push({
+        id: "demo1", name: "English Demo", lang: "en-US",
+        cards: [
+            // Provide a variety of example words to allow immediate practice without configuration.
+            {word: "necessary", sentence: "It is necessary to sleep well.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
+            {word: "queue", sentence: "Wait in the queue.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
+            {word: "apple", sentence: "", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
+            {word: "banana", sentence: "", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
+            {word: "books", sentence: "I forgot my books at home", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
+            {word: "school", sentence: "", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0}
+        ]
+    });
+    saveData();
+    renderDeckList();
+}
+
+</script>
+</body>
+</html>
