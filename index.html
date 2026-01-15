@@ -540,6 +540,13 @@
             </p>
             <button class="btn-secondary" onclick="triggerDeckImport()" style="width:100%; margin-bottom:10px;">Choose Deck File</button>
             <input type="file" id="import-deck-file" class="hidden" accept=".json,application/json">
+            <div style="margin-bottom:10px;">
+                <label for="import-deck-json" style="display:block; font-size:0.85rem; color:var(--text-sub); margin-bottom:6px;">
+                    Paste deck as JSON
+                </label>
+                <textarea id="import-deck-json" rows="6" placeholder='{"name":"My Deck","lang":"en-US","cards":[{"word":"example","sentence":""}]}' style="width:100%; padding:12px; border:2px solid #e5e7eb; border-radius:12px; font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
+            </div>
+            <button class="btn-secondary" onclick="importDeckFromPaste()" style="width:100%; margin-bottom:10px;">Import Pasted Deck</button>
             <div style="display:flex; gap:10px;">
                 <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
             </div>
@@ -1372,6 +1379,30 @@ function showDeckPanel(panel) {
 function triggerDeckImport() {
     document.getElementById('import-deck-file').click();
 }
+function importDeckFromPaste() {
+    const textArea = document.getElementById('import-deck-json');
+    if (!textArea) return;
+    const raw = textArea.value.trim();
+    if (!raw) {
+        alert("Paste deck JSON first.");
+        return;
+    }
+    try {
+        const data = JSON.parse(raw);
+        const decks = normalizeImportedDecks(data);
+        if (!decks.length) {
+            alert("Invalid deck JSON");
+            return;
+        }
+        app.decks.push(...decks);
+        saveData();
+        renderDeckList();
+        textArea.value = '';
+        closeDeckModal();
+    } catch (err) {
+        alert("Invalid deck JSON");
+    }
+}
 function saveDeck() {
     const name = document.getElementById('new-deck-name').value;
     const lang = document.getElementById('new-deck-lang').value;
@@ -1466,9 +1497,13 @@ function resetDeckStats() {
         card.incorrectCount = 0;
         card.avgTime = 0;
     });
+    deck.uncompleted = false;
     saveData();
     renderDeckProgress(deck.id);
     renderProgress();
+    if (!currentSession.isActive && document.getElementById('view-practice').classList.contains('active')) {
+        renderPracticeHome();
+    }
 }
 
 function exportDeck() {
