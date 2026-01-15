@@ -784,13 +784,9 @@ function startPractice(deckIds) {
     
     // If no due cards, practice all
     if (currentSession.queue.length === 0) {
-        if(confirm("No cards due. Practice all cards in the selected decks?")) {
-            currentSession.queue = selectedDecks.flatMap(deck => (
-                deck.cards.map(card => ({ deck, card }))
-            ));
-        } else {
-            return;
-        }
+        currentSession.queue = selectedDecks.flatMap(deck => (
+            deck.cards.map(card => ({ deck, card }))
+        ));
     }
 
     if (currentSession.queue.length === 0) {
@@ -861,7 +857,7 @@ function renderPracticeHome() {
     const now = Date.now();
     const dueDecks = app.decks.filter(deck => getDueCount(deck, now) > 0);
     const uncompletedDecks = app.decks.filter(deck => deck.uncompleted);
-    const completedDecks = app.decks.filter(deck => !deck.uncompleted);
+    const otherDecks = app.decks.filter(deck => !deck.uncompleted && getDueCount(deck, now) === 0);
     const renderDeckItems = (decks) => decks.map(deck => `
         <label class="practice-deck-item">
             <input type="checkbox" class="practice-deck-checkbox" value="${deck.id}" ${selectedSet.has(deck.id) ? 'checked' : ''}>
@@ -873,7 +869,7 @@ function renderPracticeHome() {
     `).join('');
     const dueItems = renderDeckItems(dueDecks);
     const uncompletedItems = renderDeckItems(uncompletedDecks);
-    const completedItems = renderDeckItems(completedDecks);
+    const otherItems = renderDeckItems(otherDecks);
 
     container.innerHTML = `
         <div class="card practice-selection">
@@ -894,8 +890,8 @@ function renderPracticeHome() {
                     ${uncompletedItems || `<div class="practice-empty">No uncompleted decks right now.</div>`}
                 </div>
                 <div class="practice-category">
-                    <div class="practice-category-title">All Decks</div>
-                    ${completedItems}
+                    <div class="practice-category-title">Others</div>
+                    ${otherItems || `<div class="practice-empty">No other decks right now.</div>`}
                 </div>
             </div>
             <button class="btn-primary" id="practice-start-btn" onclick="startPracticeFromSelection()">Start Practice</button>
@@ -1435,6 +1431,29 @@ function addCardToDeck() {
     renderDeckList();
 }
 
+function handlePracticeKeydown(event) {
+    if (event.key !== "Enter") return;
+    if (!currentSession.isActive || !currentSession.currentCard) return;
+    if (!currentSession.isAnswered) return;
+    event.preventDefault();
+    rateCard(3);
+}
+
+function initCardInputListeners() {
+    const inputs = [
+        document.getElementById('new-card-word'),
+        document.getElementById('new-card-sentence'),
+        document.getElementById('new-card-audio')
+    ].filter(Boolean);
+    inputs.forEach(input => {
+        input.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            addCardToDeck();
+        });
+    });
+}
+
 function deleteCard(index) {
     const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
     deck.cards.splice(index, 1);
@@ -1674,6 +1693,8 @@ function resetApp() {
 // --- BOOTSTRAP ---
 initAudio();
 loadData();
+initCardInputListeners();
+document.addEventListener('keydown', handlePracticeKeydown);
 
 // Add some demo data if empty
 if(app.decks.length === 0) {
