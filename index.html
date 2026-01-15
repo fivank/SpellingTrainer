@@ -245,6 +245,16 @@
     .modal-panel.hidden {
         display: none;
     }
+
+    .deck-actions {
+        display: grid;
+        gap: 10px;
+    }
+
+    .deck-actions .btn-secondary,
+    .deck-actions .btn-primary {
+        width: 100%;
+    }
     
     /* --- ANIMATIONS --- */
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(99, 102, 241, 0); } 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); } }
@@ -397,6 +407,17 @@
         <div class="card" id="progress-overview" style="margin-bottom:1rem;"></div>
         <div class="card" id="progress-details"></div>
     </div>
+
+    <!-- DECK PROGRESS SCREEN -->
+    <div id="view-deck-progress" class="view">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+            <button class="btn-secondary" onclick="navTo('words')" style="padding: 10px 16px;">← Back</button>
+            <h2 style="margin:0;" id="deck-progress-title">Deck Progress</h2>
+            <div style="width:84px;"></div>
+        </div>
+        <div class="card" id="deck-progress-overview" style="margin-bottom:1rem;"></div>
+        <div class="card" id="deck-progress-details"></div>
+    </div>
 </main>
 
 <nav>
@@ -473,6 +494,22 @@
         </div>
         <div style="flex:1; overflow-y:auto; border-top:1px solid #eee; padding-top:10px;" id="cards-list-content">
             <!-- Cards list -->
+        </div>
+    </div>
+</div>
+
+<!-- DECK ACTIONS MODAL -->
+<div id="deck-actions-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 id="deck-actions-title">Deck Actions</h3>
+            <button class="btn-icon" onclick="closeDeckActionsModal()">✕</button>
+        </div>
+        <div class="deck-actions">
+            <button class="btn-primary" onclick="openDeckStats()">Stats</button>
+            <button class="btn-secondary" onclick="openDeckEditor()">Edit Words</button>
+            <button class="btn-secondary" onclick="exportDeck()">Export Deck</button>
+            <button class="btn-secondary" style="color: var(--error); border-color: var(--error);" onclick="deleteDeck()">Delete Deck</button>
         </div>
     </div>
 </div>
@@ -653,7 +690,8 @@ function navTo(screen) {
     document.getElementById('view-' + screen).classList.add('active');
     
     document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
-    document.getElementById('nav-' + screen).classList.add('active');
+    const navBtn = document.getElementById('nav-' + screen);
+    if (navBtn) navBtn.classList.add('active');
     
     if (screen === 'words') {
         renderDeckList();
@@ -906,7 +944,7 @@ function renderDeckList() {
                 <small>${deck.lang} • ${deck.cards.length} cards</small>
             </div>
             <div style="display:flex; gap:8px;">
-                <button class="btn-secondary" onclick="manageCards('${deck.id}')">Edit</button>
+                <button class="btn-secondary" onclick="openDeckActions('${deck.id}')">Edit</button>
                 <button class="btn-primary" style="padding: 10px 20px;" onclick="startPractice('${deck.id}')">Play</button>
             </div>
         `;
@@ -1039,6 +1077,58 @@ function closeCardsModal() {
     document.getElementById('cards-modal').classList.remove('open');
 }
 
+function openDeckActions(deckId) {
+    activeDeckIdForEdit = deckId;
+    const deck = app.decks.find(d => d.id === deckId);
+    document.getElementById('deck-actions-title').textContent = deck ? deck.name : 'Deck Actions';
+    document.getElementById('deck-actions-modal').classList.add('open');
+}
+
+function closeDeckActionsModal() {
+    document.getElementById('deck-actions-modal').classList.remove('open');
+}
+
+function openDeckEditor() {
+    closeDeckActionsModal();
+    if (activeDeckIdForEdit) manageCards(activeDeckIdForEdit);
+}
+
+function openDeckStats() {
+    closeDeckActionsModal();
+    if (activeDeckIdForEdit) renderDeckProgress(activeDeckIdForEdit);
+}
+
+function exportDeck() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    if (!deck) return;
+    const str = JSON.stringify(deck, null, 2);
+    const blob = new Blob([str], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = deck.name ? deck.name.replace(/[^a-z0-9-_]+/gi, '_') : 'deck';
+    a.href = url;
+    a.download = `${safeName}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function deleteDeck() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    if (!deck) return;
+    if (!confirm(`Delete "${deck.name}"? This cannot be undone.`)) return;
+    app.decks = app.decks.filter(d => d.id !== activeDeckIdForEdit);
+    saveData();
+    closeDeckActionsModal();
+    renderDeckList();
+    if (currentSession.deck && currentSession.deck.id === activeDeckIdForEdit) {
+        currentSession.deck = null;
+        currentSession.queue = [];
+    }
+    activeDeckIdForEdit = null;
+}
+
 function renderCardList() {
     const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
     const container = document.getElementById('cards-list-content');
@@ -1097,6 +1187,76 @@ function deleteCard(index) {
     saveData();
     renderCardList();
     renderDeckList();
+}
+
+function renderDeckProgress(deckId) {
+    const deck = app.decks.find(d => d.id === deckId);
+    const overviewEl = document.getElementById('deck-progress-overview');
+    const detailsEl = document.getElementById('deck-progress-details');
+    const titleEl = document.getElementById('deck-progress-title');
+    if (!deck || !overviewEl || !detailsEl || !titleEl) return;
+    titleEl.textContent = `${deck.name} Progress`;
+    overviewEl.innerHTML = '';
+    detailsEl.innerHTML = '';
+    if (deck.cards.length === 0) {
+        overviewEl.innerHTML = '<div style="padding:1rem; color:var(--text-sub); text-align:center;">No cards yet.</div>';
+        navTo('deck-progress');
+        return;
+    }
+    let total = 0;
+    let newWords = 0;
+    let learning = 0;
+    let mastered = 0;
+    let sumTime = 0;
+    let countTime = 0;
+    const troubleList = [];
+    deck.cards.forEach(card => {
+        total++;
+        if (card.interval === 0) {
+            newWords++;
+        } else if (card.interval > 15) {
+            mastered++;
+        } else {
+            learning++;
+        }
+        if (card.avgTime && card.avgTime > 0) {
+            sumTime += card.avgTime;
+            countTime++;
+        }
+        troubleList.push({
+            word: card.word,
+            deck: deck.name,
+            incorrect: card.incorrectCount || 0,
+            avgTime: card.avgTime || 0
+        });
+    });
+    const avgTime = countTime > 0 ? (sumTime / countTime).toFixed(1) : 'N/A';
+    let overviewHTML = '<table style="width:100%; border-collapse:collapse; font-size:0.95rem;">';
+    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Total words</th><td style="padding:6px 4px; text-align:right;">${total}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">New</th><td style="padding:6px 4px; text-align:right;">${newWords}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Learning</th><td style="padding:6px 4px; text-align:right;">${learning}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Mastered</th><td style="padding:6px 4px; text-align:right;">${mastered}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Average response time (s)</th><td style="padding:6px 4px; text-align:right;">${avgTime}</td></tr>`;
+    overviewHTML += '</table>';
+    overviewEl.innerHTML = overviewHTML;
+    troubleList.sort((a,b) => {
+        if (b.incorrect !== a.incorrect) return b.incorrect - a.incorrect;
+        return b.avgTime - a.avgTime;
+    });
+    const topTrouble = troubleList.filter(t => t.incorrect > 0 || t.avgTime > 0).slice(0,10);
+    if (topTrouble.length > 0) {
+        let detailsHTML = '<h3 style="margin-top:0;">Trouble Words</h3>';
+        detailsHTML += '<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">';
+        detailsHTML += '<tr><th style="text-align:left; padding:4px;">Word</th><th style="text-align:left; padding:4px;">Errors</th><th style="text-align:right; padding:4px;">Avg time (s)</th></tr>';
+        topTrouble.forEach(item => {
+            detailsHTML += `<tr><td style="padding:4px;">${item.word}</td><td style="padding:4px;">${item.incorrect}</td><td style="padding:4px; text-align:right;">${item.avgTime.toFixed ? item.avgTime.toFixed(1) : item.avgTime}</td></tr>`;
+        });
+        detailsHTML += '</table>';
+        detailsEl.innerHTML = detailsHTML;
+    } else {
+        detailsEl.innerHTML = '<div style="padding:1rem; color:var(--text-sub);">No trouble words yet. Keep practicing!</div>';
+    }
+    navTo('deck-progress');
 }
 
 // --- UTILS & INIT ---
