@@ -1069,7 +1069,11 @@ function nextCard() {
 
     // Keyboard support
     input.addEventListener("keydown", (e) => {
-        if(e.key === "Enter" && !currentSession.isAnswered) checkAnswer();
+        if (e.key !== "Enter") return;
+        if (currentSession.isAnswered) return;
+        e.preventDefault();
+        e.stopPropagation();
+        checkAnswer();
     });
 }
 
@@ -1495,7 +1499,8 @@ function handlePracticeKeydown(event) {
     if (!currentSession.isActive || !currentSession.currentCard) return;
     if (!currentSession.isAnswered) return;
     event.preventDefault();
-    rateCard(3);
+    const quality = currentSession.lastAnswerCorrect ? 3 : 2;
+    rateCard(quality);
 }
 
 function initCardInputListeners() {
