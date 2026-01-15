@@ -631,16 +631,18 @@ function initAudio() {
 
     // Attempt to load voices
     const loadVoices = () => {
-        availableVoices = window.speechSynthesis.getVoices();
-        if (availableVoices.length > 0) {
+        const freshVoices = window.speechSynthesis.getVoices();
+        if (freshVoices.length > 0) {
+            availableVoices = freshVoices;
             statusEl.className = 'status-badge status-ok';
             statusEl.textContent = 'Engine Ready';
             populateVoiceSelect();
-        } else {
-            // Keep waiting or show warning
-            statusEl.className = 'status-badge status-err';
-            statusEl.textContent = 'Voices Empty (Try Chrome/Safari)';
+            return true;
         }
+        // Keep waiting or show warning
+        statusEl.className = 'status-badge status-err';
+        statusEl.textContent = 'Voices Empty (Try Chrome/Safari)';
+        return false;
     };
 
     // Modern browsers load async
@@ -651,13 +653,31 @@ function initAudio() {
     
     // Some browsers need a kick
     setTimeout(loadVoices, 500);
+
+    // Keep retrying briefly for browsers that populate voices late.
+    let retries = 0;
+    const retryTimer = setInterval(() => {
+        retries += 1;
+        const loaded = loadVoices();
+        if (loaded || retries >= 10) {
+            clearInterval(retryTimer);
+        }
+    }, 500);
+}
+
+function normalizeLangCode(lang) {
+    return lang ? String(lang).replace('_', '-').toLowerCase() : '';
 }
 
 function getBestVoiceForLang(lang) {
     if (!lang) return null;
-    const baseLang = lang.split('-')[0];
-    const exactMatches = availableVoices.filter(v => v.lang === lang);
-    const baseMatches = availableVoices.filter(v => v.lang && v.lang.startsWith(baseLang));
+    const normalized = normalizeLangCode(lang);
+    const baseLang = normalized.split('-')[0];
+    const exactMatches = availableVoices.filter(v => normalizeLangCode(v.lang) === normalized);
+    const baseMatches = availableVoices.filter(v => {
+        const voiceLang = normalizeLangCode(v.lang);
+        return voiceLang && voiceLang.startsWith(baseLang);
+    });
     const candidates = exactMatches.length ? exactMatches : baseMatches;
     if (!candidates.length) return null;
     return candidates.find(v => v.default) || candidates.find(v => v.localService) || candidates[0];
@@ -695,6 +715,14 @@ function speak(text, lang) {
     if (!('speechSynthesis' in window)) {
         alert("Your browser does not support Audio. Please try Chrome or Safari.");
         return;
+    }
+
+    if (availableVoices.length === 0) {
+        const freshVoices = window.speechSynthesis.getVoices();
+        if (freshVoices.length > 0) {
+            availableVoices = freshVoices;
+            populateVoiceSelect();
+        }
     }
     
     window.speechSynthesis.cancel(); // Stop current
