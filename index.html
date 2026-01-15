@@ -118,6 +118,12 @@
         gap: 8px;
         box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
     }
+    .btn-primary:disabled {
+        background: #d1d5db;
+        color: #6b7280;
+        box-shadow: none;
+        cursor: not-allowed;
+    }
     
     .btn-secondary {
         background: transparent;
@@ -304,6 +310,23 @@
     .practice-end {
         color: var(--error);
         border-color: var(--error);
+    }
+    .practice-category-title {
+        font-size: 0.95rem;
+        color: var(--text-sub);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 10px 0 0;
+    }
+    .practice-category {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .practice-empty {
+        font-size: 0.9rem;
+        color: var(--text-sub);
+        margin: 0 0 8px;
     }
 
     /* Toggle switch styling (borrowed from improved version) */
@@ -699,6 +722,7 @@ function loadData() {
     }
     // Ensure all cards have expected properties (migration for newer versions)
     app.decks.forEach(deck => {
+        if (deck.uncompleted === undefined) deck.uncompleted = false;
         deck.cards.forEach(card => {
             if (card.audioUrl === undefined) card.audioUrl = '';
             if (card.correctCount === undefined) card.correctCount = 0;
@@ -785,6 +809,11 @@ function startPracticeFromSelection() {
 function endPracticeSession() {
     if (!currentSession.isActive) return;
     if (!confirm("End this practice session early?")) return;
+    const remainingDeckIds = new Set(currentSession.queue.map(entry => entry.deck.id));
+    currentSession.decks.forEach(deck => {
+        deck.uncompleted = remainingDeckIds.has(deck.id);
+    });
+    saveData();
     currentSession.isActive = false;
     currentSession.queue = [];
     currentSession.currentCard = null;
@@ -815,12 +844,18 @@ function renderPracticeHome() {
         return;
     }
 
-    if (!currentSession.selectedDeckIds.length) {
-        currentSession.selectedDeckIds = app.decks.map(deck => deck.id);
+    const allDeckIds = app.decks.map(deck => deck.id);
+    const validSelectedIds = currentSession.selectedDeckIds.filter(id => allDeckIds.includes(id));
+    if (!validSelectedIds.length) {
+        currentSession.selectedDeckIds = allDeckIds.slice();
+    } else {
+        currentSession.selectedDeckIds = validSelectedIds;
     }
 
     const selectedSet = new Set(currentSession.selectedDeckIds);
-    const deckItems = app.decks.map(deck => `
+    const uncompletedDecks = app.decks.filter(deck => deck.uncompleted);
+    const completedDecks = app.decks.filter(deck => !deck.uncompleted);
+    const renderDeckItems = (decks) => decks.map(deck => `
         <label class="practice-deck-item">
             <input type="checkbox" class="practice-deck-checkbox" value="${deck.id}" ${selectedSet.has(deck.id) ? 'checked' : ''}>
             <div>
@@ -829,6 +864,8 @@ function renderPracticeHome() {
             </div>
         </label>
     `).join('');
+    const uncompletedItems = renderDeckItems(uncompletedDecks);
+    const completedItems = renderDeckItems(completedDecks);
 
     container.innerHTML = `
         <div class="card practice-selection">
@@ -840,7 +877,14 @@ function renderPracticeHome() {
                 </div>
             </label>
             <div class="practice-selection">
-                ${deckItems}
+                <div>
+                    <div class="practice-category-title">Uncompleted</div>
+                    ${uncompletedItems || `<div class="practice-empty">No uncompleted decks right now.</div>`}
+                </div>
+                <div class="practice-category">
+                    <div class="practice-category-title">All Decks</div>
+                    ${completedItems}
+                </div>
             </div>
             <button class="btn-primary" id="practice-start-btn" onclick="startPracticeFromSelection()">Start Practice</button>
         </div>
@@ -879,6 +923,10 @@ function nextCard() {
                 <p>Great job.</p>
                 <button class="btn-primary" onclick="navTo('practice'); renderPracticeHome();">Practice More</button>
             </div>`;
+        currentSession.decks.forEach(deck => {
+            deck.uncompleted = false;
+        });
+        saveData();
         currentSession.isActive = false;
         currentSession.currentCard = null;
         currentSession.currentEntry = null;
@@ -1219,7 +1267,8 @@ function saveDeck() {
         id: generateDeckId(),
         name,
         lang,
-        cards: []
+        cards: [],
+        uncompleted: false
     });
     saveData();
     closeDeckModal();
@@ -1467,7 +1516,8 @@ function normalizeImportedDecks(raw) {
             id: existingId ? deck.id : generateDeckId(),
             name: deck.name ? String(deck.name) : 'Imported Deck',
             lang: deck.lang ? String(deck.lang) : 'en-US',
-            cards: normalizedCards
+            cards: normalizedCards,
+            uncompleted: Boolean(deck.uncompleted)
         };
     });
 }
@@ -1589,6 +1639,7 @@ loadData();
 if(app.decks.length === 0) {
     app.decks.push({
         id: "demo1", name: "English Demo", lang: "en-US",
+        uncompleted: false,
         cards: [
             // Provide a variety of example words to allow immediate practice without configuration.
             {word: "necessary", sentence: "It is necessary to sleep well.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
