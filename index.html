@@ -277,6 +277,35 @@
     .diff-wrong { color: var(--error); text-decoration: line-through; }
     .diff-correct { color: var(--success); font-weight: bold; }
 
+    .practice-selection {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .practice-deck-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #f9fafb;
+    }
+    .practice-deck-item input {
+        margin: 0;
+        width: auto;
+    }
+    .practice-header {
+        display: flex;
+        justify-content: flex-end;
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    .practice-end {
+        color: var(--error);
+        border-color: var(--error);
+    }
+
     /* Toggle switch styling (borrowed from improved version) */
     .toggle {
         position: relative;
@@ -413,7 +442,7 @@
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
             <button class="btn-secondary" onclick="navTo('words')" style="padding: 10px 16px;">← Back</button>
             <h2 style="margin:0;" id="deck-progress-title">Deck Progress</h2>
-            <div style="width:84px;"></div>
+            <button class="btn-secondary" id="deck-reset-stats" onclick="resetDeckStats()" style="padding: 10px 16px;">Reset Stats</button>
         </div>
         <div class="card" id="deck-progress-overview" style="margin-bottom:1rem;"></div>
         <div class="card" id="deck-progress-details"></div>
@@ -534,9 +563,13 @@ let app = {
 
 let currentSession = {
     deck: null,
+    decks: [],
     queue: [],
     currentCard: null,
+    currentEntry: null,
     isAnswered: false,
+    isActive: false,
+    selectedDeckIds: [],
     startTime: null
 };
 
@@ -678,6 +711,7 @@ function loadData() {
     });
     renderDeckList();
     initSettingsListeners();
+    renderPracticeHome();
 }
 
 function saveData() {
@@ -697,30 +731,144 @@ function navTo(screen) {
         renderDeckList();
     } else if (screen === 'progress') {
         renderProgress();
+    } else if (screen === 'practice') {
+        if (!currentSession.isActive) {
+            renderPracticeHome();
+        }
     }
 }
 
 // --- PRACTICE ---
-function startPractice(deckId) {
-    const deck = app.decks.find(d => d.id === deckId);
-    if (!deck) return;
+function startPractice(deckIds) {
+    const selectedDecks = app.decks.filter(d => deckIds.includes(d.id));
+    if (!selectedDecks.length) return;
     
     // Sort by due date
     const now = Date.now();
-    currentSession.queue = deck.cards.filter(c => c.due <= now).sort((a,b) => a.due - b.due);
+    currentSession.queue = selectedDecks.flatMap(deck => (
+        deck.cards.filter(card => card.due <= now)
+            .map(card => ({ deck, card }))
+    )).sort((a,b) => a.card.due - b.card.due);
     
     // If no due cards, practice all
     if (currentSession.queue.length === 0) {
-        if(confirm("No cards due. Practice all cards in this deck?")) {
-            currentSession.queue = [...deck.cards]; // Copy all
+        if(confirm("No cards due. Practice all cards in the selected decks?")) {
+            currentSession.queue = selectedDecks.flatMap(deck => (
+                deck.cards.map(card => ({ deck, card }))
+            ));
         } else {
             return;
         }
     }
-    
-    currentSession.deck = deck;
+
+    if (currentSession.queue.length === 0) {
+        alert("No cards available in the selected decks.");
+        return;
+    }
+
+    currentSession.deck = null;
+    currentSession.decks = selectedDecks;
+    currentSession.isActive = true;
     navTo('practice');
     nextCard();
+}
+
+function startPracticeFromSelection() {
+    const selected = currentSession.selectedDeckIds || [];
+    if (!selected.length) {
+        alert("Select at least one deck to practice.");
+        return;
+    }
+    startPractice(selected);
+}
+
+function endPracticeSession() {
+    if (!currentSession.isActive) return;
+    if (!confirm("End this practice session early?")) return;
+    currentSession.isActive = false;
+    currentSession.queue = [];
+    currentSession.currentCard = null;
+    currentSession.currentEntry = null;
+    currentSession.deck = null;
+    currentSession.decks = [];
+    currentSession.isAnswered = false;
+    currentSession.startTime = null;
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+    renderPracticeHome();
+}
+
+function renderPracticeHome() {
+    const container = document.getElementById('practice-container');
+    if (!container) return;
+
+    if (app.decks.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; color: var(--text-sub);">
+                <h2>Ready to Practice?</h2>
+                <p>Select a deck from the Words tab to begin.</p>
+                <br>
+                <button class="btn-primary" onclick="navTo('words')">Go to Decks</button>
+            </div>
+        `;
+        return;
+    }
+
+    if (!currentSession.selectedDeckIds.length) {
+        currentSession.selectedDeckIds = app.decks.map(deck => deck.id);
+    }
+
+    const selectedSet = new Set(currentSession.selectedDeckIds);
+    const deckItems = app.decks.map(deck => `
+        <label class="practice-deck-item">
+            <input type="checkbox" class="practice-deck-checkbox" value="${deck.id}" ${selectedSet.has(deck.id) ? 'checked' : ''}>
+            <div>
+                <strong>${deck.name}</strong>
+                <div style="font-size:0.85rem; color:var(--text-sub);">${deck.cards.length} cards</div>
+            </div>
+        </label>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="card practice-selection">
+            <h2 style="margin:0;">Choose decks to practice</h2>
+            <label class="practice-deck-item">
+                <input type="checkbox" id="practice-select-all">
+                <div>
+                    <strong>Select all decks</strong>
+                </div>
+            </label>
+            <div class="practice-selection">
+                ${deckItems}
+            </div>
+            <button class="btn-primary" id="practice-start-btn" onclick="startPracticeFromSelection()">Start Practice</button>
+        </div>
+    `;
+
+    const selectAll = document.getElementById('practice-select-all');
+    const deckCheckboxes = Array.from(document.querySelectorAll('.practice-deck-checkbox'));
+    const startBtn = document.getElementById('practice-start-btn');
+
+    const updateSelectionState = () => {
+        const selectedIds = deckCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
+        currentSession.selectedDeckIds = selectedIds;
+        selectAll.checked = selectedIds.length === deckCheckboxes.length;
+        startBtn.disabled = selectedIds.length === 0;
+    };
+
+    selectAll.checked = currentSession.selectedDeckIds.length === deckCheckboxes.length;
+    startBtn.disabled = currentSession.selectedDeckIds.length === 0;
+
+    selectAll.addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        deckCheckboxes.forEach(cb => { cb.checked = isChecked; });
+        updateSelectionState();
+    });
+
+    deckCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectionState);
+    });
 }
 
 function nextCard() {
@@ -729,12 +877,18 @@ function nextCard() {
             <div style="text-align:center">
                 <h2>Session Complete!</h2>
                 <p>Great job.</p>
-                <button class="btn-primary" onclick="navTo('words')">Back to Decks</button>
+                <button class="btn-primary" onclick="navTo('practice'); renderPracticeHome();">Practice More</button>
             </div>`;
+        currentSession.isActive = false;
+        currentSession.currentCard = null;
+        currentSession.currentEntry = null;
+        currentSession.deck = null;
         return;
     }
 
-    currentSession.currentCard = currentSession.queue[0];
+    currentSession.currentEntry = currentSession.queue[0];
+    currentSession.currentCard = currentSession.currentEntry.card;
+    currentSession.deck = currentSession.currentEntry.deck;
     currentSession.isAnswered = false;
     // Reset timer
     currentSession.startTime = null;
@@ -751,6 +905,9 @@ function nextCard() {
     }
 
     const html = `
+        <div class="practice-header">
+            <button class="btn-secondary practice-end" onclick="endPracticeSession()">End Session</button>
+        </div>
         <div class="audio-trigger" onclick="playCurrent()">
             <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
         </div>
@@ -830,7 +987,7 @@ function playCurrent() {
         if (app.settings.timerStart === 'audio') {
             currentSession.startTime = Date.now();
         }
-        const lang = currentSession.deck.lang;
+        const lang = currentSession.deck ? currentSession.deck.lang : 'en-US';
         // If card has a sentence, speak word, sentence, word for context
         if (card.sentence && card.sentence.trim() !== '') {
             const phrase = `${card.word}. ${card.sentence}. ${card.word}`;
@@ -895,6 +1052,7 @@ function checkAnswer() {
 
 function rateCard(quality) {
     const card = currentSession.currentCard;
+    const entry = currentSession.currentEntry;
     
     // Simple SRS Logic
     if (quality < 3) {
@@ -917,7 +1075,7 @@ function rateCard(quality) {
     
     currentSession.queue.shift(); // Remove current
     if (quality < 3) {
-        currentSession.queue.push(card); // Re-queue if wrong
+        currentSession.queue.push(entry); // Re-queue if wrong
     }
     
     nextCard();
@@ -945,7 +1103,7 @@ function renderDeckList() {
             </div>
             <div style="display:flex; gap:8px;">
                 <button class="btn-secondary" onclick="openDeckActions('${deck.id}')">Edit</button>
-                <button class="btn-primary" style="padding: 10px 20px;" onclick="startPractice('${deck.id}')">Play</button>
+                <button class="btn-primary" style="padding: 10px 20px;" onclick="startPractice(['${deck.id}'])">Play</button>
             </div>
         `;
         list.appendChild(div);
@@ -1098,6 +1256,23 @@ function openDeckStats() {
     if (activeDeckIdForEdit) renderDeckProgress(activeDeckIdForEdit);
 }
 
+function resetDeckStats() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    if (!deck) return;
+    if (!confirm(`Reset stats for "${deck.name}"? This will mark all words as new.`)) return;
+    deck.cards.forEach(card => {
+        card.due = 0;
+        card.interval = 0;
+        card.ease = 2.5;
+        card.correctCount = 0;
+        card.incorrectCount = 0;
+        card.avgTime = 0;
+    });
+    saveData();
+    renderDeckProgress(deck.id);
+    renderProgress();
+}
+
 function exportDeck() {
     const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
     if (!deck) return;
@@ -1119,6 +1294,7 @@ function deleteDeck() {
     if (!deck) return;
     if (!confirm(`Delete "${deck.name}"? This cannot be undone.`)) return;
     app.decks = app.decks.filter(d => d.id !== activeDeckIdForEdit);
+    currentSession.selectedDeckIds = currentSession.selectedDeckIds.filter(id => id !== activeDeckIdForEdit);
     saveData();
     closeDeckActionsModal();
     renderDeckList();
@@ -1195,6 +1371,7 @@ function renderDeckProgress(deckId) {
     const detailsEl = document.getElementById('deck-progress-details');
     const titleEl = document.getElementById('deck-progress-title');
     if (!deck || !overviewEl || !detailsEl || !titleEl) return;
+    activeDeckIdForEdit = deckId;
     titleEl.textContent = `${deck.name} Progress`;
     overviewEl.innerHTML = '';
     detailsEl.innerHTML = '';
