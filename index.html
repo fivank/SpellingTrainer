@@ -2503,14 +2503,25 @@ document.getElementById('import-file').addEventListener('change', function(e) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
+        let decks = [];
         try {
             const data = JSON.parse(e.target.result);
             if (data.decks) {
                 app = data;
                 saveData();
                 location.reload();
+                return;
+            }
+            decks = normalizeImportedDecks(data);
+            if (!decks.length) {
+                alert("Invalid file");
+                return;
             }
         } catch(err) { alert("Invalid file"); }
+        if (!decks.length) return;
+        app.decks.push(...decks);
+        saveData();
+        renderDeckList();
     };
     reader.readAsText(file);
 });
