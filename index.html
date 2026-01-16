@@ -17,6 +17,16 @@
         --error: #ef4444;
         --nav-height: 72px;
         --radius: 16px;
+        --radius-sm: 12px;
+        --space-1: 8px;
+        --space-2: 16px;
+        --space-3: 24px;
+        --space-4: 32px;
+        --space-5: 40px;
+        --font-h1: 1.75rem;
+        --font-h2: 1.35rem;
+        --font-body: 1rem;
+        --font-small: 0.85rem;
         /* additional neutral colour used for toggles */
         --neutral-200: #e5e7eb;
     }
@@ -28,19 +38,31 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: var(--bg-body);
         color: var(--text-main);
+        font-size: var(--font-body);
+        line-height: 1.6;
         height: 100vh;
         display: flex;
         flex-direction: column;
         overflow: hidden;
     }
 
+    h1, h2, h3 {
+        margin: 0 0 var(--space-2);
+        line-height: 1.2;
+    }
+    h1 { font-size: var(--font-h1); }
+    h2 { font-size: var(--font-h2); }
+    h3 { font-size: 1.05rem; }
+    p { margin: 0 0 var(--space-2); }
+    small, .text-small { font-size: var(--font-small); }
+
     /* --- LAYOUT --- */
     header {
-        padding: 1rem;
+        padding: var(--space-2);
         background: var(--bg-card);
         text-align: center;
         font-weight: 800;
-        font-size: 1.2rem;
+        font-size: var(--font-h2);
         color: var(--primary);
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         z-index: 10;
@@ -50,7 +72,7 @@
     main {
         flex: 1;
         overflow-y: auto;
-        padding: 1rem;
+        padding: var(--space-3);
         padding-bottom: calc(var(--nav-height) + 120px + env(safe-area-inset-bottom));
         max-width: 600px;
         width: 100%;
@@ -69,7 +91,7 @@
         width: 100%;
         height: var(--nav-height);
         background: var(--bg-card);
-        border-top: 1px solid #e5e7eb;
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
         display: flex;
         justify-content: space-around;
         align-items: center;
@@ -84,11 +106,12 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        font-size: 0.75rem;
+        font-size: var(--font-small);
         width: 100%;
         height: 100%;
         justify-content: center;
         cursor: pointer;
+        gap: 2px;
     }
 
     nav button svg { width: 24px; height: 24px; margin-bottom: 4px; fill: currentColor; overflow: visible; }
@@ -98,26 +121,43 @@
     .card {
         background: var(--bg-card);
         border-radius: var(--radius);
-        padding: 1.5rem;
+        padding: var(--space-3);
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-        margin-bottom: 1rem;
+        margin-bottom: var(--space-2);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
 
-    button { cursor: pointer; border: none; font-family: inherit; font-weight: 600; transition: transform 0.1s; outline: none; }
-    button:active { transform: scale(0.96); }
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px -16px rgba(15, 23, 42, 0.25);
+    }
+
+    button {
+        cursor: pointer;
+        border: none;
+        font-family: inherit;
+        font-weight: 600;
+        transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+        outline: none;
+    }
+    button:active { transform: scale(0.98); }
 
     .btn-primary {
-        background: var(--primary);
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         color: white;
-        padding: 14px;
-        border-radius: 12px;
+        padding: var(--space-2);
+        border-radius: var(--radius-sm);
         width: 100%;
         font-size: 1rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+        gap: var(--space-1);
+        box-shadow: 0 12px 20px -12px rgba(99, 102, 241, 0.6);
+    }
+    .btn-primary:hover {
+        box-shadow: 0 16px 24px -14px rgba(99, 102, 241, 0.7);
+        transform: translateY(-1px);
     }
     .btn-primary:disabled {
         background: #d1d5db;
@@ -127,24 +167,39 @@
     }
     
     .btn-secondary {
-        background: transparent;
-        color: var(--primary);
-        border: 2px solid var(--primary);
-        padding: 10px 16px;
-        border-radius: 10px;
+        background: #ffffff;
+        color: var(--primary-dark);
+        border: 1px solid rgba(99, 102, 241, 0.35);
+        padding: calc(var(--space-2) - 4px) var(--space-2);
+        border-radius: var(--radius-sm);
         font-weight: 600;
+        box-shadow: 0 8px 18px -14px rgba(15, 23, 42, 0.25);
+    }
+    .btn-secondary:hover {
+        border-color: var(--primary);
+        box-shadow: 0 12px 18px -14px rgba(15, 23, 42, 0.3);
     }
     
-    .btn-icon { background: #f3f4f6; padding: 8px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+    .btn-icon {
+        background: #f8fafc;
+        padding: 8px;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+    }
 
     input, select {
         width: 100%;
-        padding: 14px;
+        padding: var(--space-2);
         border: 2px solid #e5e7eb;
-        border-radius: 12px;
+        border-radius: var(--radius-sm);
         font-size: 1rem;
         background: #f9fafb;
-        margin-bottom: 1rem;
+        margin-bottom: var(--space-2);
         -webkit-appearance: none; /* Fix for iOS input styles */
     }
     input:focus { border-color: var(--primary); outline: none; background: #fff; }
@@ -158,6 +213,13 @@
         min-height: 80%;
     }
 
+    .audio-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-1);
+        margin-bottom: var(--space-3);
+    }
     .audio-trigger {
         width: 120px;
         height: 120px;
@@ -168,14 +230,21 @@
         align-items: center;
         justify-content: center;
         box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
-        margin-bottom: 2rem;
-        transition: transform 0.2s;
+        margin-bottom: 0;
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
         cursor: pointer;
         position: relative;
     }
     .audio-trigger:active { transform: scale(0.95); }
     .audio-trigger.playing { animation: pulse 1.5s infinite; }
     .audio-trigger svg { width: 50px; height: 50px; fill: white; }
+    .audio-label {
+        margin-top: var(--space-1);
+        font-size: var(--font-small);
+        font-weight: 700;
+        color: var(--text-sub);
+        letter-spacing: 0.02em;
+    }
 
     .word-input {
         font-size: 2rem;
@@ -187,6 +256,7 @@
         color: var(--primary);
         letter-spacing: 1px;
         font-weight: bold;
+        margin-bottom: var(--space-2);
     }
     .word-input:focus { border-color: var(--primary); background: transparent; }
     
@@ -195,8 +265,8 @@
     .diff-correct { color: var(--success); }
     .diff-wrong { color: var(--error); text-decoration: line-through; margin-right: 8px; opacity: 0.7; }
 
-    .srs-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-top: 2rem; }
-    .srs-btn { padding: 16px; border-radius: 12px; font-size: 0.9rem; font-weight: 700; color: #333; }
+    .srs-controls { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-1); width: 100%; margin-top: var(--space-4); }
+    .srs-btn { padding: var(--space-2); border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 700; color: #333; }
     .srs-again { background: #fee2e2; color: #991b1b; }
     .srs-hard { background: #ffedd5; color: #9a3412; }
     .srs-good { background: #dcfce7; color: #166534; }
@@ -207,9 +277,9 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding-bottom: 1rem;
+        padding-bottom: var(--space-2);
         border-bottom: 1px solid #f3f4f6;
-        margin-bottom: 1rem;
+        margin-bottom: var(--space-2);
     }
     .deck-item:last-child { border: none; margin-bottom: 0; padding-bottom: 0; }
     .deck-info h3 { margin: 0 0 4px 0; font-size: 1.1rem; }
@@ -220,14 +290,14 @@
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0,0,0,0.5); z-index: 100;
         display: flex; align-items: center; justify-content: center;
-        opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        opacity: 0; pointer-events: none; transition: opacity 0.18s ease;
         backdrop-filter: blur(2px);
     }
     .modal-overlay.open { opacity: 1; pointer-events: auto; }
     .modal {
         background: white; width: 90%; max-width: 400px;
-        padding: 1.5rem; border-radius: var(--radius);
-        transform: translateY(20px); transition: transform 0.2s;
+        padding: var(--space-3); border-radius: var(--radius);
+        transform: translateY(20px); transition: transform 0.18s ease;
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     }
     .modal-overlay.open .modal { transform: translateY(0); }
@@ -238,8 +308,8 @@
         margin-bottom: 1rem;
     }
     .modal-toggle button {
-        padding: 10px;
-        border-radius: 10px;
+        padding: var(--space-2);
+        border-radius: var(--radius-sm);
         border: 2px solid var(--primary);
         background: transparent;
         color: var(--primary);
@@ -255,7 +325,7 @@
 
     .deck-actions {
         display: grid;
-        gap: 10px;
+        gap: var(--space-1);
     }
 
     .deck-actions .btn-secondary,
@@ -287,15 +357,15 @@
     .practice-selection {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: var(--space-2);
     }
     .practice-deck-item {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 10px 12px;
+        gap: var(--space-2);
+        padding: var(--space-2);
         border: 1px solid #e5e7eb;
-        border-radius: 10px;
+        border-radius: var(--radius-sm);
         background: #f9fafb;
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
     }
@@ -322,18 +392,18 @@
     .practice-deck-meta {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: var(--space-1);
         font-size: 0.78rem;
         color: var(--text-sub);
     }
     .practice-filters {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin: 12px 0 4px;
+        gap: var(--space-1);
+        margin: var(--space-2) 0 var(--space-1);
     }
     .practice-filter-btn {
-        padding: 6px 12px;
+        padding: 8px 16px;
         border-radius: 999px;
         border: 1px solid #e5e7eb;
         background: #f3f4f6;
@@ -361,12 +431,12 @@
         color: var(--text-sub);
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        margin: 10px 0 0;
+        margin: var(--space-1) 0 0;
     }
     .practice-category {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: var(--space-1);
     }
     .practice-empty {
         font-size: 0.9rem;
@@ -377,8 +447,8 @@
         width: 100%;
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        margin: 0 auto 1.5rem;
+        gap: var(--space-1);
+        margin: 0 auto var(--space-3);
     }
     .practice-progress-header {
         display: flex;
@@ -402,7 +472,7 @@
         transition: width 0.3s ease;
     }
     .practice-hint {
-        margin-top: 10px;
+        margin-top: var(--space-1);
         font-size: 0.95rem;
         color: var(--text-sub);
         text-align: center;
@@ -416,7 +486,7 @@
         font-size: 1.1rem;
     }
     .feedback-sub {
-        margin-top: 6px;
+        margin-top: var(--space-1);
         font-size: 0.95rem;
         color: var(--text-sub);
     }
@@ -481,7 +551,7 @@
                 <h2>Today's Practice</h2>
                 <p>Press Start to begin.</p>
                 <br>
-                <button class="btn-primary" onclick="startTodayPractice()">Start today's practice</button>
+                <button class="btn-primary" onclick="startTodayPractice()">Start today’s practice</button>
             </div>
         </div>
     </div>
@@ -534,13 +604,13 @@
             <h3>Audio Diagnostics</h3>
             <p style="font-size:0.9rem; color: var(--text-sub);">If audio isn't working, check here.</p>
             <div id="audio-status" class="status-badge status-err">Checking...</div>
-            <div style="margin-top:10px;">
+            <div style="margin-top:var(--space-1);">
                 <label>Voice mode</label>
                 <select id="setting-voice-mode">
                     <option value="auto">Auto (match deck language)</option>
                     <option value="fixed">Fixed (use selected voice)</option>
                 </select>
-                <p style="font-size:0.8rem; color: var(--text-sub); margin: 6px 0 12px;">
+                <p style="font-size:0.8rem; color: var(--text-sub); margin: var(--space-1) 0 var(--space-2);">
                     Auto mode chooses a voice that matches the deck language (e.g., Spanish decks use Spanish voices).
                 </p>
             </div>
@@ -557,8 +627,8 @@
         
         <div class="card">
             <h3>Data Management</h3>
-            <button class="btn-secondary" onclick="exportData()" style="width:100%; margin-bottom:10px;">Export Backup</button>
-            <button class="btn-secondary" onclick="document.getElementById('import-file').click()" style="width:100%; margin-bottom:10px;">Import Backup</button>
+            <button class="btn-secondary" onclick="exportData()" style="width:100%; margin-bottom:var(--space-1);">Export Backup</button>
+            <button class="btn-secondary" onclick="document.getElementById('import-file').click()" style="width:100%; margin-bottom:var(--space-1);">Import Backup</button>
             <input type="file" id="import-file" class="hidden" accept=".json">
             <button class="btn-secondary" style="color: var(--error); border-color: var(--error); width:100%;" onclick="resetApp()">Reset All Data</button>
         </div>
@@ -574,9 +644,9 @@
     <!-- DECK PROGRESS SCREEN -->
     <div id="view-deck-progress" class="view">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
-            <button class="btn-secondary" onclick="navTo('words')" style="padding: 10px 16px;">← Back</button>
+            <button class="btn-secondary" onclick="navTo('words')">← Back</button>
             <h2 style="margin:0;" id="deck-progress-title">Deck Progress</h2>
-            <button class="btn-secondary" id="deck-reset-stats" onclick="resetDeckStats()" style="padding: 10px 16px;">Reset Stats</button>
+            <button class="btn-secondary" id="deck-reset-stats" onclick="resetDeckStats()">Reset Stats</button>
         </div>
         <div class="card" id="deck-progress-overview" style="margin-bottom:1rem;"></div>
         <div class="card" id="deck-progress-details"></div>
@@ -590,7 +660,7 @@
     </button>
     <button onclick="navTo('words')" id="nav-words">
         <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
-        Words
+        Decks
     </button>
     <button onclick="navTo('progress')" id="nav-progress">
         <svg viewBox="0 0 24 24"><path d="M3 17h4V9H3v8zm6 0h4V5H9v12zm6 0h4V13h-4v4z"/></svg>
@@ -623,7 +693,7 @@
                 <option value="de-DE">German</option>
                 <option value="it-IT">Italian</option>
             </select>
-            <div style="display:flex; gap:10px; margin-top:1rem;">
+            <div style="display:flex; gap:var(--space-1); margin-top:var(--space-2);">
                 <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
                 <button class="btn-primary" onclick="saveDeck()" style="flex:1">Create</button>
             </div>
@@ -632,17 +702,17 @@
             <p style="font-size:0.95rem; color:var(--text-sub); margin-top:0;">
                 Import a compatible deck JSON file to add it to your collection.
             </p>
-            <button class="btn-secondary" onclick="triggerDeckImport()" style="width:100%; margin-bottom:10px;">Choose Deck File</button>
-            <button class="btn-secondary" onclick="focusDeckPaste()" style="width:100%; margin-bottom:10px;">Paste Deck as JSON</button>
+            <button class="btn-secondary" onclick="triggerDeckImport()" style="width:100%; margin-bottom:var(--space-1);">Choose Deck File</button>
+            <button class="btn-secondary" onclick="focusDeckPaste()" style="width:100%; margin-bottom:var(--space-1);">Paste Deck as JSON</button>
             <input type="file" id="import-deck-file" class="hidden" accept=".json,application/json">
-            <div style="margin-bottom:10px;">
+            <div style="margin-bottom:var(--space-1);">
                 <label for="import-deck-json" style="display:block; font-size:0.85rem; color:var(--text-sub); margin-bottom:6px;">
                     Paste deck as JSON
                 </label>
-                <textarea id="import-deck-json" rows="6" placeholder='{"name":"My Deck","lang":"en-US","cards":[{"word":"example","sentence":""}]}' style="width:100%; padding:12px; border:2px solid #e5e7eb; border-radius:12px; font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
+                <textarea id="import-deck-json" rows="6" placeholder='{"name":"My Deck","lang":"en-US","cards":[{"word":"example","sentence":""}]}' style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
             </div>
-            <button class="btn-secondary" onclick="importDeckFromPaste()" style="width:100%; margin-bottom:10px;">Import Pasted Deck</button>
-            <div style="display:flex; gap:10px;">
+            <button class="btn-secondary" onclick="importDeckFromPaste()" style="width:100%; margin-bottom:var(--space-1);">Import Pasted Deck</button>
+            <div style="display:flex; gap:var(--space-1);">
                 <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
             </div>
         </div>
@@ -663,7 +733,7 @@
             <input type="text" id="new-card-audio" placeholder="Audio URL (optional)" style="margin-bottom:8px;">
             <button class="btn-primary" onclick="addCardToDeck()">Add Card</button>
         </div>
-        <div style="flex:1; overflow-y:auto; border-top:1px solid #eee; padding-top:10px;" id="cards-list-content">
+        <div style="flex:1; overflow-y:auto; border-top:1px solid #eee; padding-top:var(--space-1);" id="cards-list-content">
             <!-- Cards list -->
         </div>
     </div>
@@ -704,7 +774,7 @@
             <option value="de-DE">German</option>
             <option value="it-IT">Italian</option>
         </select>
-        <div style="display:flex; gap:10px;">
+        <div style="display:flex; gap:var(--space-1);">
             <button class="btn-secondary" onclick="closeDeckMetaModal()" style="flex:1">Cancel</button>
             <button class="btn-primary" onclick="saveDeckMeta()" style="flex:1">Save</button>
         </div>
@@ -1104,7 +1174,7 @@ function renderPracticeHome() {
                 <p style="color: var(--text-sub); margin-bottom:1.5rem;">
                     Choose a starting point to set up your first deck.
                 </p>
-                <div style="display:grid; gap:10px;">
+                <div style="display:grid; gap:var(--space-1);">
                     <button class="btn-primary" onclick="addSampleDeck()">Try sample</button>
                     <button class="btn-secondary" onclick="openPasteList()">Paste list</button>
                     <button class="btn-secondary" onclick="triggerBackupRestore()">Restore backup</button>
@@ -1128,7 +1198,7 @@ function renderPracticeHome() {
                 <div><strong>New:</strong> ${newCount}</div>
                 <div><strong>Trouble:</strong> ${troubleCount}</div>
             </div>
-            <div style="margin-top:1.5rem; display:grid; gap:10px;">
+            <div style="margin-top:var(--space-3); display:grid; gap:var(--space-1);">
                 <button class="btn-secondary" onclick="navTo('words')">Go to Decks</button>
             </div>
         </div>
@@ -1174,7 +1244,7 @@ function nextCard() {
                     <div><strong>Accuracy:</strong> ${accuracy}%</div>
                     <div><strong>Time:</strong> ${formatDuration(durationMs)}</div>
                 </div>
-                <div style="display:grid; gap:10px;">
+                <div style="display:grid; gap:var(--space-1);">
                     <button class="btn-primary" onclick="navTo('practice'); renderPracticeHome();">Practice More</button>
                     ${troubleButton}
                 </div>
@@ -1232,17 +1302,20 @@ function nextCard() {
                 <div class="progress-fill" style="width:${progressPercent}%"></div>
             </div>
         </div>
-        <div class="audio-trigger" onclick="playCurrent()">
-            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        <div class="audio-stack">
+            <div class="audio-trigger" onclick="playCurrent()" role="button" aria-label="Play audio">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            </div>
+            <div class="audio-label">Play</div>
         </div>
-        ${hasSentence ? `<p style="font-size:1.2rem; color:var(--text-sub); margin-bottom:2rem; text-align:center; padding:0 20px; line-height:1.5;">${sentenceDisplay}</p>` : ''}
+        ${hasSentence ? `<p style="font-size:1.2rem; color:var(--text-sub); margin-bottom:var(--space-4); text-align:center; padding:0 var(--space-3); line-height:1.5;">${sentenceDisplay}</p>` : ''}
         
         <div class="feedback-area" id="feedback"></div>
         
         <input type="text" id="p-input" class="word-input" placeholder="Type word here">
         ${hintMarkup}
         
-        <button id="btn-check" class="btn-primary" style="margin-top:20px" onclick="checkAnswer()">Check</button>
+        <button id="btn-check" class="btn-primary" style="margin-top:var(--space-2);" onclick="checkAnswer()">Check</button>
         
         <div id="srs-area" class="srs-controls hidden">
             <button class="srs-btn srs-again" onclick="rateCard(1)">Again</button>
@@ -1482,7 +1555,7 @@ function renderDeckList() {
     list.innerHTML = '';
     
     if (app.decks.length === 0) {
-        list.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--text-sub);">
+        list.innerHTML = `<div style="text-align:center; padding:var(--space-4); color:var(--text-sub);">
             No decks yet.<br>Click "+ New" to create one.
         </div>`;
         return;
@@ -1499,7 +1572,7 @@ function renderDeckList() {
             </div>
             <div style="display:flex; gap:8px;">
                 <button class="btn-secondary" onclick="openDeckActions('${deck.id}')">Edit</button>
-                <button class="btn-primary" style="padding: 10px 20px;" onclick="startPractice(['${deck.id}'])">Play</button>
+                <button class="btn-primary" onclick="startPractice(['${deck.id}'])">Practice</button>
             </div>
         `;
         list.appendChild(div);
@@ -1514,7 +1587,7 @@ function renderProgress() {
     overviewEl.innerHTML = '';
     detailsEl.innerHTML = '';
     if (app.decks.length === 0) {
-        overviewEl.innerHTML = '<div style="padding:1rem; color:var(--text-sub); text-align:center;">No data yet.</div>';
+        overviewEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">No data yet.</div>';
         return;
     }
     let total = 0;
@@ -1554,12 +1627,12 @@ function renderProgress() {
     const avgTime = countTime > 0 ? (sumTime / countTime).toFixed(1) : 'N/A';
     // Overview table
     let overviewHTML = '<table style="width:100%; border-collapse:collapse; font-size:0.95rem;">';
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Total words</th><td style="padding:6px 4px; text-align:right;">${total}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Due</th><td style="padding:6px 4px; text-align:right;">${dueTotal}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">New</th><td style="padding:6px 4px; text-align:right;">${newWords}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Learning</th><td style="padding:6px 4px; text-align:right;">${learning}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Mastered</th><td style="padding:6px 4px; text-align:right;">${mastered}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Average response time (s)</th><td style="padding:6px 4px; text-align:right;">${avgTime}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Total words</th><td style="padding:8px 4px; text-align:right;">${total}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Due</th><td style="padding:8px 4px; text-align:right;">${dueTotal}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">New</th><td style="padding:8px 4px; text-align:right;">${newWords}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Learning</th><td style="padding:8px 4px; text-align:right;">${learning}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Mastered</th><td style="padding:8px 4px; text-align:right;">${mastered}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Average response time (s)</th><td style="padding:8px 4px; text-align:right;">${avgTime}</td></tr>`;
     overviewHTML += '</table>';
     overviewEl.innerHTML = overviewHTML;
     // Trouble words
@@ -1578,7 +1651,7 @@ function renderProgress() {
         detailsHTML += '</table>';
         detailsEl.innerHTML = detailsHTML;
     } else {
-        detailsEl.innerHTML = '<div style="padding:1rem; color:var(--text-sub);">No trouble words yet. Keep practicing!</div>';
+        detailsEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub);">No trouble words yet. Keep practicing!</div>';
     }
 }
 
@@ -1801,13 +1874,13 @@ function renderCardList() {
     container.innerHTML = '';
     
     if(deck.cards.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">No cards yet</div>';
+        container.innerHTML = '<div style="text-align:center; color:#999; padding:var(--space-3);">No cards yet</div>';
         return;
     }
 
     deck.cards.slice().reverse().forEach((card, index) => {
         const div = document.createElement('div');
-        div.style = "display:flex; justify-content:space-between; align-items:center; padding: 12px 0; border-bottom:1px solid #f3f4f6;";
+        div.style = "display:flex; justify-content:space-between; align-items:center; padding: var(--space-2) 0; border-bottom:1px solid #f3f4f6;";
         const realIndex = deck.cards.length - 1 - index;
         div.innerHTML = `
             <div>
@@ -1891,7 +1964,7 @@ function renderDeckProgress(deckId) {
     overviewEl.innerHTML = '';
     detailsEl.innerHTML = '';
     if (deck.cards.length === 0) {
-        overviewEl.innerHTML = '<div style="padding:1rem; color:var(--text-sub); text-align:center;">No cards yet.</div>';
+        overviewEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">No cards yet.</div>';
         navTo('deck-progress');
         return;
     }
@@ -1929,12 +2002,12 @@ function renderDeckProgress(deckId) {
     });
     const avgTime = countTime > 0 ? (sumTime / countTime).toFixed(1) : 'N/A';
     let overviewHTML = '<table style="width:100%; border-collapse:collapse; font-size:0.95rem;">';
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Total words</th><td style="padding:6px 4px; text-align:right;">${total}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Due</th><td style="padding:6px 4px; text-align:right;">${dueTotal}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">New</th><td style="padding:6px 4px; text-align:right;">${newWords}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Learning</th><td style="padding:6px 4px; text-align:right;">${learning}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Mastered</th><td style="padding:6px 4px; text-align:right;">${mastered}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:6px 4px;">Average response time (s)</th><td style="padding:6px 4px; text-align:right;">${avgTime}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Total words</th><td style="padding:8px 4px; text-align:right;">${total}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Due</th><td style="padding:8px 4px; text-align:right;">${dueTotal}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">New</th><td style="padding:8px 4px; text-align:right;">${newWords}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Learning</th><td style="padding:8px 4px; text-align:right;">${learning}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Mastered</th><td style="padding:8px 4px; text-align:right;">${mastered}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Average response time (s)</th><td style="padding:8px 4px; text-align:right;">${avgTime}</td></tr>`;
     overviewHTML += '</table>';
     overviewEl.innerHTML = overviewHTML;
     troubleList.sort((a,b) => {
@@ -1952,7 +2025,7 @@ function renderDeckProgress(deckId) {
         detailsHTML += '</table>';
         detailsEl.innerHTML = detailsHTML;
     } else {
-        detailsEl.innerHTML = '<div style="padding:1rem; color:var(--text-sub);">No trouble words yet. Keep practicing!</div>';
+        detailsEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub);">No trouble words yet. Keep practicing!</div>';
     }
     navTo('deck-progress');
 }
