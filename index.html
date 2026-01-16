@@ -309,6 +309,43 @@
         background: #eef2ff;
         box-shadow: 0 6px 12px rgba(99, 102, 241, 0.15);
     }
+    .practice-deck-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+    }
+    .practice-deck-name {
+        font-weight: 600;
+        font-size: 0.98rem;
+    }
+    .practice-deck-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 0.78rem;
+        color: var(--text-sub);
+    }
+    .practice-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 12px 0 4px;
+    }
+    .practice-filter-btn {
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid #e5e7eb;
+        background: #f3f4f6;
+        color: var(--text-sub);
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .practice-filter-btn.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
     .practice-header {
         display: flex;
         justify-content: flex-end;
@@ -653,6 +690,7 @@ let currentSession = {
     isActive: false,
     lastAnswerCorrect: null,
     selectedDeckIds: [],
+    practiceFilter: 'all',
     startTime: null
 };
 
@@ -831,6 +869,7 @@ function loadData() {
     // Ensure all cards have expected properties (migration for newer versions)
     app.decks.forEach(deck => {
         if (deck.uncompleted === undefined) deck.uncompleted = false;
+        if (deck.lastPracticed === undefined) deck.lastPracticed = null;
         deck.cards.forEach(card => {
             if (card.audioUrl === undefined) card.audioUrl = '';
             if (card.correctCount === undefined) card.correctCount = 0;
@@ -955,44 +994,59 @@ function renderPracticeHome() {
 
     const selectedSet = new Set(currentSession.selectedDeckIds);
     const now = Date.now();
-    const dueDecks = app.decks.filter(deck => getDueCount(deck, now) > 0);
-    const uncompletedDecks = app.decks.filter(deck => deck.uncompleted);
-    const otherDecks = app.decks.filter(deck => !deck.uncompleted && getDueCount(deck, now) === 0);
-    const renderDeckItems = (decks) => decks.map(deck => `
+    const dueCountTotal = app.decks.filter(deck => getDueCount(deck, now) > 0).length;
+    const inProgressCount = app.decks.filter(deck => deck.uncompleted).length;
+    const completedCount = app.decks.filter(deck => !deck.uncompleted && getDueCount(deck, now) === 0).length;
+    const filterOptions = [
+        { key: 'all', label: `All (${app.decks.length})` },
+        { key: 'due', label: `Due (${dueCountTotal})` },
+        { key: 'in-progress', label: `In progress (${inProgressCount})` },
+        { key: 'completed', label: `Completed (${completedCount})` }
+    ];
+    const activeFilter = currentSession.practiceFilter || 'all';
+    const matchesFilter = (deck) => {
+        if (activeFilter === 'due') return getDueCount(deck, now) > 0;
+        if (activeFilter === 'in-progress') return deck.uncompleted;
+        if (activeFilter === 'completed') return !deck.uncompleted && getDueCount(deck, now) === 0;
+        return true;
+    };
+    const filteredDecks = app.decks.filter(matchesFilter);
+    const renderDeckItems = (decks) => decks.map(deck => {
+        const dueCount = getDueCount(deck, now);
+        return `
         <label class="practice-deck-item">
             <input type="checkbox" class="practice-deck-checkbox" value="${deck.id}" ${selectedSet.has(deck.id) ? 'checked' : ''}>
-            <div>
-                <strong>${deck.name}</strong>
-                <div style="font-size:0.85rem; color:var(--text-sub);">${deck.cards.length} cards • ${getDueCount(deck, now)} due</div>
+            <div class="practice-deck-details">
+                <div class="practice-deck-name">${deck.name}</div>
+                <div class="practice-deck-meta">
+                    <span>${deck.cards.length} items</span>
+                    <span>${dueCount} due</span>
+                    <span>Last practiced: ${formatLastPracticed(deck.lastPracticed)}</span>
+                </div>
             </div>
         </label>
-    `).join('');
-    const dueItems = renderDeckItems(dueDecks);
-    const uncompletedItems = renderDeckItems(uncompletedDecks);
-    const otherItems = renderDeckItems(otherDecks);
+    `;
+    }).join('');
+    const deckItems = renderDeckItems(filteredDecks);
 
     container.innerHTML = `
         <div class="card practice-selection">
             <h2 style="margin:0;">Choose decks to practice</h2>
+            <div class="practice-filters">
+                ${filterOptions.map(option => `
+                    <button class="practice-filter-btn ${option.key === activeFilter ? 'active' : ''}" data-filter="${option.key}">
+                        ${option.label}
+                    </button>
+                `).join('')}
+            </div>
             <label class="practice-deck-item">
                 <input type="checkbox" id="practice-select-all">
                 <div>
-                    <strong>Select all decks</strong>
+                    <strong>Select all shown</strong>
                 </div>
             </label>
             <div class="practice-selection">
-                <div>
-                    <div class="practice-category-title">Due Decks</div>
-                    ${dueItems || `<div class="practice-empty">No due decks right now.</div>`}
-                </div>
-                <div>
-                    <div class="practice-category-title">Uncompleted</div>
-                    ${uncompletedItems || `<div class="practice-empty">No uncompleted decks right now.</div>`}
-                </div>
-                <div class="practice-category">
-                    <div class="practice-category-title">Others</div>
-                    ${otherItems || `<div class="practice-empty">No other decks right now.</div>`}
-                </div>
+                ${deckItems || `<div class="practice-empty">No decks match this filter.</div>`}
             </div>
             <button class="btn-primary" id="practice-start-btn" onclick="startPracticeFromSelection()">Start Practice</button>
         </div>
@@ -1002,12 +1056,12 @@ function renderPracticeHome() {
     const deckCheckboxes = Array.from(document.querySelectorAll('.practice-deck-checkbox'));
     const startBtn = document.getElementById('practice-start-btn');
     const deckLabels = Array.from(document.querySelectorAll('.practice-deck-item'));
+    const filterButtons = Array.from(document.querySelectorAll('.practice-filter-btn'));
 
-    const updateSelectionState = () => {
-        const selectedIds = deckCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
-        currentSession.selectedDeckIds = selectedIds;
-        selectAll.checked = selectedIds.length === deckCheckboxes.length;
-        startBtn.disabled = selectedIds.length === 0;
+    const syncSelectionState = () => {
+        const visibleSelectedCount = deckCheckboxes.filter(cb => cb.checked).length;
+        selectAll.checked = deckCheckboxes.length > 0 && visibleSelectedCount === deckCheckboxes.length;
+        startBtn.disabled = selectedSet.size === 0;
         deckLabels.forEach(label => {
             const checkbox = label.querySelector('.practice-deck-checkbox');
             if (checkbox) {
@@ -1016,18 +1070,39 @@ function renderPracticeHome() {
         });
     };
 
-    selectAll.checked = currentSession.selectedDeckIds.length === deckCheckboxes.length;
-    startBtn.disabled = currentSession.selectedDeckIds.length === 0;
-    updateSelectionState();
+    syncSelectionState();
 
     selectAll.addEventListener('change', (e) => {
         const isChecked = e.target.checked;
-        deckCheckboxes.forEach(cb => { cb.checked = isChecked; });
-        updateSelectionState();
+        deckCheckboxes.forEach(cb => {
+            cb.checked = isChecked;
+            if (isChecked) {
+                selectedSet.add(cb.value);
+            } else {
+                selectedSet.delete(cb.value);
+            }
+        });
+        currentSession.selectedDeckIds = Array.from(selectedSet);
+        syncSelectionState();
     });
 
     deckCheckboxes.forEach(cb => {
-        cb.addEventListener('change', updateSelectionState);
+        cb.addEventListener('change', () => {
+            if (cb.checked) {
+                selectedSet.add(cb.value);
+            } else {
+                selectedSet.delete(cb.value);
+            }
+            currentSession.selectedDeckIds = Array.from(selectedSet);
+            syncSelectionState();
+        });
+    });
+
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentSession.practiceFilter = btn.dataset.filter || 'all';
+            renderPracticeHome();
+        });
     });
 }
 
@@ -1260,6 +1335,9 @@ function rateCard(quality) {
     const DAY_MS = 86400000;
     card.due = Date.now() + (quality < 3 ? 0 : card.interval * DAY_MS);
 
+    if (entry && entry.deck) {
+        entry.deck.lastPracticed = Date.now();
+    }
     saveData();
     
     currentSession.queue.shift(); // Remove current
@@ -1446,7 +1524,8 @@ function saveDeck() {
         name,
         lang,
         cards: [],
-        uncompleted: false
+        uncompleted: false,
+        lastPracticed: null
     });
     saveData();
     closeDeckModal();
@@ -1759,6 +1838,13 @@ function getDueCount(deck, now = Date.now()) {
     return deck.cards.filter(card => card.due <= now).length;
 }
 
+function formatLastPracticed(timestamp) {
+    if (!timestamp) return 'Never';
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return 'Never';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function normalizeImportedDecks(raw) {
     let decks = [];
     if (Array.isArray(raw)) {
@@ -1786,7 +1872,8 @@ function normalizeImportedDecks(raw) {
             name: deck.name ? String(deck.name) : 'Imported Deck',
             lang: deck.lang ? String(deck.lang) : 'en-US',
             cards: normalizedCards,
-            uncompleted: Boolean(deck.uncompleted)
+            uncompleted: Boolean(deck.uncompleted),
+            lastPracticed: deck.lastPracticed ? Number(deck.lastPracticed) : null
         };
     });
 }
