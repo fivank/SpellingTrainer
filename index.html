@@ -373,6 +373,58 @@
         color: var(--text-sub);
         margin: 0 0 8px;
     }
+    .practice-progress {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 0 auto 1.5rem;
+    }
+    .practice-progress-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: var(--text-sub);
+        font-weight: 600;
+    }
+    .progress-track {
+        width: 100%;
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+        border-radius: 999px;
+        transition: width 0.3s ease;
+    }
+    .practice-hint {
+        margin-top: 10px;
+        font-size: 0.95rem;
+        color: var(--text-sub);
+        text-align: center;
+    }
+    .practice-hint strong {
+        color: var(--primary-dark);
+    }
+    .feedback-positive {
+        color: var(--success);
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    .feedback-sub {
+        margin-top: 6px;
+        font-size: 0.95rem;
+        color: var(--text-sub);
+    }
+    .try-again-wrap {
+        margin-top: 1rem;
+        display: flex;
+        justify-content: center;
+    }
 
     /* Toggle switch styling (borrowed from improved version) */
     .toggle {
@@ -691,8 +743,16 @@ let currentSession = {
     lastAnswerCorrect: null,
     selectedDeckIds: [],
     practiceFilter: 'all',
-    startTime: null
+    startTime: null,
+    sessionStartTime: null,
+    totalCount: 0,
+    completedCount: 0,
+    correctAttempts: 0,
+    totalAttempts: 0,
+    troubleEntries: []
 };
+
+let lastSessionSummary = null;
 
 // --- AUDIO ENGINE (ROBUST VERSION) ---
 let availableVoices = [];
@@ -916,26 +976,38 @@ function startPractice(deckIds) {
     
     // Sort by due date
     const now = Date.now();
-    currentSession.queue = selectedDecks.flatMap(deck => (
+    let entries = selectedDecks.flatMap(deck => (
         deck.cards.filter(card => card.due <= now)
             .map(card => ({ deck, card }))
     )).sort((a,b) => a.card.due - b.card.due);
     
     // If no due cards, practice all
-    if (currentSession.queue.length === 0) {
-        currentSession.queue = selectedDecks.flatMap(deck => (
+    if (entries.length === 0) {
+        entries = selectedDecks.flatMap(deck => (
             deck.cards.map(card => ({ deck, card }))
         ));
     }
 
-    if (currentSession.queue.length === 0) {
+    if (entries.length === 0) {
         alert("No cards available in the selected decks.");
         return;
     }
 
+    startPracticeEntries(entries, selectedDecks);
+}
+
+function startPracticeEntries(entries, selectedDecks = []) {
+    currentSession.queue = entries.slice();
     currentSession.deck = null;
     currentSession.decks = selectedDecks;
     currentSession.isActive = true;
+    currentSession.sessionStartTime = Date.now();
+    currentSession.totalCount = entries.length;
+    currentSession.completedCount = 0;
+    currentSession.correctAttempts = 0;
+    currentSession.totalAttempts = 0;
+    currentSession.troubleEntries = [];
+    lastSessionSummary = null;
     navTo('practice');
     nextCard();
 }
@@ -953,6 +1025,23 @@ function startTodayPractice() {
     if (!app.decks.length) return;
     const deckIds = app.decks.map(deck => deck.id);
     startPractice(deckIds);
+}
+
+function startTroublePractice() {
+    if (!lastSessionSummary || !Array.isArray(lastSessionSummary.troubleEntries)) {
+        return;
+    }
+    const uniqueMap = new Map();
+    lastSessionSummary.troubleEntries.forEach(entry => {
+        const key = `${entry.deck.id}-${entry.card.word}`;
+        if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, entry);
+        }
+    });
+    const entries = Array.from(uniqueMap.values());
+    if (!entries.length) return;
+    const selectedDecks = Array.from(new Set(entries.map(entry => entry.deck)));
+    startPracticeEntries(entries, selectedDecks);
 }
 
 function openPasteList() {
@@ -992,6 +1081,12 @@ function endPracticeSession() {
     currentSession.isAnswered = false;
     currentSession.lastAnswerCorrect = null;
     currentSession.startTime = null;
+    currentSession.sessionStartTime = null;
+    currentSession.totalCount = 0;
+    currentSession.completedCount = 0;
+    currentSession.correctAttempts = 0;
+    currentSession.totalAttempts = 0;
+    currentSession.troubleEntries = [];
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
     }
@@ -1040,13 +1135,49 @@ function renderPracticeHome() {
     `;
 }
 
+function formatDuration(ms) {
+    if (!ms || ms < 0) return '0:00';
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function getHintMarkup(word) {
+    if (!word) return '';
+    const safeWord = String(word).trim();
+    const firstLetter = safeWord.charAt(0).toUpperCase();
+    const lengthHint = safeWord.split('').map(() => '_').join(' ');
+    return `<div class="practice-hint">Hint: starts with <strong>${firstLetter}</strong> • ${lengthHint}</div>`;
+}
+
 function nextCard() {
     if (currentSession.queue.length === 0) {
+        const totalAttempts = currentSession.totalAttempts || 0;
+        const correctAttempts = currentSession.correctAttempts || 0;
+        const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
+        const durationMs = currentSession.sessionStartTime ? Date.now() - currentSession.sessionStartTime : 0;
+        const troubleEntries = currentSession.troubleEntries || [];
+        lastSessionSummary = {
+            accuracy,
+            durationMs,
+            troubleEntries
+        };
+        const troubleButton = troubleEntries.length > 0
+            ? `<button class="btn-secondary" onclick="startTroublePractice()">Practice trouble words</button>`
+            : '';
         document.getElementById('practice-container').innerHTML = `
-            <div style="text-align:center">
-                <h2>Session Complete!</h2>
-                <p>Great job.</p>
-                <button class="btn-primary" onclick="navTo('practice'); renderPracticeHome();">Practice More</button>
+            <div class="card" style="text-align:center">
+                <h2 style="margin-top:0;">Completed</h2>
+                <p style="color:var(--text-sub); margin-bottom:1.5rem;">You finished this session.</p>
+                <div style="display:grid; gap:8px; text-align:left; margin-bottom:1.5rem;">
+                    <div><strong>Accuracy:</strong> ${accuracy}%</div>
+                    <div><strong>Time:</strong> ${formatDuration(durationMs)}</div>
+                </div>
+                <div style="display:grid; gap:10px;">
+                    <button class="btn-primary" onclick="navTo('practice'); renderPracticeHome();">Practice More</button>
+                    ${troubleButton}
+                </div>
             </div>`;
         currentSession.decks.forEach(deck => {
             deck.uncompleted = false;
@@ -1056,6 +1187,12 @@ function nextCard() {
         currentSession.currentCard = null;
         currentSession.currentEntry = null;
         currentSession.deck = null;
+        currentSession.sessionStartTime = null;
+        currentSession.totalCount = 0;
+        currentSession.completedCount = 0;
+        currentSession.correctAttempts = 0;
+        currentSession.totalAttempts = 0;
+        currentSession.troubleEntries = [];
         return;
     }
 
@@ -1078,9 +1215,22 @@ function nextCard() {
         sentenceDisplay = c.sentence.replace(regex, "____");
     }
 
+    const totalCount = currentSession.totalCount || currentSession.queue.length;
+    const currentIndex = Math.min(currentSession.completedCount + 1, totalCount);
+    const progressPercent = totalCount ? Math.round((currentIndex / totalCount) * 100) : 0;
+    const hintMarkup = getHintMarkup(c.word);
     const html = `
         <div class="practice-header">
             <button class="btn-secondary practice-end" onclick="endPracticeSession()">End Session</button>
+        </div>
+        <div class="practice-progress">
+            <div class="practice-progress-header">
+                <span>Progress</span>
+                <span>${currentIndex} / ${totalCount}</span>
+            </div>
+            <div class="progress-track" aria-hidden="true">
+                <div class="progress-fill" style="width:${progressPercent}%"></div>
+            </div>
         </div>
         <div class="audio-trigger" onclick="playCurrent()">
             <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
@@ -1090,6 +1240,7 @@ function nextCard() {
         <div class="feedback-area" id="feedback"></div>
         
         <input type="text" id="p-input" class="word-input" placeholder="Type word here">
+        ${hintMarkup}
         
         <button id="btn-check" class="btn-primary" style="margin-top:20px" onclick="checkAnswer()">Check</button>
         
@@ -1211,9 +1362,16 @@ function checkAnswer() {
     currentSession.isAnswered = true;
     currentSession.lastAnswerCorrect = isCorrect;
     document.getElementById('btn-check').classList.add('hidden');
-    document.getElementById('srs-area').classList.remove('hidden');
     input.disabled = true;
     const feedback = document.getElementById('feedback');
+    const positiveFeedback = [
+        'Nice work!',
+        'Great job!',
+        'You got it!',
+        'Nailed it!',
+        'Smooth!'
+    ];
+    const extraPraise = positiveFeedback[Math.floor(Math.random() * positiveFeedback.length)];
     // Update performance statistics
     const card = currentSession.currentCard;
     const now = Date.now();
@@ -1233,19 +1391,52 @@ function checkAnswer() {
     } else {
         card.incorrectCount = (card.incorrectCount || 0) + 1;
     }
+    currentSession.totalAttempts += 1;
+    if (isCorrect) {
+        currentSession.correctAttempts += 1;
+    } else {
+        currentSession.troubleEntries.push(currentSession.currentEntry);
+    }
     saveData();
     // Provide feedback
     if (isCorrect) {
         input.style.color = 'var(--success)';
-        feedback.innerHTML = `<span style="color:var(--success); font-weight:bold;">Correct!</span>`;
+        feedback.innerHTML = `
+            <div class="feedback-positive">Correct!</div>
+            <div class="feedback-sub">${extraPraise}</div>
+        `;
+        document.getElementById('srs-area').classList.remove('hidden');
     } else {
         input.style.color = 'var(--error)';
         // Show Diff
-        feedback.innerHTML = `<div class="diff-display">
-            <span class="diff-wrong">${input.value}</span>
-            <span class="diff-correct">${currentSession.currentCard.word}</span>
-        </div>`;
+        const typedValue = input.value ? input.value : '—';
+        feedback.innerHTML = `
+            <div class="diff-display">
+                <span class="diff-wrong">${typedValue}</span>
+                <span class="diff-correct">${currentSession.currentCard.word}</span>
+            </div>
+            <div class="feedback-sub">You typed <strong>${typedValue}</strong>. The correct spelling is <strong>${currentSession.currentCard.word}</strong>.</div>
+            <div class="try-again-wrap">
+                <button class="btn-secondary" onclick="retryCurrentCard()">Try again</button>
+            </div>
+        `;
     }
+}
+
+function retryCurrentCard() {
+    const input = document.getElementById('p-input');
+    const feedback = document.getElementById('feedback');
+    if (!input || !feedback) return;
+    currentSession.isAnswered = false;
+    currentSession.lastAnswerCorrect = null;
+    currentSession.startTime = app.settings.timerStart === 'show' ? Date.now() : null;
+    input.disabled = false;
+    input.value = '';
+    input.style.color = 'var(--primary)';
+    feedback.innerHTML = '';
+    document.getElementById('btn-check').classList.remove('hidden');
+    document.getElementById('srs-area').classList.add('hidden');
+    input.focus();
 }
 
 function rateCard(quality) {
@@ -1275,8 +1466,11 @@ function rateCard(quality) {
     saveData();
     
     currentSession.queue.shift(); // Remove current
-    if (quality < 3 || currentSession.lastAnswerCorrect === false || quality === 1) {
+    const shouldRequeue = quality < 3 || currentSession.lastAnswerCorrect === false || quality === 1;
+    if (shouldRequeue) {
         currentSession.queue.unshift(entry); // Re-queue immediately
+    } else {
+        currentSession.completedCount += 1;
     }
     
     nextCard();
@@ -1657,6 +1851,7 @@ function handlePracticeKeydown(event) {
     if (event.key !== "Enter") return;
     if (!currentSession.isActive || !currentSession.currentCard) return;
     if (!currentSession.isAnswered) return;
+    if (!currentSession.lastAnswerCorrect) return;
     event.preventDefault();
     const quality = currentSession.lastAnswerCorrect ? 3 : 2;
     rateCard(quality);
