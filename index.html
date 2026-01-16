@@ -754,7 +754,7 @@
                 <label for="import-deck-json" style="display:block; font-size:0.85rem; color:var(--text-sub); margin-bottom:6px;">
                     Paste deck as JSON
                 </label>
-                <textarea id="import-deck-json" rows="6" placeholder='{"name":"My Deck","lang":"en-US","cards":[{"word":"example","sentence":""}]}' style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
+                <textarea id="import-deck-json" rows="6" placeholder='{"name":"My Deck","lang":"en-US","text":"First sentence. Second sentence.","cards":[{"word":"example","sentence":"First sentence."}]}' style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
             </div>
             <button class="btn-secondary" onclick="importDeckFromPaste()" style="width:100%; margin-bottom:var(--space-1);">Import Pasted Deck</button>
             <div style="display:flex; gap:var(--space-1);">
@@ -1046,6 +1046,7 @@ function loadData() {
     app.decks.forEach(deck => {
         if (deck.uncompleted === undefined) deck.uncompleted = false;
         if (deck.lastPracticed === undefined) deck.lastPracticed = null;
+        if (deck.text === undefined) deck.text = '';
         deck.cards.forEach(card => {
             if (card.audioUrl === undefined) card.audioUrl = '';
             if (card.correctCount === undefined) card.correctCount = 0;
@@ -1092,16 +1093,25 @@ function startPractice(deckIds) {
     
     // Sort by due date
     const now = Date.now();
-    let entries = selectedDecks.flatMap(deck => (
-        deck.cards.filter(card => card.due <= now)
-            .map(card => ({ deck, card }))
-    )).sort((a,b) => a.card.due - b.card.due);
+    let entries = selectedDecks.flatMap(deck => {
+        if (isDictationDeck(deck)) {
+            return buildDictationEntries(deck);
+        }
+        return deck.cards.filter(card => card.due <= now)
+            .map(card => ({ deck, card, mode: 'word' }));
+    }).sort((a,b) => {
+        if (a.mode === 'dictation' || b.mode === 'dictation') return 0;
+        return a.card.due - b.card.due;
+    });
     
     // If no due cards, practice all
     if (entries.length === 0) {
-        entries = selectedDecks.flatMap(deck => (
-            deck.cards.map(card => ({ deck, card }))
-        ));
+        entries = selectedDecks.flatMap(deck => {
+            if (isDictationDeck(deck)) {
+                return buildDictationEntries(deck);
+            }
+            return deck.cards.map(card => ({ deck, card, mode: 'word' }));
+        });
     }
 
     if (entries.length === 0) {
@@ -1328,7 +1338,7 @@ function nextCard() {
     }
 
     currentSession.currentEntry = currentSession.queue[0];
-    currentSession.currentCard = currentSession.currentEntry.card;
+    currentSession.currentCard = currentSession.currentEntry.card || currentSession.currentEntry.primaryCard || null;
     currentSession.deck = currentSession.currentEntry.deck;
     currentSession.isAnswered = false;
     currentSession.lastAnswerCorrect = null;
@@ -1336,7 +1346,8 @@ function nextCard() {
     currentSession.startTime = null;
     
     const c = currentSession.currentCard;
-    const hasSentence = c.sentence && c.sentence.trim() !== "";
+    const isDictation = currentSession.currentEntry.mode === 'dictation';
+    const hasSentence = !isDictation && c && c.sentence && c.sentence.trim() !== "";
     
     // Hide target word in sentence
     let sentenceDisplay = "";
@@ -1349,7 +1360,12 @@ function nextCard() {
     const totalCount = currentSession.totalCount || currentSession.queue.length;
     const currentIndex = Math.min(currentSession.completedCount + 1, totalCount);
     const progressPercent = totalCount ? Math.round((currentIndex / totalCount) * 100) : 0;
-    const hintMarkup = getHintMarkup(c.word);
+    const hintMarkup = !isDictation && c ? getHintMarkup(c.word) : '';
+    const dictationNotice = isDictation ? `
+        <p style="font-size:1rem; color:var(--text-sub); margin-bottom:var(--space-3); text-align:center;">
+            Dictation sentence ${currentSession.currentEntry.sentenceIndex} of ${currentSession.currentEntry.sentenceCount}. Listen and type the full sentence.
+        </p>
+    ` : '';
     const html = `
         <div class="practice-header">
             <button class="btn-secondary practice-end" onclick="endPracticeSession()">End Session</button>
@@ -1369,11 +1385,12 @@ function nextCard() {
             </div>
             <div class="audio-label">Play</div>
         </div>
+        ${dictationNotice}
         ${hasSentence ? `<p style="font-size:1.2rem; color:var(--text-sub); margin-bottom:var(--space-4); text-align:center; padding:0 var(--space-3); line-height:1.5;">${sentenceDisplay}</p>` : ''}
         
         <div class="feedback-area" id="feedback"></div>
         
-        <input type="text" id="p-input" class="word-input" placeholder="Type word here">
+        <input type="text" id="p-input" class="word-input" placeholder="${isDictation ? 'Type sentence here' : 'Type word here'}">
         ${hintMarkup}
         
         <button id="btn-check" class="btn-primary" style="margin-top:var(--space-2);" onclick="checkAnswer()">Check</button>
@@ -1432,10 +1449,11 @@ function applySuggestionSettingToInput(input) {
 }
 
 function playCurrent() {
-    if (!currentSession.currentCard) return;
+    if (!currentSession.currentEntry) return;
     const card = currentSession.currentCard;
+    const entry = currentSession.currentEntry;
     // Play custom audio if URL exists
-    if (card.audioUrl) {
+    if (entry.mode !== 'dictation' && card && card.audioUrl) {
         try {
             const audio = new Audio(card.audioUrl);
             const btn = document.querySelector('.audio-trigger');
@@ -1470,6 +1488,10 @@ function playCurrent() {
             currentSession.startTime = Date.now();
         }
         const lang = currentSession.deck ? currentSession.deck.lang : 'en-US';
+        if (entry.mode === 'dictation') {
+            speak(entry.sentence, lang);
+            return;
+        }
         // If card has a sentence, speak word then sentence for context
         if (card.sentence && card.sentence.trim() !== '') {
             const phrase = `${card.word}. ${card.sentence}`;
@@ -1483,6 +1505,11 @@ function playCurrent() {
 function checkAnswer() {
     const input = document.getElementById('p-input');
     const userRaw = input.value.trim();
+    const entry = currentSession.currentEntry;
+    if (entry && entry.mode === 'dictation') {
+        checkDictationAnswer(userRaw);
+        return;
+    }
     const userValLower = userRaw.toLowerCase();
     const correctRaw = currentSession.currentCard.word;
     const correctLower = correctRaw.toLowerCase();
@@ -1557,6 +1584,69 @@ function checkAnswer() {
     }
 }
 
+function checkDictationAnswer(userRaw) {
+    const input = document.getElementById('p-input');
+    const entry = currentSession.currentEntry;
+    if (!entry) return;
+    const correctSentence = entry.sentence || '';
+    const isCorrect = isSentenceCorrect(correctSentence, userRaw, app.settings.strictness);
+    currentSession.isAnswered = true;
+    currentSession.lastAnswerCorrect = isCorrect;
+    document.getElementById('btn-check').classList.add('hidden');
+    input.disabled = true;
+    const feedback = document.getElementById('feedback');
+    const elapsed = getElapsedSeconds();
+    const { mistakeCards, fallbackCard } = resolveDictationRatings(entry, userRaw);
+    const ratedCards = mistakeCards.length ? mistakeCards : (fallbackCard ? [fallbackCard] : []);
+    ratedCards.forEach(card => {
+        const isCardCorrect = !mistakeCards.includes(card);
+        applyDictationRating(card, entry.deck, elapsed, isCardCorrect);
+        currentSession.totalAttempts += 1;
+        if (isCardCorrect) {
+            currentSession.correctAttempts += 1;
+        } else {
+            currentSession.troubleEntries.push({ deck: entry.deck, card });
+        }
+    });
+    saveData();
+    if (isCorrect) {
+        input.style.color = 'var(--success)';
+        feedback.innerHTML = `
+            <div class="feedback-positive">Sentence correct!</div>
+            <div class="feedback-sub">Nice work finishing that dictation.</div>
+        `;
+    } else {
+        input.style.color = 'var(--error)';
+        const typedValue = userRaw || '—';
+        const mistakeList = mistakeCards.map(card => card.word).join(', ');
+        feedback.innerHTML = `
+            <div class="diff-display">
+                <span class="diff-wrong">${typedValue}</span>
+                <span class="diff-correct">${correctSentence}</span>
+            </div>
+            <div class="feedback-sub">Review these words: <strong>${mistakeList || 'Check the sentence again'}</strong>.</div>
+        `;
+    }
+    feedback.innerHTML += `
+        <div class="try-again-wrap">
+            <button class="btn-primary" onclick="advanceDictationEntry()">Next sentence</button>
+        </div>
+    `;
+}
+
+function advanceDictationEntry() {
+    if (!currentSession.currentEntry) return;
+    currentSession.queue.shift();
+    currentSession.completedCount += 1;
+    nextCard();
+}
+
+function getElapsedSeconds() {
+    const now = Date.now();
+    if (!currentSession.startTime) return 0;
+    return (now - currentSession.startTime) / 1000;
+}
+
 function retryCurrentCard() {
     const input = document.getElementById('p-input');
     const feedback = document.getElementById('feedback');
@@ -1624,12 +1714,13 @@ function renderDeckList() {
 
     app.decks.forEach(deck => {
         const dueCount = getDueCount(deck);
+        const dictationLabel = isDictationDeck(deck) ? ' • Dictation text' : '';
         const div = document.createElement('div');
         div.className = 'deck-item';
         div.innerHTML = `
             <div class="deck-info">
                 <h3>${deck.name}</h3>
-                <small>${deck.lang} • ${deck.cards.length} cards • ${dueCount} due</small>
+                <small>${deck.lang} • ${deck.cards.length} cards • ${dueCount} due${dictationLabel}</small>
             </div>
             <div style="display:flex; gap:8px;">
                 <button class="btn-secondary" onclick="openDeckActions('${deck.id}')">Edit</button>
@@ -2135,6 +2226,7 @@ function createSampleDeck() {
         lang: "en-US",
         uncompleted: false,
         lastPracticed: null,
+        text: '',
         cards: [
             {word: "necessary", sentence: "It is necessary to sleep well.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
             {word: "queue", sentence: "Wait in the queue.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
@@ -2151,6 +2243,144 @@ function formatLastPracticed(timestamp) {
     const date = new Date(timestamp);
     if (Number.isNaN(date.getTime())) return 'Never';
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function isDictationDeck(deck) {
+    return Boolean(deck && deck.text && deck.text.trim());
+}
+
+function splitTextIntoSentences(text) {
+    if (!text) return [];
+    const matches = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g);
+    return matches ? matches.map(sentence => sentence.trim()).filter(Boolean) : [];
+}
+
+function getDictationSentences(deck) {
+    const sentences = splitTextIntoSentences(deck.text || '');
+    if (sentences.length) return sentences;
+    const unique = [];
+    const seen = new Set();
+    deck.cards.forEach(card => {
+        const sentence = (card.sentence || '').trim();
+        if (sentence && !seen.has(sentence)) {
+            seen.add(sentence);
+            unique.push(sentence);
+        }
+    });
+    return unique;
+}
+
+function buildDictationEntries(deck) {
+    const sentences = getDictationSentences(deck);
+    return sentences.map((sentence, index) => {
+        const cards = deck.cards.filter(card => (card.sentence || '').trim() === sentence);
+        return {
+            deck,
+            mode: 'dictation',
+            sentence,
+            sentenceIndex: index + 1,
+            sentenceCount: sentences.length,
+            cards,
+            primaryCard: pickMostDifficultCard(cards)
+        };
+    }).filter(entry => entry.sentence);
+}
+
+function pickMostDifficultCard(cards) {
+    if (!cards || !cards.length) return null;
+    return cards.slice().sort((a, b) => {
+        const aErrors = a.incorrectCount || 0;
+        const bErrors = b.incorrectCount || 0;
+        if (bErrors !== aErrors) return bErrors - aErrors;
+        const aTime = a.avgTime || 0;
+        const bTime = b.avgTime || 0;
+        if (bTime !== aTime) return bTime - aTime;
+        return (b.word || '').length - (a.word || '').length;
+    })[0];
+}
+
+function tokenizeWords(text) {
+    return text.match(/[\p{L}\p{N}']+/gu) || [];
+}
+
+function normalizeToken(token, strictness) {
+    return strictness === 'strict' ? token : token.toLowerCase();
+}
+
+function isSentenceCorrect(correctSentence, userSentence, strictness) {
+    if (strictness === 'strict') {
+        return correctSentence.trim() === userSentence.trim();
+    }
+    const correctTokens = tokenizeWords(correctSentence).map(token => token.toLowerCase());
+    const userTokens = tokenizeWords(userSentence).map(token => token.toLowerCase());
+    if (correctTokens.length !== userTokens.length) return false;
+    return correctTokens.every((token, index) => token === userTokens[index]);
+}
+
+function resolveDictationRatings(entry, userSentence) {
+    const strictness = app.settings.strictness;
+    const correctTokens = tokenizeWords(entry.sentence || '');
+    const userTokens = tokenizeWords(userSentence);
+    const maxLen = Math.max(correctTokens.length, userTokens.length);
+    const mistakeCounts = new Map();
+    for (let i = 0; i < maxLen; i += 1) {
+        const correctToken = correctTokens[i];
+        if (!correctToken) continue;
+        const userToken = userTokens[i];
+        const normalizedCorrect = normalizeToken(correctToken, strictness);
+        const normalizedUser = userToken ? normalizeToken(userToken, strictness) : '';
+        if (!userToken || normalizedCorrect !== normalizedUser) {
+            const prev = mistakeCounts.get(normalizedCorrect) || 0;
+            mistakeCounts.set(normalizedCorrect, prev + 1);
+        }
+    }
+    const mistakeCards = [];
+    entry.cards.forEach(card => {
+        const normalized = normalizeToken(card.word || '', strictness);
+        const remaining = mistakeCounts.get(normalized) || 0;
+        if (remaining > 0) {
+            mistakeCards.push(card);
+            mistakeCounts.set(normalized, remaining - 1);
+        }
+    });
+    const fallbackCard = mistakeCards.length ? null : pickMostDifficultCard(entry.cards);
+    return { mistakeCards, fallbackCard };
+}
+
+function applyDictationRating(card, deck, elapsedSeconds, isCorrect) {
+    if (!card) return;
+    const prevAttempts = (card.correctCount || 0) + (card.incorrectCount || 0);
+    if (prevAttempts === 0) {
+        card.avgTime = elapsedSeconds;
+    } else {
+        card.avgTime = ((card.avgTime || 0) * prevAttempts + elapsedSeconds) / (prevAttempts + 1);
+    }
+    if (isCorrect) {
+        card.correctCount = (card.correctCount || 0) + 1;
+        applySrsRating(card, 3);
+    } else {
+        card.incorrectCount = (card.incorrectCount || 0) + 1;
+        applySrsRating(card, 1);
+    }
+    if (deck) {
+        deck.lastPracticed = Date.now();
+    }
+}
+
+function applySrsRating(card, quality) {
+    card.interval = Number(card.interval) || 0;
+    if (quality < 3) {
+        card.interval = 1;
+        card.ease = Math.max(1.3, (card.ease || 2.5) - 0.2);
+    } else {
+        if (card.interval === 0) card.interval = 1;
+        else if (card.interval === 1) card.interval = 3;
+        else card.interval = Math.ceil(card.interval * (card.ease || 2.5));
+        card.ease = (card.ease || 2.5) + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+        if (card.ease < 1.3) card.ease = 1.3;
+    }
+    const DAY_MS = 86400000;
+    card.due = Date.now() + (quality < 3 ? 0 : card.interval * DAY_MS);
 }
 
 function normalizeImportedDecks(raw) {
@@ -2181,7 +2411,8 @@ function normalizeImportedDecks(raw) {
             lang: deck.lang ? String(deck.lang) : 'en-US',
             cards: normalizedCards,
             uncompleted: Boolean(deck.uncompleted),
-            lastPracticed: deck.lastPracticed ? Number(deck.lastPracticed) : null
+            lastPracticed: deck.lastPracticed ? Number(deck.lastPracticed) : null,
+            text: deck.text ? String(deck.text) : ''
         };
     });
 }
