@@ -132,6 +132,50 @@
         box-shadow: 0 12px 24px -16px rgba(15, 23, 42, 0.25);
     }
 
+    .progress-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: var(--space-2);
+    }
+
+    .progress-metric {
+        background: #f8fafc;
+        border-radius: var(--radius-sm);
+        padding: var(--space-2);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .progress-metric-label {
+        color: var(--text-sub);
+        font-size: var(--font-small);
+        margin-bottom: 4px;
+    }
+
+    .progress-metric-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+
+    .progress-trouble-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        margin-bottom: var(--space-2);
+    }
+
+    .progress-trouble-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-1) 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .progress-trouble-item:last-child {
+        border-bottom: none;
+    }
+
     button {
         cursor: pointer;
         border: none;
@@ -636,7 +680,8 @@
 
     <!-- PROGRESS SCREEN -->
     <div id="view-progress" class="view">
-        <h2>Progress</h2>
+        <h2>What’s next</h2>
+        <p class="text-small" style="color:var(--text-sub);">Focus on the next step that grows your mastery.</p>
         <div class="card" id="progress-overview" style="margin-bottom:1rem;"></div>
         <div class="card" id="progress-details"></div>
     </div>
@@ -823,6 +868,7 @@ let currentSession = {
 };
 
 let lastSessionSummary = null;
+let progressTroubleEntries = [];
 
 // --- AUDIO ENGINE (ROBUST VERSION) ---
 let availableVoices = [];
@@ -1103,6 +1149,21 @@ function startTroublePractice() {
     }
     const uniqueMap = new Map();
     lastSessionSummary.troubleEntries.forEach(entry => {
+        const key = `${entry.deck.id}-${entry.card.word}`;
+        if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, entry);
+        }
+    });
+    const entries = Array.from(uniqueMap.values());
+    if (!entries.length) return;
+    const selectedDecks = Array.from(new Set(entries.map(entry => entry.deck)));
+    startPracticeEntries(entries, selectedDecks);
+}
+
+function startProgressTroublePractice() {
+    if (!progressTroubleEntries.length) return;
+    const uniqueMap = new Map();
+    progressTroubleEntries.forEach(entry => {
         const key = `${entry.deck.id}-${entry.card.word}`;
         if (!uniqueMap.has(key)) {
             uniqueMap.set(key, entry);
@@ -1586,17 +1647,14 @@ function renderProgress() {
     if (!overviewEl || !detailsEl) return;
     overviewEl.innerHTML = '';
     detailsEl.innerHTML = '';
+    progressTroubleEntries = [];
     if (app.decks.length === 0) {
         overviewEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">No data yet.</div>';
         return;
     }
     let total = 0;
-    let newWords = 0;
-    let learning = 0;
     let mastered = 0;
     let dueTotal = 0;
-    let sumTime = 0;
-    let countTime = 0;
     const troubleList = [];
     const now = Date.now();
     app.decks.forEach(deck => {
@@ -1605,54 +1663,68 @@ function renderProgress() {
             if (card.due <= now) {
                 dueTotal++;
             }
-            if (card.interval === 0) {
-                newWords++;
-            } else if (card.interval > 15) {
+            if (card.interval > 15) {
                 mastered++;
-            } else {
-                learning++;
-            }
-            if (card.avgTime && card.avgTime > 0) {
-                sumTime += card.avgTime;
-                countTime++;
             }
             troubleList.push({
                 word: card.word,
                 deck: deck.name,
+                deckRef: deck,
+                cardRef: card,
                 incorrect: card.incorrectCount || 0,
                 avgTime: card.avgTime || 0
             });
         });
     });
-    const avgTime = countTime > 0 ? (sumTime / countTime).toFixed(1) : 'N/A';
-    // Overview table
-    let overviewHTML = '<table style="width:100%; border-collapse:collapse; font-size:0.95rem;">';
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Total words</th><td style="padding:8px 4px; text-align:right;">${total}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Due</th><td style="padding:8px 4px; text-align:right;">${dueTotal}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">New</th><td style="padding:8px 4px; text-align:right;">${newWords}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Learning</th><td style="padding:8px 4px; text-align:right;">${learning}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Mastered</th><td style="padding:8px 4px; text-align:right;">${mastered}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Average response time (s)</th><td style="padding:8px 4px; text-align:right;">${avgTime}</td></tr>`;
-    overviewHTML += '</table>';
+    const masteryPercent = total ? Math.round((mastered / total) * 100) : 0;
+    const troubleCandidates = troubleList.filter(item => item.incorrect > 0 || item.avgTime > 0);
+    const troubleCount = troubleCandidates.length;
+    let overviewHTML = `
+        <h3 style="margin-top:0;">Mastery</h3>
+        <div class="progress-metrics">
+            <div class="progress-metric">
+                <div class="progress-metric-label">Mastered</div>
+                <div class="progress-metric-value">${masteryPercent}%</div>
+            </div>
+            <div class="progress-metric">
+                <div class="progress-metric-label">Due today</div>
+                <div class="progress-metric-value">${dueTotal}</div>
+            </div>
+            <div class="progress-metric">
+                <div class="progress-metric-label">Trouble count</div>
+                <div class="progress-metric-value">${troubleCount}</div>
+            </div>
+        </div>
+    `;
     overviewEl.innerHTML = overviewHTML;
     // Trouble words
-    troubleList.sort((a,b) => {
+    troubleCandidates.sort((a,b) => {
         if (b.incorrect !== a.incorrect) return b.incorrect - a.incorrect;
         return b.avgTime - a.avgTime;
     });
-    const topTrouble = troubleList.filter(t => t.incorrect > 0 || t.avgTime > 0).slice(0,10);
+    const topTrouble = troubleCandidates.slice(0,5);
+    progressTroubleEntries = topTrouble.map(item => ({ deck: item.deckRef, card: item.cardRef }));
+    let detailsHTML = '<h3 style="margin-top:0;">Trouble words</h3>';
+    detailsHTML += '<p class="text-small" style="color:var(--text-sub);">Tackle these to level up your mastery.</p>';
     if (topTrouble.length > 0) {
-        let detailsHTML = '<h3 style="margin-top:0;">Trouble Words</h3>';
-        detailsHTML += '<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">';
-        detailsHTML += '<tr><th style="text-align:left; padding:4px;">Word</th><th style="text-align:left; padding:4px;">Deck</th><th style="text-align:right; padding:4px;">Errors</th><th style="text-align:right; padding:4px;">Avg time (s)</th></tr>';
+        detailsHTML += '<div class="progress-trouble-list">';
         topTrouble.forEach(item => {
-            detailsHTML += `<tr><td style="padding:4px;">${item.word}</td><td style="padding:4px;">${item.deck}</td><td style="padding:4px; text-align:right;">${item.incorrect}</td><td style="padding:4px; text-align:right;">${item.avgTime.toFixed ? item.avgTime.toFixed(1) : item.avgTime}</td></tr>`;
+            const avgTimeLabel = item.avgTime > 0 ? `${item.avgTime.toFixed(1)}s` : '—';
+            detailsHTML += `
+                <div class="progress-trouble-item">
+                    <div>
+                        <strong>${item.word}</strong>
+                        <div class="text-small" style="color:var(--text-sub);">${item.deck} • ${item.incorrect} errors • Avg ${avgTimeLabel}</div>
+                    </div>
+                </div>
+            `;
         });
-        detailsHTML += '</table>';
-        detailsEl.innerHTML = detailsHTML;
+        detailsHTML += '</div>';
     } else {
-        detailsEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub);">No trouble words yet. Keep practicing!</div>';
+        detailsHTML += '<div class="text-small" style="color:var(--text-sub); margin-bottom:var(--space-2);">No trouble words yet. Keep practicing!</div>';
     }
+    detailsHTML += `<button class="btn-primary" onclick="startProgressTroublePractice()" ${topTrouble.length ? '' : 'disabled'}>Practice trouble words</button>`;
+    detailsEl.innerHTML = detailsHTML;
 }
 
 // Modal Logic
