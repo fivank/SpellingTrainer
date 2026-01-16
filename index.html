@@ -426,10 +426,10 @@
         <div class="practice-wrapper" id="practice-container">
             <!-- Dynamic Content -->
             <div style="text-align: center; color: var(--text-sub);">
-                <h2>Ready to Practice?</h2>
-                <p>Select a deck from the Words tab to begin.</p>
+                <h2>Today's Practice</h2>
+                <p>Press Start to begin.</p>
                 <br>
-                <button class="btn-primary" onclick="navTo('words')">Go to Decks</button>
+                <button class="btn-primary" onclick="startTodayPractice()">Start today's practice</button>
             </div>
         </div>
     </div>
@@ -534,7 +534,7 @@
 <nav>
     <button onclick="navTo('practice')" id="nav-practice" class="active">
         <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-        Practice
+        Today
     </button>
     <button onclick="navTo('words')" id="nav-words">
         <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
@@ -949,6 +949,32 @@ function startPracticeFromSelection() {
     startPractice(selected);
 }
 
+function startTodayPractice() {
+    if (!app.decks.length) return;
+    const deckIds = app.decks.map(deck => deck.id);
+    startPractice(deckIds);
+}
+
+function openPasteList() {
+    openDeckModal();
+    showDeckPanel('import');
+    setTimeout(() => focusDeckPaste(), 0);
+}
+
+function triggerBackupRestore() {
+    const input = document.getElementById('import-file');
+    if (input) {
+        input.click();
+    }
+}
+
+function addSampleDeck() {
+    app.decks.push(createSampleDeck());
+    saveData();
+    renderDeckList();
+    renderPracticeHome();
+}
+
 function endPracticeSession() {
     if (!currentSession.isActive) return;
     if (!confirm("End this practice session early?")) return;
@@ -978,132 +1004,40 @@ function renderPracticeHome() {
 
     if (app.decks.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; color: var(--text-sub);">
-                <h2>Ready to Practice?</h2>
-                <p>Select a deck from the Words tab to begin.</p>
-                <br>
-                <button class="btn-primary" onclick="navTo('words')">Go to Decks</button>
+            <div class="card" style="text-align:center;">
+                <h2 style="margin-top:0;">Welcome to SpellMaster</h2>
+                <p style="color: var(--text-sub); margin-bottom:1.5rem;">
+                    Choose a starting point to set up your first deck.
+                </p>
+                <div style="display:grid; gap:10px;">
+                    <button class="btn-primary" onclick="addSampleDeck()">Try sample</button>
+                    <button class="btn-secondary" onclick="openPasteList()">Paste list</button>
+                    <button class="btn-secondary" onclick="triggerBackupRestore()">Restore backup</button>
+                </div>
             </div>
         `;
         return;
     }
-
-    const allDeckIds = app.decks.map(deck => deck.id);
-    const validSelectedIds = currentSession.selectedDeckIds.filter(id => allDeckIds.includes(id));
-    currentSession.selectedDeckIds = validSelectedIds;
-
-    const selectedSet = new Set(currentSession.selectedDeckIds);
     const now = Date.now();
-    const dueCountTotal = app.decks.filter(deck => getDueCount(deck, now) > 0).length;
-    const inProgressCount = app.decks.filter(deck => deck.uncompleted).length;
-    const completedCount = app.decks.filter(deck => !deck.uncompleted && getDueCount(deck, now) === 0).length;
-    const filterOptions = [
-        { key: 'all', label: `All (${app.decks.length})` },
-        { key: 'due', label: `Due (${dueCountTotal})` },
-        { key: 'in-progress', label: `In progress (${inProgressCount})` },
-        { key: 'completed', label: `Completed (${completedCount})` }
-    ];
-    const activeFilter = currentSession.practiceFilter || 'all';
-    const matchesFilter = (deck) => {
-        if (activeFilter === 'due') return getDueCount(deck, now) > 0;
-        if (activeFilter === 'in-progress') return deck.uncompleted;
-        if (activeFilter === 'completed') return !deck.uncompleted && getDueCount(deck, now) === 0;
-        return true;
-    };
-    const filteredDecks = app.decks.filter(matchesFilter);
-    const renderDeckItems = (decks) => decks.map(deck => {
-        const dueCount = getDueCount(deck, now);
-        return `
-        <label class="practice-deck-item">
-            <input type="checkbox" class="practice-deck-checkbox" value="${deck.id}" ${selectedSet.has(deck.id) ? 'checked' : ''}>
-            <div class="practice-deck-details">
-                <div class="practice-deck-name">${deck.name}</div>
-                <div class="practice-deck-meta">
-                    <span>${deck.cards.length} items</span>
-                    <span>${dueCount} due</span>
-                    <span>Last practiced: ${formatLastPracticed(deck.lastPracticed)}</span>
-                </div>
-            </div>
-        </label>
-    `;
-    }).join('');
-    const deckItems = renderDeckItems(filteredDecks);
+    const { dueCount, newCount, troubleCount, totalCards } = getTodayCounts(now);
+    const isStartDisabled = totalCards === 0;
+    const startCopy = isStartDisabled ? 'Add words to start practicing' : 'Press Start to begin today’s practice.';
 
     container.innerHTML = `
-        <div class="card practice-selection">
-            <h2 style="margin:0;">Choose decks to practice</h2>
-            <div class="practice-filters">
-                ${filterOptions.map(option => `
-                    <button class="practice-filter-btn ${option.key === activeFilter ? 'active' : ''}" data-filter="${option.key}">
-                        ${option.label}
-                    </button>
-                `).join('')}
+        <div class="card" style="text-align:center;">
+            <h2 style="margin-top:0;">Today</h2>
+            <p style="color: var(--text-sub); margin-bottom:1.5rem;">${startCopy}</p>
+            <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s practice</button>
+            <div style="margin-top:1.5rem; display:grid; gap:6px; text-align:left;">
+                <div><strong>Due now:</strong> ${dueCount}</div>
+                <div><strong>New:</strong> ${newCount}</div>
+                <div><strong>Trouble:</strong> ${troubleCount}</div>
             </div>
-            <label class="practice-deck-item">
-                <input type="checkbox" id="practice-select-all">
-                <div>
-                    <strong>Select all shown</strong>
-                </div>
-            </label>
-            <div class="practice-selection">
-                ${deckItems || `<div class="practice-empty">No decks match this filter.</div>`}
+            <div style="margin-top:1.5rem; display:grid; gap:10px;">
+                <button class="btn-secondary" onclick="navTo('words')">Go to Decks</button>
             </div>
-            <button class="btn-primary" id="practice-start-btn" onclick="startPracticeFromSelection()">Start Practice</button>
         </div>
     `;
-
-    const selectAll = document.getElementById('practice-select-all');
-    const deckCheckboxes = Array.from(document.querySelectorAll('.practice-deck-checkbox'));
-    const startBtn = document.getElementById('practice-start-btn');
-    const deckLabels = Array.from(document.querySelectorAll('.practice-deck-item'));
-    const filterButtons = Array.from(document.querySelectorAll('.practice-filter-btn'));
-
-    const syncSelectionState = () => {
-        const visibleSelectedCount = deckCheckboxes.filter(cb => cb.checked).length;
-        selectAll.checked = deckCheckboxes.length > 0 && visibleSelectedCount === deckCheckboxes.length;
-        startBtn.disabled = selectedSet.size === 0;
-        deckLabels.forEach(label => {
-            const checkbox = label.querySelector('.practice-deck-checkbox');
-            if (checkbox) {
-                label.classList.toggle('selected', checkbox.checked);
-            }
-        });
-    };
-
-    syncSelectionState();
-
-    selectAll.addEventListener('change', (e) => {
-        const isChecked = e.target.checked;
-        deckCheckboxes.forEach(cb => {
-            cb.checked = isChecked;
-            if (isChecked) {
-                selectedSet.add(cb.value);
-            } else {
-                selectedSet.delete(cb.value);
-            }
-        });
-        currentSession.selectedDeckIds = Array.from(selectedSet);
-        syncSelectionState();
-    });
-
-    deckCheckboxes.forEach(cb => {
-        cb.addEventListener('change', () => {
-            if (cb.checked) {
-                selectedSet.add(cb.value);
-            } else {
-                selectedSet.delete(cb.value);
-            }
-            currentSession.selectedDeckIds = Array.from(selectedSet);
-            syncSelectionState();
-        });
-    });
-
-    filterButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            currentSession.practiceFilter = btn.dataset.filter || 'all';
-            renderPracticeHome();
-        });
-    });
 }
 
 function nextCard() {
@@ -1838,6 +1772,40 @@ function getDueCount(deck, now = Date.now()) {
     return deck.cards.filter(card => card.due <= now).length;
 }
 
+function getTodayCounts(now = Date.now()) {
+    let dueCount = 0;
+    let newCount = 0;
+    let troubleCount = 0;
+    let totalCards = 0;
+    app.decks.forEach(deck => {
+        deck.cards.forEach(card => {
+            totalCards++;
+            if (card.due <= now) dueCount++;
+            if (card.interval === 0) newCount++;
+            if ((card.incorrectCount || 0) > 0) troubleCount++;
+        });
+    });
+    return { dueCount, newCount, troubleCount, totalCards };
+}
+
+function createSampleDeck() {
+    return {
+        id: generateDeckId(),
+        name: "Sample English",
+        lang: "en-US",
+        uncompleted: false,
+        lastPracticed: null,
+        cards: [
+            {word: "necessary", sentence: "It is necessary to sleep well.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
+            {word: "queue", sentence: "Wait in the queue.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
+            {word: "apple", sentence: "", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
+            {word: "banana", sentence: "", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
+            {word: "books", sentence: "I forgot my books at home", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
+            {word: "school", sentence: "", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0}
+        ]
+    };
+}
+
 function formatLastPracticed(timestamp) {
     if (!timestamp) return 'Never';
     const date = new Date(timestamp);
@@ -2012,25 +1980,6 @@ initAudio();
 loadData();
 initCardInputListeners();
 document.addEventListener('keydown', handlePracticeKeydown);
-
-// Add some demo data if empty
-if(app.decks.length === 0) {
-    app.decks.push({
-        id: "demo1", name: "English Demo", lang: "en-US",
-        uncompleted: false,
-        cards: [
-            // Provide a variety of example words to allow immediate practice without configuration.
-            {word: "necessary", sentence: "It is necessary to sleep well.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
-            {word: "queue", sentence: "Wait in the queue.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
-            {word: "apple", sentence: "", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
-            {word: "banana", sentence: "", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
-            {word: "books", sentence: "I forgot my books at home", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
-            {word: "school", sentence: "", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0}
-        ]
-    });
-    saveData();
-    renderDeckList();
-}
 
 </script>
 </body>
