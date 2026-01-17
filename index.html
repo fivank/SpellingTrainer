@@ -783,8 +783,11 @@
                 <option value="de-DE">German</option>
                 <option value="it-IT">Italian</option>
             </select>
-            <label for="new-deck-text">Dictation Text (optional)</label>
-            <textarea id="new-deck-text" rows="5" placeholder="Paste the full dictation passage." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
+            <label for="new-deck-text">Dictation Text or Word List (optional)</label>
+            <textarea id="new-deck-text" rows="5" placeholder="Paste full dictation text, or a list like: apple, banana; or apple - An example sentence." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
+            <p class="text-small" style="color:var(--text-sub); margin-top:6px;">
+                Tip: Separate words with commas/semicolons, or use word-sentence pairs like "ocean: The ocean is calm; breeze / A light breeze blew."
+            </p>
             <div style="display:flex; gap:var(--space-1); margin-top:var(--space-2);">
                 <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
                 <button class="btn-primary" onclick="saveDeck()" style="flex:1">Create</button>
@@ -2017,20 +2020,57 @@ function importDeckFromPaste() {
         alert("Invalid deck JSON");
     }
 }
+function buildCardEntry(word, sentence = '') {
+    return {
+        word: word.trim(),
+        sentence: sentence.trim(),
+        audioUrl: '',
+        due: 0,
+        interval: 0,
+        ease: 2.5,
+        correctCount: 0,
+        incorrectCount: 0,
+        avgTime: 0
+    };
+}
+
+function parseDeckTextInput(raw) {
+    const input = raw.trim();
+    if (!input) return { text: '', cards: [], usedList: false };
+    const hasPairPattern = /[^,;]+?\s*[-:/=]\s*[^,;]+/;
+    const hasSeparators = /[,;]/;
+    const hasSentencePunct = /[.!?]/;
+    if (hasPairPattern.test(input) || (hasSeparators.test(input) && !hasSentencePunct.test(input))) {
+        const segments = input.split(/[;,]+/);
+        const cards = [];
+        segments.forEach(segment => {
+            const trimmed = segment.trim();
+            if (!trimmed) return;
+            const pairMatch = trimmed.match(/^(.+?)\s*[-:/=]\s*(.+)$/);
+            const word = pairMatch ? pairMatch[1].trim() : trimmed;
+            const sentence = pairMatch ? pairMatch[2].trim() : '';
+            if (word) cards.push(buildCardEntry(word, sentence));
+        });
+        return { text: '', cards, usedList: true };
+    }
+    return { text: input, cards: [], usedList: false };
+}
+
 function saveDeck() {
     const name = document.getElementById('new-deck-name').value;
     const lang = document.getElementById('new-deck-lang').value;
-    const text = document.getElementById('new-deck-text').value.trim();
+    const rawInput = document.getElementById('new-deck-text').value;
+    const parsedInput = parseDeckTextInput(rawInput);
     if (!name) return;
     
     app.decks.push({
         id: generateDeckId(),
         name,
         lang,
-        cards: [],
+        cards: parsedInput.cards,
         uncompleted: false,
         lastPracticed: null,
-        text,
+        text: parsedInput.text,
         dictationStatsReady: false
     });
     saveData();
@@ -2276,17 +2316,9 @@ function addCardToDeck() {
     if (!w.value) return;
     
     const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
-    deck.cards.push({
-        word: w.value.trim(),
-        sentence: s.value.trim(),
-        audioUrl: a.value.trim() || '',
-        due: 0,
-        interval: 0,
-        ease: 2.5,
-        correctCount: 0,
-        incorrectCount: 0,
-        avgTime: 0
-    });
+    const entry = buildCardEntry(w.value.trim(), s.value.trim());
+    entry.audioUrl = a.value.trim() || '';
+    deck.cards.push(entry);
     w.value = '';
     s.value = '';
     a.value = '';
