@@ -770,6 +770,10 @@
                 <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-val">350</span> ms</label>
                 <input type="range" id="setting-pause-mid-sentence" min="0" max="1500" step="50" value="350">
             </div>
+            <div>
+                <label>Pause every 2 words: <span id="pause-two-words-val">0</span> ms</label>
+                <input type="range" id="setting-pause-two-words" min="0" max="1500" step="50" value="0">
+            </div>
             <button class="btn-secondary" onclick="testAudio()">Test Audio</button>
         </div>
         
@@ -992,6 +996,7 @@ let app = {
         pauseWordSentenceMs: 600,
         pauseBetweenSentencesMs: 800,
         pauseMidSentenceMs: 350,
+        pauseTwoWordsMs: 0,
         /* whether to automatically play audio when a card appears */
         autoplay: true,
         /* whether to block keyboard suggestions on the practice input */
@@ -1161,12 +1166,28 @@ function buildSentenceParts(sentence) {
     return [clean];
 }
 
-function buildSentenceSegments(sentence, pauseMs) {
+function buildSentenceSegments(sentence, pauseMs, pauseTwoWordsMs = 0) {
     const parts = buildSentenceParts(sentence);
-    return parts.map((part, index) => ({
-        text: part,
-        pauseAfter: index < parts.length - 1 ? pauseMs : 0
-    }));
+    const segments = [];
+    parts.forEach((part, partIndex) => {
+        const words = part.split(/\s+/).filter(Boolean);
+        if (pauseTwoWordsMs > 0 && words.length > 2) {
+            for (let i = 0; i < words.length; i += 2) {
+                const chunk = words.slice(i, i + 2).join(' ');
+                const isLastChunk = i + 2 >= words.length;
+                const pauseAfter = isLastChunk
+                    ? (partIndex < parts.length - 1 ? pauseMs : 0)
+                    : pauseTwoWordsMs;
+                segments.push({ text: chunk, pauseAfter });
+            }
+        } else {
+            segments.push({
+                text: part,
+                pauseAfter: partIndex < parts.length - 1 ? pauseMs : 0
+            });
+        }
+    });
+    return segments;
 }
 
 function speakSegments(segments, lang) {
@@ -1249,16 +1270,18 @@ function speak(text, lang) {
 
 function speakSentenceWithPauses(sentence, lang) {
     const pauseMidSentenceMs = getPauseSetting('pauseMidSentenceMs', 350);
-    const segments = buildSentenceSegments(sentence, pauseMidSentenceMs);
+    const pauseTwoWordsMs = getPauseSetting('pauseTwoWordsMs', 0);
+    const segments = buildSentenceSegments(sentence, pauseMidSentenceMs, pauseTwoWordsMs);
     speakSegments(segments, lang);
 }
 
 function speakWordWithSentence(word, sentence, lang) {
     const pauseWordSentenceMs = getPauseSetting('pauseWordSentenceMs', 600);
     const pauseMidSentenceMs = getPauseSetting('pauseMidSentenceMs', 350);
+    const pauseTwoWordsMs = getPauseSetting('pauseTwoWordsMs', 0);
     const segments = [
         { text: word, pauseAfter: pauseWordSentenceMs },
-        ...buildSentenceSegments(sentence, pauseMidSentenceMs)
+        ...buildSentenceSegments(sentence, pauseMidSentenceMs, pauseTwoWordsMs)
     ];
     speakSegments(segments, lang);
 }
@@ -1266,6 +1289,7 @@ function speakWordWithSentence(word, sentence, lang) {
 function speakTextWithPauses(text, lang) {
     const pauseBetweenSentencesMs = getPauseSetting('pauseBetweenSentencesMs', 800);
     const pauseMidSentenceMs = getPauseSetting('pauseMidSentenceMs', 350);
+    const pauseTwoWordsMs = getPauseSetting('pauseTwoWordsMs', 0);
     const sentences = splitTextIntoSentences(text || '');
     if (!sentences.length) {
         speak(text, lang);
@@ -1273,7 +1297,7 @@ function speakTextWithPauses(text, lang) {
     }
     const segments = [];
     sentences.forEach((sentence, index) => {
-        const sentenceSegments = buildSentenceSegments(sentence, pauseMidSentenceMs);
+        const sentenceSegments = buildSentenceSegments(sentence, pauseMidSentenceMs, pauseTwoWordsMs);
         if (sentenceSegments.length && index < sentences.length - 1) {
             sentenceSegments[sentenceSegments.length - 1].pauseAfter += pauseBetweenSentencesMs;
         }
@@ -3225,6 +3249,7 @@ function initSettingsListeners() {
     initPauseSlider('setting-pause-word-sentence', 'pause-word-sentence-val', 'pauseWordSentenceMs', 600);
     initPauseSlider('setting-pause-between-sentences', 'pause-between-sentences-val', 'pauseBetweenSentencesMs', 800);
     initPauseSlider('setting-pause-mid-sentence', 'pause-mid-sentence-val', 'pauseMidSentenceMs', 350);
+    initPauseSlider('setting-pause-two-words', 'pause-two-words-val', 'pauseTwoWordsMs', 0);
 
     const voiceModeEl = document.getElementById('setting-voice-mode');
     if (voiceModeEl) {
