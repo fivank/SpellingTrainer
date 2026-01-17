@@ -880,6 +880,14 @@
             <h3>Manage Cards</h3>
             <button class="btn-icon" onclick="closeCardsModal()">✕</button>
         </div>
+        <div id="dictation-text-panel" style="margin-bottom:1rem; display:none;">
+            <label for="edit-deck-text-inline">Dictation Text</label>
+            <textarea id="edit-deck-text-inline" rows="5" placeholder="Edit the full dictation passage." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical; margin-bottom:8px;"></textarea>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-1); flex-wrap:wrap;">
+                <small class="text-small" style="color: var(--text-sub);">Saving updates words and sentences to match the text.</small>
+                <button class="btn-secondary" onclick="saveDictationText()">Save Dictation Text</button>
+            </div>
+        </div>
         <div style="margin-bottom:1rem;">
             <input type="text" id="new-card-word" placeholder="Word to spell" style="margin-bottom:8px;">
             <input type="text" id="new-card-sentence" placeholder="Sentence (optional)" style="margin-bottom:8px;">
@@ -889,6 +897,26 @@
         </div>
         <div style="flex:1; overflow-y:auto; border-top:1px solid #eee; padding-top:var(--space-1);" id="cards-list-content">
             <!-- Cards list -->
+        </div>
+    </div>
+</div>
+
+<!-- EDIT CARD MODAL -->
+<div id="card-edit-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Edit Card</h3>
+            <button class="btn-icon" onclick="closeCardEditModal()">✕</button>
+        </div>
+        <label for="edit-card-word">Word</label>
+        <input type="text" id="edit-card-word" placeholder="Word">
+        <label for="edit-card-sentence">Sentence</label>
+        <input type="text" id="edit-card-sentence" placeholder="Sentence (optional)">
+        <label for="edit-card-audio">Audio URL</label>
+        <input type="text" id="edit-card-audio" placeholder="Audio URL (optional)">
+        <div style="display:flex; gap:var(--space-1);">
+            <button class="btn-secondary" onclick="closeCardEditModal()" style="flex:1">Cancel</button>
+            <button class="btn-primary" onclick="saveCardEdits()" style="flex:1">Save</button>
         </div>
     </div>
 </div>
@@ -2128,6 +2156,7 @@ function renderProgress() {
 
 // Modal Logic
 let activeDeckIdForEdit = null;
+let activeCardIndexForEdit = null;
 function openDeckModal() {
     document.getElementById('deck-modal').classList.add('open');
     document.getElementById('new-deck-name').value = '';
@@ -2248,10 +2277,83 @@ function saveDeck() {
 function manageCards(deckId) {
     activeDeckIdForEdit = deckId;
     document.getElementById('cards-modal').classList.add('open');
+    renderDictationEditor();
     renderCardList();
 }
 function closeCardsModal() {
     document.getElementById('cards-modal').classList.remove('open');
+    closeCardEditModal();
+}
+
+function renderDictationEditor() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    const panel = document.getElementById('dictation-text-panel');
+    const textArea = document.getElementById('edit-deck-text-inline');
+    if (!panel || !textArea) return;
+    if (deck && deck.text && deck.text.trim()) {
+        panel.style.display = 'block';
+        textArea.value = deck.text || '';
+    } else {
+        panel.style.display = 'none';
+        textArea.value = '';
+    }
+}
+
+function updateDeckTextAndCards(deck, newText, shouldSync = true) {
+    if (!deck) return;
+    const trimmed = newText.trim();
+    const prevText = (deck.text || '').trim();
+    deck.text = trimmed;
+    if (trimmed && (shouldSync || trimmed !== prevText)) {
+        syncCardsWithDictationText(deck, trimmed);
+        deck.dictationStatsReady = false;
+    } else if (!trimmed && prevText) {
+        deck.dictationStatsReady = false;
+    }
+}
+
+function syncCardsWithDictationText(deck, text) {
+    const tokens = getWordTokensWithSentence(text);
+    const uniqueTokens = [];
+    const seen = new Set();
+    tokens.forEach(token => {
+        const normalized = normalizeToken(token.word, 'lenient');
+        if (!normalized || seen.has(normalized)) return;
+        seen.add(normalized);
+        uniqueTokens.push({ word: token.word, sentence: token.sentence });
+    });
+    const existingMap = new Map();
+    deck.cards.forEach(card => {
+        existingMap.set(normalizeToken(card.word || '', 'lenient'), card);
+    });
+    const nextCards = uniqueTokens.map(token => {
+        const normalized = normalizeToken(token.word, 'lenient');
+        const existing = existingMap.get(normalized);
+        if (existing) {
+            existing.word = token.word;
+            existing.sentence = token.sentence || existing.sentence || '';
+            return existing;
+        }
+        return buildCardEntry(token.word, token.sentence);
+    });
+    deck.cards = nextCards;
+}
+
+function saveDictationText() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    const textInput = document.getElementById('edit-deck-text-inline');
+    if (!deck || !textInput) return;
+    const nextText = textInput.value || '';
+    updateDeckTextAndCards(deck, nextText, true);
+    saveData();
+    renderDictationEditor();
+    renderCardList();
+    renderDeckList();
+    renderPracticeHome();
+    renderProgress();
+    if (document.getElementById('view-deck-progress').classList.contains('active')) {
+        renderDeckProgress(deck.id);
+    }
 }
 
 function openDeckActions(deckId) {
@@ -2363,14 +2465,14 @@ function saveDeckMeta() {
     const langSelect = document.getElementById('edit-deck-lang');
     const textInput = document.getElementById('edit-deck-text');
     const newName = nameInput.value.trim();
-    const newText = textInput.value.trim();
+    const newText = textInput.value;
     if (!newName) {
         alert("Pack name can't be empty.");
         return;
     }
     deck.name = newName;
     deck.lang = langSelect.value;
-    deck.text = newText;
+    updateDeckTextAndCards(deck, newText, true);
     saveData();
     closeDeckMetaModal();
     renderDeckList();
@@ -2470,10 +2572,54 @@ function renderCardList() {
                 <strong style="font-size:1.1rem;">${card.word}</strong>
                 ${card.sentence ? `<div style="font-size:0.85rem; color:#666; margin-top:4px;">${card.sentence}</div>` : ''}
             </div>
-            <button class="btn-icon" style="background:#fee2e2; color:var(--error); width:32px; height:32px;" onclick="deleteCard(${realIndex})">✕</button>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <button class="btn-icon" style="background:#e0e7ff; color:var(--primary-dark); width:32px; height:32px;" onclick="openCardEditor(${realIndex})">✎</button>
+                <button class="btn-icon" style="background:#fee2e2; color:var(--error); width:32px; height:32px;" onclick="deleteCard(${realIndex})">✕</button>
+            </div>
         `;
         container.appendChild(div);
     });
+}
+
+function openCardEditor(index) {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    if (!deck || !deck.cards[index]) return;
+    const card = deck.cards[index];
+    activeCardIndexForEdit = index;
+    document.getElementById('edit-card-word').value = card.word || '';
+    document.getElementById('edit-card-sentence').value = card.sentence || '';
+    document.getElementById('edit-card-audio').value = card.audioUrl || '';
+    document.getElementById('card-edit-modal').classList.add('open');
+}
+
+function closeCardEditModal() {
+    document.getElementById('card-edit-modal').classList.remove('open');
+    activeCardIndexForEdit = null;
+}
+
+function saveCardEdits() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    if (!deck || activeCardIndexForEdit === null) return;
+    const wordInput = document.getElementById('edit-card-word');
+    const sentenceInput = document.getElementById('edit-card-sentence');
+    const audioInput = document.getElementById('edit-card-audio');
+    const nextWord = wordInput.value.trim();
+    if (!nextWord) {
+        alert("Word can't be empty.");
+        return;
+    }
+    const card = deck.cards[activeCardIndexForEdit];
+    card.word = nextWord;
+    card.sentence = sentenceInput.value.trim();
+    card.audioUrl = audioInput.value.trim();
+    saveData();
+    closeCardEditModal();
+    renderCardList();
+    renderDeckList();
+    renderProgress();
+    if (document.getElementById('view-deck-progress').classList.contains('active')) {
+        renderDeckProgress(deck.id);
+    }
 }
 
 function addCardToDeck() {
