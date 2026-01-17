@@ -877,6 +877,8 @@
             <option value="de-DE">German</option>
             <option value="it-IT">Italian</option>
         </select>
+        <label for="edit-deck-text">Dictation Text (optional)</label>
+        <textarea id="edit-deck-text" rows="5" placeholder="Enter the full dictation passage." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
         <div style="display:flex; gap:var(--space-1);">
             <button class="btn-secondary" onclick="closeDeckMetaModal()" style="flex:1">Cancel</button>
             <button class="btn-primary" onclick="saveDeckMeta()" style="flex:1">Save</button>
@@ -2134,6 +2136,7 @@ function openDeckMetaEditor() {
     if (!deck) return;
     document.getElementById('edit-deck-name').value = deck.name || '';
     document.getElementById('edit-deck-lang').value = deck.lang || 'en-US';
+    document.getElementById('edit-deck-text').value = deck.text || '';
     closeDeckActionsModal();
     document.getElementById('deck-meta-modal').classList.add('open');
 }
@@ -2147,13 +2150,16 @@ function saveDeckMeta() {
     if (!deck) return;
     const nameInput = document.getElementById('edit-deck-name');
     const langSelect = document.getElementById('edit-deck-lang');
+    const textInput = document.getElementById('edit-deck-text');
     const newName = nameInput.value.trim();
+    const newText = textInput.value.trim();
     if (!newName) {
         alert("Deck name can't be empty.");
         return;
     }
     deck.name = newName;
     deck.lang = langSelect.value;
+    deck.text = newText;
     saveData();
     closeDeckMetaModal();
     renderDeckList();
