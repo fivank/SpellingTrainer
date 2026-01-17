@@ -754,6 +754,22 @@
                 <label>Speed: <span id="speed-val">1.0</span>x</label>
                 <input type="range" id="setting-speed" min="0.5" max="1.5" step="0.1" value="1">
             </div>
+            <div style="margin-top:var(--space-2);">
+                <label>Silence at start: <span id="pause-start-val">0</span> ms</label>
+                <input type="range" id="setting-pause-start" min="0" max="2000" step="50" value="0">
+            </div>
+            <div>
+                <label>Pause between word &amp; sentence: <span id="pause-word-sentence-val">600</span> ms</label>
+                <input type="range" id="setting-pause-word-sentence" min="0" max="2000" step="50" value="600">
+            </div>
+            <div>
+                <label>Pause between sentences: <span id="pause-between-sentences-val">800</span> ms</label>
+                <input type="range" id="setting-pause-between-sentences" min="0" max="3000" step="50" value="800">
+            </div>
+            <div>
+                <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-val">350</span> ms</label>
+                <input type="range" id="setting-pause-mid-sentence" min="0" max="1500" step="50" value="350">
+            </div>
             <button class="btn-secondary" onclick="testAudio()">Test Audio</button>
         </div>
         
@@ -944,6 +960,10 @@ let app = {
         voiceURI: null,
         voiceMode: 'auto',
         speed: 1.0,
+        pauseStartMs: 0,
+        pauseWordSentenceMs: 600,
+        pauseBetweenSentencesMs: 800,
+        pauseMidSentenceMs: 350,
         /* whether to automatically play audio when a card appears */
         autoplay: true,
         /* whether to block keyboard suggestions on the practice input */
@@ -1076,7 +1096,52 @@ function populateVoiceSelect() {
     updateVoiceModeUI();
 }
 
-function speak(text, lang) {
+function getPauseValue(value, fallback) {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.max(0, parsed);
+}
+
+function getPauseSetting(key, fallback) {
+    return getPauseValue(app.settings[key], fallback);
+}
+
+function selectVoiceForLang(lang) {
+    let voice = null;
+    if (app.settings.voiceMode === 'fixed' && app.settings.voiceURI) {
+        voice = availableVoices.find(v => v.voiceURI === app.settings.voiceURI);
+    }
+    if (!voice && lang) {
+        voice = getBestVoiceForLang(lang);
+    }
+    return voice;
+}
+
+function buildSentenceParts(sentence) {
+    const clean = String(sentence || '').trim();
+    if (!clean) return [];
+    const commaParts = clean.split(/,\s*/).filter(Boolean);
+    if (commaParts.length > 1) return commaParts;
+    const words = clean.split(/\s+/).filter(Boolean);
+    if (words.length > 6) {
+        const midpoint = Math.ceil(words.length / 2);
+        return [
+            words.slice(0, midpoint).join(' '),
+            words.slice(midpoint).join(' ')
+        ];
+    }
+    return [clean];
+}
+
+function buildSentenceSegments(sentence, pauseMs) {
+    const parts = buildSentenceParts(sentence);
+    return parts.map((part, index) => ({
+        text: part,
+        pauseAfter: index < parts.length - 1 ? pauseMs : 0
+    }));
+}
+
+function speakSegments(segments, lang) {
     if (!('speechSynthesis' in window)) {
         alert("Your browser does not support Audio. Please try Chrome or Safari.");
         return;
@@ -1092,41 +1157,101 @@ function speak(text, lang) {
     
     window.speechSynthesis.cancel(); // Stop current
 
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = parseFloat(app.settings.speed) || 1.0;
-    
-    // --- VOICE SELECTION LOGIC ---
-    let voice = null;
-    
-    // 1. Try User Preference when fixed mode is enabled
-    if (app.settings.voiceMode === 'fixed' && app.settings.voiceURI) {
-        voice = availableVoices.find(v => v.voiceURI === app.settings.voiceURI);
-    }
-    
-    // 2. If no preference or invalid, find best match for Deck Language
-    if (!voice && lang) {
-        voice = getBestVoiceForLang(lang);
-    }
+    const validSegments = (segments || []).filter(segment => segment && (segment.text || segment.pauseAfter));
+    if (!validSegments.length) return;
 
-    if (voice) {
-        u.voice = voice;
-        u.lang = voice.lang; // Ensure lang matches voice
-    } else {
-        // 3. Last Resort: Let browser decide based on lang code
-        u.lang = lang || 'en-US';
-    }
-
-    // Visual Feedback
+    const voice = selectVoiceForLang(lang);
     const btn = document.querySelector('.audio-trigger');
-    if(btn) btn.classList.add('playing');
+    if (btn) btn.classList.add('playing');
 
-    u.onend = () => { if(btn) btn.classList.remove('playing'); };
-    u.onerror = (e) => { 
-        if(btn) btn.classList.remove('playing');
-        console.warn("Audio Error:", e);
+    let index = 0;
+    const startDelay = getPauseSetting('pauseStartMs', 0);
+
+    const finishSequence = () => {
+        if (btn) btn.classList.remove('playing');
     };
 
-    window.speechSynthesis.speak(u);
+    const speakNext = () => {
+        if (index >= validSegments.length) {
+            finishSequence();
+            return;
+        }
+        const segment = validSegments[index];
+        const pauseAfter = getPauseValue(segment.pauseAfter, 0);
+        const advance = () => {
+            index += 1;
+            if (pauseAfter > 0) {
+                setTimeout(speakNext, pauseAfter);
+            } else {
+                speakNext();
+            }
+        };
+
+        if (!segment.text) {
+            advance();
+            return;
+        }
+
+        const u = new SpeechSynthesisUtterance(segment.text);
+        u.rate = parseFloat(app.settings.speed) || 1.0;
+        if (voice) {
+            u.voice = voice;
+            u.lang = voice.lang;
+        } else {
+            u.lang = lang || 'en-US';
+        }
+        u.onend = advance;
+        u.onerror = (e) => {
+            console.warn("Audio Error:", e);
+            advance();
+        };
+        window.speechSynthesis.speak(u);
+    };
+
+    if (startDelay > 0) {
+        setTimeout(speakNext, startDelay);
+    } else {
+        speakNext();
+    }
+}
+
+function speak(text, lang) {
+    speakSegments([{ text, pauseAfter: 0 }], lang);
+}
+
+function speakSentenceWithPauses(sentence, lang) {
+    const pauseMidSentenceMs = getPauseSetting('pauseMidSentenceMs', 350);
+    const segments = buildSentenceSegments(sentence, pauseMidSentenceMs);
+    speakSegments(segments, lang);
+}
+
+function speakWordWithSentence(word, sentence, lang) {
+    const pauseWordSentenceMs = getPauseSetting('pauseWordSentenceMs', 600);
+    const pauseMidSentenceMs = getPauseSetting('pauseMidSentenceMs', 350);
+    const segments = [
+        { text: word, pauseAfter: pauseWordSentenceMs },
+        ...buildSentenceSegments(sentence, pauseMidSentenceMs)
+    ];
+    speakSegments(segments, lang);
+}
+
+function speakTextWithPauses(text, lang) {
+    const pauseBetweenSentencesMs = getPauseSetting('pauseBetweenSentencesMs', 800);
+    const pauseMidSentenceMs = getPauseSetting('pauseMidSentenceMs', 350);
+    const sentences = splitTextIntoSentences(text || '');
+    if (!sentences.length) {
+        speak(text, lang);
+        return;
+    }
+    const segments = [];
+    sentences.forEach((sentence, index) => {
+        const sentenceSegments = buildSentenceSegments(sentence, pauseMidSentenceMs);
+        if (sentenceSegments.length && index < sentences.length - 1) {
+            sentenceSegments[sentenceSegments.length - 1].pauseAfter += pauseBetweenSentencesMs;
+        }
+        segments.push(...sentenceSegments);
+    });
+    speakSegments(segments, lang);
 }
 
 function testAudio() {
@@ -1613,17 +1738,16 @@ function playCurrent() {
         }
         const lang = currentSession.deck ? currentSession.deck.lang : 'en-US';
         if (entry.mode === 'dictation-text') {
-            speak(entry.text, lang);
+            speakTextWithPauses(entry.text, lang);
             return;
         }
         if (entry.mode === 'dictation') {
-            speak(entry.sentence, lang);
+            speakSentenceWithPauses(entry.sentence, lang);
             return;
         }
         // If card has a sentence, speak word then sentence for context
         if (card.sentence && card.sentence.trim() !== '') {
-            const phrase = `${card.word}. ${card.sentence}`;
-            speak(phrase, lang);
+            speakWordWithSentence(card.word, card.sentence, lang);
         } else {
             speak(card.word, lang);
         }
@@ -2935,6 +3059,26 @@ function initSettingsListeners() {
         document.getElementById('speed-val').textContent = e.target.value;
         saveData();
     });
+
+    const initPauseSlider = (inputId, valueId, settingKey, fallback) => {
+        const input = document.getElementById(inputId);
+        const valueEl = document.getElementById(valueId);
+        if (!input || !valueEl) return;
+        const value = getPauseSetting(settingKey, fallback);
+        input.value = value;
+        valueEl.textContent = value;
+        input.addEventListener('input', (e) => {
+            const nextValue = getPauseValue(e.target.value, fallback);
+            app.settings[settingKey] = nextValue;
+            valueEl.textContent = nextValue;
+            saveData();
+        });
+    };
+
+    initPauseSlider('setting-pause-start', 'pause-start-val', 'pauseStartMs', 0);
+    initPauseSlider('setting-pause-word-sentence', 'pause-word-sentence-val', 'pauseWordSentenceMs', 600);
+    initPauseSlider('setting-pause-between-sentences', 'pause-between-sentences-val', 'pauseBetweenSentencesMs', 800);
+    initPauseSlider('setting-pause-mid-sentence', 'pause-mid-sentence-val', 'pauseMidSentenceMs', 350);
 
     const voiceModeEl = document.getElementById('setting-voice-mode');
     if (voiceModeEl) {
