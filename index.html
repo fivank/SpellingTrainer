@@ -305,9 +305,9 @@
     .word-input:focus { border-color: var(--primary); background: transparent; }
     
     .feedback-area { text-align: center; margin-bottom: 1rem; min-height: 24px; }
-    .diff-display span { font-size: 1.5rem; font-weight: 700; }
-    .diff-correct { color: var(--success); }
-    .diff-wrong { color: var(--error); text-decoration: line-through; margin-right: 8px; opacity: 0.7; }
+    .diff-display span { font-size: 1.2rem; font-weight: 600; }
+    .diff-correct { color: var(--text-main); }
+    .diff-wrong { color: var(--error); font-weight: 700; }
 
     .srs-controls { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-1); width: 100%; margin-top: var(--space-4); }
     .srs-btn { padding: var(--space-2); border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 700; color: #333; }
@@ -389,14 +389,26 @@
     /* Diff display styling for incorrect answers */
     .diff-display {
         display: flex;
-        gap: 8px;
+        flex-wrap: wrap;
+        gap: 4px;
         justify-content: center;
         margin-top: 8px;
         margin-bottom: 8px;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
+        line-height: 1.5;
+        text-align: center;
     }
-    .diff-wrong { color: var(--error); text-decoration: line-through; }
-    .diff-correct { color: var(--success); font-weight: bold; }
+    .diff-highlight {
+        color: var(--error);
+        font-weight: 700;
+    }
+    .diff-line {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+    }
 
     .practice-selection {
         display: flex;
@@ -538,6 +550,39 @@
         margin-top: 1rem;
         display: flex;
         justify-content: center;
+    }
+    .practice-options {
+        display: grid;
+        gap: var(--space-1);
+        margin-bottom: var(--space-2);
+    }
+    .practice-option {
+        padding: var(--space-2);
+        border-radius: var(--radius-sm);
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .practice-option.selected {
+        border-color: var(--primary);
+        background: #eef2ff;
+        box-shadow: 0 6px 12px rgba(99, 102, 241, 0.12);
+    }
+    .practice-option.disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+    .practice-option-title {
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
+    .practice-option-desc {
+        font-size: 0.85rem;
+        color: var(--text-sub);
     }
 
     /* Toggle switch styling (borrowed from improved version) */
@@ -801,6 +846,19 @@
     </div>
 </div>
 
+<!-- PRACTICE OPTIONS MODAL -->
+<div id="practice-options-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 id="practice-options-title">Practice Options</h3>
+            <button class="btn-icon" onclick="closePracticeOptionsModal()">✕</button>
+        </div>
+        <div id="practice-options-list" class="practice-options"></div>
+        <p id="practice-options-note" class="text-small" style="color: var(--text-sub); margin-top:0;"></p>
+        <button class="btn-primary" id="practice-options-start" onclick="startPracticeFromOptions()" disabled>Start practice</button>
+    </div>
+</div>
+
 <!-- EDIT DECK META MODAL -->
 <div id="deck-meta-modal" class="modal-overlay">
     <div class="modal">
@@ -869,6 +927,8 @@ let currentSession = {
 
 let lastSessionSummary = null;
 let progressTroubleEntries = [];
+let activePracticeDeckId = null;
+let selectedPracticeMode = null;
 
 // --- AUDIO ENGINE (ROBUST VERSION) ---
 let availableVoices = [];
@@ -1047,6 +1107,7 @@ function loadData() {
         if (deck.uncompleted === undefined) deck.uncompleted = false;
         if (deck.lastPracticed === undefined) deck.lastPracticed = null;
         if (deck.text === undefined) deck.text = '';
+        if (deck.dictationStatsReady === undefined) deck.dictationStatsReady = false;
         deck.cards.forEach(card => {
             if (card.audioUrl === undefined) card.audioUrl = '';
             if (card.correctCount === undefined) card.correctCount = 0;
@@ -1056,6 +1117,9 @@ function loadData() {
             if (card.ease === undefined) card.ease = 2.5;
             if (card.due === undefined) card.due = 0;
         });
+        if (!deck.dictationStatsReady) {
+            deck.dictationStatsReady = deck.cards.some(card => (card.correctCount || 0) + (card.incorrectCount || 0) > 0);
+        }
     });
     renderDeckList();
     initSettingsListeners();
@@ -1094,23 +1158,29 @@ function startPractice(deckIds) {
     // Sort by due date
     const now = Date.now();
     let entries = selectedDecks.flatMap(deck => {
+        if (isDictationDeck(deck) && !deckHasDictationStats(deck)) {
+            return buildDictationTextEntry(deck);
+        }
         if (isDictationDeck(deck)) {
             return buildDictationEntries(deck);
         }
-        return deck.cards.filter(card => card.due <= now)
-            .map(card => ({ deck, card, mode: 'word' }));
+        return buildWordEntries(deck, now, true);
     }).sort((a,b) => {
         if (a.mode === 'dictation' || b.mode === 'dictation') return 0;
+        if (a.mode === 'dictation-text' || b.mode === 'dictation-text') return 0;
         return a.card.due - b.card.due;
     });
     
     // If no due cards, practice all
     if (entries.length === 0) {
         entries = selectedDecks.flatMap(deck => {
+            if (isDictationDeck(deck) && !deckHasDictationStats(deck)) {
+                return buildDictationTextEntry(deck);
+            }
             if (isDictationDeck(deck)) {
                 return buildDictationEntries(deck);
             }
-            return deck.cards.map(card => ({ deck, card, mode: 'word' }));
+            return buildWordEntries(deck, now, false);
         });
     }
 
@@ -1346,7 +1416,9 @@ function nextCard() {
     currentSession.startTime = null;
     
     const c = currentSession.currentCard;
-    const isDictation = currentSession.currentEntry.mode === 'dictation';
+    const entry = currentSession.currentEntry;
+    const isDictation = entry.mode === 'dictation' || entry.mode === 'dictation-text';
+    const isDictationText = entry.mode === 'dictation-text';
     const hasSentence = !isDictation && c && c.sentence && c.sentence.trim() !== "";
     
     // Hide target word in sentence
@@ -1363,7 +1435,9 @@ function nextCard() {
     const hintMarkup = !isDictation && c ? getHintMarkup(c.word) : '';
     const dictationNotice = isDictation ? `
         <p style="font-size:1rem; color:var(--text-sub); margin-bottom:var(--space-3); text-align:center;">
-            Dictation sentence ${currentSession.currentEntry.sentenceIndex} of ${currentSession.currentEntry.sentenceCount}. Listen and type the full sentence.
+            ${isDictationText
+                ? `Dictation text with ${entry.sentenceCount || 1} sentence${entry.sentenceCount === 1 ? '' : 's'}. Listen and type the full text.`
+                : `Dictation sentence ${entry.sentenceIndex} of ${entry.sentenceCount}. Listen and type the full sentence.`}
         </p>
     ` : '';
     const html = `
@@ -1390,7 +1464,7 @@ function nextCard() {
         
         <div class="feedback-area" id="feedback"></div>
         
-        <input type="text" id="p-input" class="word-input" placeholder="${isDictation ? 'Type sentence here' : 'Type word here'}">
+        <input type="text" id="p-input" class="word-input" placeholder="${isDictationText ? 'Type full text here' : (isDictation ? 'Type sentence here' : 'Type word here')}">
         ${hintMarkup}
         
         <button id="btn-check" class="btn-primary" style="margin-top:var(--space-2);" onclick="checkAnswer()">Check</button>
@@ -1488,6 +1562,10 @@ function playCurrent() {
             currentSession.startTime = Date.now();
         }
         const lang = currentSession.deck ? currentSession.deck.lang : 'en-US';
+        if (entry.mode === 'dictation-text') {
+            speak(entry.text, lang);
+            return;
+        }
         if (entry.mode === 'dictation') {
             speak(entry.sentence, lang);
             return;
@@ -1506,6 +1584,10 @@ function checkAnswer() {
     const input = document.getElementById('p-input');
     const userRaw = input.value.trim();
     const entry = currentSession.currentEntry;
+    if (entry && entry.mode === 'dictation-text') {
+        checkDictationTextAnswer(userRaw);
+        return;
+    }
     if (entry && entry.mode === 'dictation') {
         checkDictationAnswer(userRaw);
         return;
@@ -1569,14 +1651,13 @@ function checkAnswer() {
         document.getElementById('srs-area').classList.remove('hidden');
     } else {
         input.style.color = 'var(--error)';
-        // Show Diff
-        const typedValue = input.value ? input.value : '—';
+        const typedValue = input.value ? input.value : '';
+        const diffMarkup = getWordDiffMarkup(currentSession.currentCard.word, typedValue, app.settings.strictness);
         feedback.innerHTML = `
             <div class="diff-display">
-                <span class="diff-wrong">${typedValue}</span>
-                <span class="diff-correct">${currentSession.currentCard.word}</span>
+                <span class="diff-line">${diffMarkup}</span>
             </div>
-            <div class="feedback-sub">You typed <strong>${typedValue}</strong>. The correct spelling is <strong>${currentSession.currentCard.word}</strong>.</div>
+            <div class="feedback-sub">Correct spelling with mistakes highlighted in red.</div>
             <div class="try-again-wrap">
                 <button class="btn-secondary" onclick="retryCurrentCard()">Try again</button>
             </div>
@@ -1608,6 +1689,9 @@ function checkDictationAnswer(userRaw) {
             currentSession.troubleEntries.push({ deck: entry.deck, card });
         }
     });
+    if (entry.deck && isDictationDeck(entry.deck)) {
+        entry.deck.dictationStatsReady = true;
+    }
     saveData();
     if (isCorrect) {
         input.style.color = 'var(--success)';
@@ -1617,24 +1701,74 @@ function checkDictationAnswer(userRaw) {
         `;
     } else {
         input.style.color = 'var(--error)';
-        const typedValue = userRaw || '—';
+        const diffMarkup = getSentenceDiffMarkup(correctSentence, userRaw, app.settings.strictness);
         const mistakeList = mistakeCards.map(card => card.word).join(', ');
         feedback.innerHTML = `
             <div class="diff-display">
-                <span class="diff-wrong">${typedValue}</span>
-                <span class="diff-correct">${correctSentence}</span>
+                <span class="diff-line">${diffMarkup}</span>
             </div>
             <div class="feedback-sub">Review these words: <strong>${mistakeList || 'Check the sentence again'}</strong>.</div>
         `;
     }
     feedback.innerHTML += `
         <div class="try-again-wrap">
-            <button class="btn-primary" onclick="advanceDictationEntry()">Next sentence</button>
+            <button class="btn-primary" onclick="advanceCurrentEntry()">Next sentence</button>
         </div>
     `;
 }
 
-function advanceDictationEntry() {
+function checkDictationTextAnswer(userRaw) {
+    const input = document.getElementById('p-input');
+    const entry = currentSession.currentEntry;
+    if (!entry) return;
+    const correctText = entry.text || '';
+    const isCorrect = isTextCorrect(correctText, userRaw, app.settings.strictness);
+    currentSession.isAnswered = true;
+    currentSession.lastAnswerCorrect = isCorrect;
+    document.getElementById('btn-check').classList.add('hidden');
+    input.disabled = true;
+    const feedback = document.getElementById('feedback');
+    const elapsed = getElapsedSeconds();
+    const mistakeCards = applyDictationTextStats(entry.deck, correctText, userRaw, elapsed);
+    if (entry.deck) {
+        entry.deck.lastPracticed = Date.now();
+        saveData();
+    }
+    const totalWords = tokenizeWords(correctText).length || 1;
+    currentSession.totalAttempts += totalWords;
+    if (isCorrect) {
+        currentSession.correctAttempts += totalWords;
+    } else {
+        const wrongCount = Math.min(mistakeCards.length, totalWords);
+        currentSession.correctAttempts += Math.max(totalWords - wrongCount, 0);
+    }
+    if (isCorrect) {
+        input.style.color = 'var(--success)';
+        feedback.innerHTML = `
+            <div class="feedback-positive">Text correct!</div>
+            <div class="feedback-sub">Great work completing the full dictation.</div>
+        `;
+    } else {
+        input.style.color = 'var(--error)';
+        const diffMarkup = getSentenceDiffMarkup(correctText, userRaw, app.settings.strictness);
+        feedback.innerHTML = `
+            <div class="diff-display">
+                <span class="diff-line">${diffMarkup}</span>
+            </div>
+            <div class="feedback-sub">Mistakes are highlighted in red. Focus on those words next.</div>
+        `;
+    }
+    feedback.innerHTML += `
+        <div class="try-again-wrap">
+            <button class="btn-primary" onclick="advanceCurrentEntry()">Finish</button>
+        </div>
+    `;
+    mistakeCards.forEach(card => {
+        currentSession.troubleEntries.push({ deck: entry.deck, card });
+    });
+}
+
+function advanceCurrentEntry() {
     if (!currentSession.currentEntry) return;
     currentSession.queue.shift();
     currentSession.completedCount += 1;
@@ -1724,7 +1858,7 @@ function renderDeckList() {
             </div>
             <div style="display:flex; gap:8px;">
                 <button class="btn-secondary" onclick="openDeckActions('${deck.id}')">Edit</button>
-                <button class="btn-primary" onclick="startPractice(['${deck.id}'])">Practice</button>
+                <button class="btn-primary" onclick="openPracticeOptionsModal('${deck.id}')">Practice</button>
             </div>
         `;
         list.appendChild(div);
@@ -1889,7 +2023,9 @@ function saveDeck() {
         lang,
         cards: [],
         uncompleted: false,
-        lastPracticed: null
+        lastPracticed: null,
+        text: '',
+        dictationStatsReady: false
     });
     saveData();
     closeDeckModal();
@@ -1914,6 +2050,73 @@ function openDeckActions(deckId) {
 
 function closeDeckActionsModal() {
     document.getElementById('deck-actions-modal').classList.remove('open');
+}
+
+function openPracticeOptionsModal(deckId) {
+    const deck = app.decks.find(d => d.id === deckId);
+    if (!deck) return;
+    activePracticeDeckId = deckId;
+    selectedPracticeMode = null;
+    renderPracticeOptions(deck);
+    document.getElementById('practice-options-modal').classList.add('open');
+}
+
+function closePracticeOptionsModal() {
+    document.getElementById('practice-options-modal').classList.remove('open');
+    activePracticeDeckId = null;
+    selectedPracticeMode = null;
+}
+
+function renderPracticeOptions(deck) {
+    const listEl = document.getElementById('practice-options-list');
+    const titleEl = document.getElementById('practice-options-title');
+    const noteEl = document.getElementById('practice-options-note');
+    const startBtn = document.getElementById('practice-options-start');
+    if (!listEl || !titleEl || !noteEl || !startBtn) return;
+    titleEl.textContent = deck ? `${deck.name} practice` : 'Practice options';
+    listEl.innerHTML = '';
+    const options = getDeckPracticeOptions(deck);
+    if (!options.length) {
+        listEl.innerHTML = '<div class="text-small" style="color: var(--text-sub);">No practice options available yet.</div>';
+        noteEl.textContent = '';
+        startBtn.disabled = true;
+        return;
+    }
+    options.forEach(option => {
+        const div = document.createElement('div');
+        div.className = 'practice-option';
+        if (!option.available) div.classList.add('disabled');
+        div.innerHTML = `
+            <div class="practice-option-title">${option.label}</div>
+            <div class="practice-option-desc">${option.description}</div>
+        `;
+        if (option.available) {
+            div.addEventListener('click', () => {
+                selectedPracticeMode = option.mode;
+                renderPracticeOptions(deck);
+            });
+        }
+        if (selectedPracticeMode === option.mode) {
+            div.classList.add('selected');
+        }
+        listEl.appendChild(div);
+    });
+    const lockedOption = options.find(option => !option.available && option.reason);
+    noteEl.textContent = lockedOption ? lockedOption.reason : '';
+    startBtn.disabled = !selectedPracticeMode;
+}
+
+function startPracticeFromOptions() {
+    if (!activePracticeDeckId || !selectedPracticeMode) return;
+    const deck = app.decks.find(d => d.id === activePracticeDeckId);
+    if (!deck) return;
+    const entries = buildPracticeEntriesForMode(deck, selectedPracticeMode);
+    if (!entries.length) {
+        alert("No practice items available for this selection.");
+        return;
+    }
+    closePracticeOptionsModal();
+    startPracticeEntries(entries, [deck]);
 }
 
 function openDeckEditor() {
@@ -2227,6 +2430,7 @@ function createSampleDeck() {
         uncompleted: false,
         lastPracticed: null,
         text: '',
+        dictationStatsReady: false,
         cards: [
             {word: "necessary", sentence: "It is necessary to sleep well.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
             {word: "queue", sentence: "Wait in the queue.", audioUrl: '', due: 0, interval: 0, ease: 2.5, correctCount: 0, incorrectCount: 0, avgTime: 0},
@@ -2247,6 +2451,67 @@ function formatLastPracticed(timestamp) {
 
 function isDictationDeck(deck) {
     return Boolean(deck && deck.text && deck.text.trim());
+}
+
+function deckHasDictationStats(deck) {
+    if (!deck) return false;
+    if (deck.dictationStatsReady) return true;
+    return deck.cards.some(card => (card.correctCount || 0) + (card.incorrectCount || 0) > 0);
+}
+
+function getDeckPracticeOptions(deck) {
+    if (!deck) return [];
+    const hasWords = Array.isArray(deck.cards) && deck.cards.length > 0;
+    const hasSentences = getDictationSentences(deck).length > 0;
+    const hasText = isDictationDeck(deck);
+    const statsReady = !hasText || deckHasDictationStats(deck);
+    const options = [
+        {
+            mode: 'word',
+            label: 'Practice words',
+            description: 'Spell individual words with sentence hints.',
+            show: hasWords,
+            available: hasWords && statsReady
+        },
+        {
+            mode: 'sentence',
+            label: 'Practice sentences',
+            description: 'Type each sentence from the dictation.',
+            show: hasSentences,
+            available: hasSentences && statsReady
+        },
+        {
+            mode: 'text',
+            label: 'Practice full text',
+            description: 'Dictation of the entire text in one go.',
+            show: hasText,
+            available: hasText
+        }
+    ];
+    if (hasText && !statsReady) {
+        options.forEach(option => {
+            if (option.mode !== 'text') {
+                option.available = false;
+                option.reason = 'Complete the full text once to unlock word and sentence practice.';
+            }
+        });
+    }
+    return options.filter(option => option.show);
+}
+
+function buildPracticeEntriesForMode(deck, mode) {
+    const now = Date.now();
+    if (mode === 'word') {
+        const dueEntries = buildWordEntries(deck, now, true);
+        return dueEntries.length ? dueEntries : buildWordEntries(deck, now, false);
+    }
+    if (mode === 'sentence') {
+        return buildDictationEntries(deck);
+    }
+    if (mode === 'text') {
+        return buildDictationTextEntry(deck);
+    }
+    return [];
 }
 
 function splitTextIntoSentences(text) {
@@ -2286,6 +2551,23 @@ function buildDictationEntries(deck) {
     }).filter(entry => entry.sentence);
 }
 
+function buildDictationTextEntry(deck) {
+    if (!deck || !deck.text || !deck.text.trim()) return [];
+    const sentences = splitTextIntoSentences(deck.text);
+    return [{
+        deck,
+        mode: 'dictation-text',
+        text: deck.text.trim(),
+        sentenceCount: sentences.length
+    }];
+}
+
+function buildWordEntries(deck, now = Date.now(), dueOnly = true) {
+    if (!deck || !Array.isArray(deck.cards)) return [];
+    const cards = dueOnly ? deck.cards.filter(card => card.due <= now) : deck.cards;
+    return cards.map(card => ({ deck, card, mode: 'word' }));
+}
+
 function pickMostDifficultCard(cards) {
     if (!cards || !cards.length) return null;
     return cards.slice().sort((a, b) => {
@@ -2307,12 +2589,96 @@ function normalizeToken(token, strictness) {
     return strictness === 'strict' ? token : token.toLowerCase();
 }
 
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+}
+
+function getLcsMatchIndices(correctTokens, userTokens) {
+    const m = correctTokens.length;
+    const n = userTokens.length;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i += 1) {
+        for (let j = 1; j <= n; j += 1) {
+            if (correctTokens[i - 1] === userTokens[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    const matchIndices = new Set();
+    let i = m;
+    let j = n;
+    while (i > 0 && j > 0) {
+        if (correctTokens[i - 1] === userTokens[j - 1]) {
+            matchIndices.add(i - 1);
+            i -= 1;
+            j -= 1;
+        } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+    return matchIndices;
+}
+
+function getWordDiffMarkup(correctWord, userWord, strictness) {
+    const correctChars = Array.from(correctWord || '');
+    const userChars = Array.from(userWord || '');
+    const normalizedCorrect = correctChars.map(char => normalizeToken(char, strictness));
+    const normalizedUser = userChars.map(char => normalizeToken(char, strictness));
+    const matchIndices = getLcsMatchIndices(normalizedCorrect, normalizedUser);
+    return correctChars.map((char, index) => {
+        const safeChar = escapeHtml(char);
+        if (matchIndices.has(index)) {
+            return `<span>${safeChar}</span>`;
+        }
+        return `<span class="diff-highlight">${safeChar}</span>`;
+    }).join('');
+}
+
+function getSentenceDiffMarkup(correctSentence, userSentence, strictness) {
+    const tokens = String(correctSentence || '').match(/[\p{L}\p{N}']+|[^\p{L}\p{N}']+/gu) || [];
+    const correctWords = tokens.filter(token => /[\p{L}\p{N}']+/u.test(token)).map(token => normalizeToken(token, strictness));
+    const userWordTokens = tokenizeWords(userSentence || '');
+    const normalizedUser = userWordTokens.map(token => normalizeToken(token, strictness));
+    const matchIndices = getLcsMatchIndices(correctWords, normalizedUser);
+    let wordIndex = 0;
+    return tokens.map(token => {
+        if (/[\p{L}\p{N}']+/u.test(token)) {
+            const isMatch = matchIndices.has(wordIndex);
+            const safeToken = escapeHtml(token);
+            wordIndex += 1;
+            if (isMatch) return safeToken;
+            if (userWordTokens.length === correctWords.length) {
+                const userWord = userWordTokens[wordIndex - 1] || '';
+                return getWordDiffMarkup(token, userWord, strictness);
+            }
+            return `<span class="diff-highlight">${safeToken}</span>`;
+        }
+        return escapeHtml(token);
+    }).join('');
+}
+
 function isSentenceCorrect(correctSentence, userSentence, strictness) {
     if (strictness === 'strict') {
         return correctSentence.trim() === userSentence.trim();
     }
     const correctTokens = tokenizeWords(correctSentence).map(token => token.toLowerCase());
     const userTokens = tokenizeWords(userSentence).map(token => token.toLowerCase());
+    if (correctTokens.length !== userTokens.length) return false;
+    return correctTokens.every((token, index) => token === userTokens[index]);
+}
+
+function isTextCorrect(correctText, userText, strictness) {
+    if (strictness === 'strict') {
+        return correctText.trim() === userText.trim();
+    }
+    const correctTokens = tokenizeWords(correctText).map(token => token.toLowerCase());
+    const userTokens = tokenizeWords(userText).map(token => token.toLowerCase());
     if (correctTokens.length !== userTokens.length) return false;
     return correctTokens.every((token, index) => token === userTokens[index]);
 }
@@ -2345,6 +2711,58 @@ function resolveDictationRatings(entry, userSentence) {
     });
     const fallbackCard = mistakeCards.length ? null : pickMostDifficultCard(entry.cards);
     return { mistakeCards, fallbackCard };
+}
+
+function getWordTokensWithSentence(text) {
+    const sentences = splitTextIntoSentences(text || '');
+    const tokens = [];
+    sentences.forEach(sentence => {
+        tokenizeWords(sentence).forEach(word => {
+            tokens.push({ word, sentence });
+        });
+    });
+    return tokens;
+}
+
+function getOrCreateCardForWord(deck, word, sentence) {
+    const normalizedWord = normalizeToken(word, 'lenient');
+    let card = deck.cards.find(item => normalizeToken(item.word || '', 'lenient') === normalizedWord);
+    if (!card) {
+        card = {
+            word,
+            sentence: sentence || '',
+            audioUrl: '',
+            due: 0,
+            interval: 0,
+            ease: 2.5,
+            correctCount: 0,
+            incorrectCount: 0,
+            avgTime: 0
+        };
+        deck.cards.push(card);
+    } else if (!card.sentence && sentence) {
+        card.sentence = sentence;
+    }
+    return card;
+}
+
+function applyDictationTextStats(deck, correctText, userText, elapsedSeconds) {
+    if (!deck) return [];
+    const strictness = app.settings.strictness;
+    const correctWordTokens = getWordTokensWithSentence(correctText);
+    const normalizedCorrectWords = correctWordTokens.map(token => normalizeToken(token.word, strictness));
+    const userWords = tokenizeWords(userText).map(token => normalizeToken(token, strictness));
+    const matchIndices = getLcsMatchIndices(normalizedCorrectWords, userWords);
+    const mistakeCards = [];
+    correctWordTokens.forEach((token, index) => {
+        if (matchIndices.has(index)) return;
+        const card = getOrCreateCardForWord(deck, token.word, token.sentence);
+        applyDictationRating(card, deck, elapsedSeconds, false);
+        mistakeCards.push(card);
+    });
+    deck.dictationStatsReady = true;
+    saveData();
+    return mistakeCards;
 }
 
 function applyDictationRating(card, deck, elapsedSeconds, isCorrect) {
@@ -2412,7 +2830,8 @@ function normalizeImportedDecks(raw) {
             cards: normalizedCards,
             uncompleted: Boolean(deck.uncompleted),
             lastPracticed: deck.lastPracticed ? Number(deck.lastPracticed) : null,
-            text: deck.text ? String(deck.text) : ''
+            text: deck.text ? String(deck.text) : '',
+            dictationStatsReady: Boolean(deck.dictationStatsReady)
         };
     });
 }
