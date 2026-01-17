@@ -783,6 +783,8 @@
                 <option value="de-DE">German</option>
                 <option value="it-IT">Italian</option>
             </select>
+            <label for="new-deck-text">Dictation Text (optional)</label>
+            <textarea id="new-deck-text" rows="5" placeholder="Paste the full dictation passage." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
             <div style="display:flex; gap:var(--space-1); margin-top:var(--space-2);">
                 <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
                 <button class="btn-primary" onclick="saveDeck()" style="flex:1">Create</button>
@@ -1959,6 +1961,7 @@ let activeDeckIdForEdit = null;
 function openDeckModal() {
     document.getElementById('deck-modal').classList.add('open');
     document.getElementById('new-deck-name').value = '';
+    document.getElementById('new-deck-text').value = '';
     showDeckPanel('create');
 }
 function closeDeckModal() {
@@ -2017,6 +2020,7 @@ function importDeckFromPaste() {
 function saveDeck() {
     const name = document.getElementById('new-deck-name').value;
     const lang = document.getElementById('new-deck-lang').value;
+    const text = document.getElementById('new-deck-text').value.trim();
     if (!name) return;
     
     app.decks.push({
@@ -2026,7 +2030,7 @@ function saveDeck() {
         cards: [],
         uncompleted: false,
         lastPracticed: null,
-        text: '',
+        text,
         dictationStatsReady: false
     });
     saveData();
