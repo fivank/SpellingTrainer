@@ -64,6 +64,47 @@
     p { margin: 0 0 var(--space-2); }
     small, .text-small { font-size: var(--font-small); }
 
+    .settings-toggle {
+        width: 100%;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        background: #ffffff;
+        color: var(--text-main);
+        border-radius: 12px;
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: var(--space-2);
+        box-shadow: 0 8px 16px -12px rgba(15, 23, 42, 0.4);
+    }
+
+    .settings-toggle::after {
+        content: '▾';
+        font-size: 0.9rem;
+        color: var(--text-sub);
+        transition: transform 0.2s ease;
+    }
+
+    .settings-toggle.active::after {
+        transform: rotate(180deg);
+    }
+
+    .settings-panel {
+        display: none;
+        padding: var(--space-2);
+        border-radius: 12px;
+        background: var(--bg-card-soft);
+        margin-top: var(--space-1);
+        border: 1px solid rgba(99, 102, 241, 0.12);
+    }
+
+    .settings-panel.open {
+        display: block;
+    }
+
     /* --- LAYOUT --- */
     header {
         padding: var(--space-2);
@@ -986,31 +1027,88 @@
                 <label>System Voice</label>
                 <select id="setting-voice"><option>Loading voices...</option></select>
             </div>
-            <div>
-                <label>Speed: <span id="speed-val">1.0</span>x</label>
-                <input type="range" id="setting-speed" min="0.5" max="1.5" step="0.1" value="1">
-            </div>
-            <div style="margin-top:var(--space-2);">
-                <label>Silence at start: <span id="pause-start-val">0</span> ms</label>
-                <input type="range" id="setting-pause-start" min="0" max="2000" step="50" value="0">
-            </div>
-            <div>
-                <label>Pause between word &amp; sentence: <span id="pause-word-sentence-val">600</span> ms</label>
-                <input type="range" id="setting-pause-word-sentence" min="0" max="2000" step="50" value="600">
-            </div>
-            <div>
-                <label>Pause between sentences: <span id="pause-between-sentences-val">800</span> ms</label>
-                <input type="range" id="setting-pause-between-sentences" min="0" max="3000" step="50" value="800">
-            </div>
-            <div>
-                <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-val">350</span> ms</label>
-                <input type="range" id="setting-pause-mid-sentence" min="0" max="1500" step="50" value="350">
-            </div>
-            <div>
-                <label>Pause every 2 words: <span id="pause-two-words-val">0</span> ms</label>
-                <input type="range" id="setting-pause-two-words" min="0" max="1500" step="50" value="0">
-            </div>
             <button class="btn-secondary" onclick="testAudio()">Test Audio</button>
+        </div>
+
+        <div class="card">
+            <h3>Audio Speed Settings</h3>
+            <p class="text-small" style="color: var(--text-sub);">
+                These controls apply to specific exercises only.
+            </p>
+
+            <button class="settings-toggle" type="button" data-panel="audio-speed-text">
+                Audio speed settings — whole text
+            </button>
+            <div class="settings-panel" id="audio-speed-text">
+                <div>
+                    <label>Speed: <span id="speed-text-val">1.0</span>x</label>
+                    <input type="range" id="setting-speed-text" min="0.5" max="1.5" step="0.1" value="1">
+                </div>
+                <div style="margin-top:var(--space-2);">
+                    <label>Silence at start: <span id="pause-start-text-val">0</span> ms</label>
+                    <input type="range" id="setting-pause-start-text" min="0" max="2000" step="50" value="0">
+                </div>
+                <div>
+                    <label>Pause between sentences: <span id="pause-between-sentences-text-val">800</span> ms</label>
+                    <input type="range" id="setting-pause-between-sentences-text" min="0" max="3000" step="50" value="800">
+                </div>
+                <div>
+                    <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-text-val">350</span> ms</label>
+                    <input type="range" id="setting-pause-mid-sentence-text" min="0" max="1500" step="50" value="350">
+                </div>
+                <div>
+                    <label>Pause every 2 words: <span id="pause-two-words-text-val">0</span> ms</label>
+                    <input type="range" id="setting-pause-two-words-text" min="0" max="1500" step="50" value="0">
+                </div>
+            </div>
+
+            <button class="settings-toggle" type="button" data-panel="audio-speed-sentence">
+                Audio speed settings — sentences
+            </button>
+            <div class="settings-panel" id="audio-speed-sentence">
+                <div>
+                    <label>Speed: <span id="speed-sentence-val">1.0</span>x</label>
+                    <input type="range" id="setting-speed-sentence" min="0.5" max="1.5" step="0.1" value="1">
+                </div>
+                <div style="margin-top:var(--space-2);">
+                    <label>Silence at start: <span id="pause-start-sentence-val">0</span> ms</label>
+                    <input type="range" id="setting-pause-start-sentence" min="0" max="2000" step="50" value="0">
+                </div>
+                <div>
+                    <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-sentence-val">350</span> ms</label>
+                    <input type="range" id="setting-pause-mid-sentence-sentence" min="0" max="1500" step="50" value="350">
+                </div>
+                <div>
+                    <label>Pause every 2 words: <span id="pause-two-words-sentence-val">0</span> ms</label>
+                    <input type="range" id="setting-pause-two-words-sentence" min="0" max="1500" step="50" value="0">
+                </div>
+            </div>
+
+            <button class="settings-toggle" type="button" data-panel="audio-speed-word">
+                Audio speed settings — words
+            </button>
+            <div class="settings-panel" id="audio-speed-word">
+                <div>
+                    <label>Speed: <span id="speed-word-val">1.0</span>x</label>
+                    <input type="range" id="setting-speed-word" min="0.5" max="1.5" step="0.1" value="1">
+                </div>
+                <div style="margin-top:var(--space-2);">
+                    <label>Silence at start: <span id="pause-start-word-val">0</span> ms</label>
+                    <input type="range" id="setting-pause-start-word" min="0" max="2000" step="50" value="0">
+                </div>
+                <div>
+                    <label>Pause between word &amp; sentence: <span id="pause-word-sentence-word-val">600</span> ms</label>
+                    <input type="range" id="setting-pause-word-sentence-word" min="0" max="2000" step="50" value="600">
+                </div>
+                <div>
+                    <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-word-val">350</span> ms</label>
+                    <input type="range" id="setting-pause-mid-sentence-word" min="0" max="1500" step="50" value="350">
+                </div>
+                <div>
+                    <label>Pause every 2 words: <span id="pause-two-words-word-val">0</span> ms</label>
+                    <input type="range" id="setting-pause-two-words-word" min="0" max="1500" step="50" value="0">
+                </div>
+            </div>
         </div>
         
         <div class="card">
@@ -1233,6 +1331,7 @@ let app = {
         pauseBetweenSentencesMs: 800,
         pauseMidSentenceMs: 350,
         pauseTwoWordsMs: 0,
+        audioProfiles: {},
         /* whether to automatically play audio when a card appears */
         autoplay: true,
         /* whether to block keyboard suggestions on the practice input */
@@ -1504,14 +1603,57 @@ function populateVoiceSelect() {
     updateVoiceModeUI();
 }
 
+const AUDIO_PROFILE_DEFAULTS = {
+    speed: 1.0,
+    pauseStartMs: 0,
+    pauseWordSentenceMs: 600,
+    pauseBetweenSentencesMs: 800,
+    pauseMidSentenceMs: 350,
+    pauseTwoWordsMs: 0
+};
+
 function getPauseValue(value, fallback) {
     const parsed = Number.parseFloat(value);
     if (!Number.isFinite(parsed)) return fallback;
     return Math.max(0, parsed);
 }
 
-function getPauseSetting(key, fallback) {
-    return getPauseValue(app.settings[key], fallback);
+function getProfileSetting(profile, key, fallback) {
+    return getPauseValue(profile?.[key], fallback);
+}
+
+function getLegacyAudioSettings() {
+    const legacy = {};
+    const speed = Number.parseFloat(app.settings.speed);
+    if (Number.isFinite(speed)) legacy.speed = speed;
+    ['pauseStartMs', 'pauseWordSentenceMs', 'pauseBetweenSentencesMs', 'pauseMidSentenceMs', 'pauseTwoWordsMs'].forEach((key) => {
+        const parsed = Number.parseFloat(app.settings[key]);
+        if (Number.isFinite(parsed)) legacy[key] = parsed;
+    });
+    return legacy;
+}
+
+function getAudioProfile(mode) {
+    const profiles = app.settings.audioProfiles || {};
+    const legacy = getLegacyAudioSettings();
+    return {
+        ...AUDIO_PROFILE_DEFAULTS,
+        ...legacy,
+        ...(profiles[mode] || {})
+    };
+}
+
+function setAudioProfileSetting(mode, key, value) {
+    if (!app.settings.audioProfiles) app.settings.audioProfiles = {};
+    if (!app.settings.audioProfiles[mode]) app.settings.audioProfiles[mode] = {};
+    app.settings.audioProfiles[mode][key] = value;
+}
+
+function getAudioProfileKeyForEntry(entry) {
+    if (!entry) return 'word';
+    if (entry.mode === 'dictation-text') return 'dictationText';
+    if (entry.mode === 'dictation') return 'sentence';
+    return 'word';
 }
 
 function selectVoiceForLang(lang) {
@@ -1565,7 +1707,7 @@ function buildSentenceSegments(sentence, pauseMs, pauseTwoWordsMs = 0) {
     return segments;
 }
 
-function speakSegments(segments, lang) {
+function speakSegments(segments, lang, profile = AUDIO_PROFILE_DEFAULTS) {
     if (!('speechSynthesis' in window)) {
         alert("Your browser does not support Audio. Please try Chrome or Safari.");
         return;
@@ -1589,7 +1731,7 @@ function speakSegments(segments, lang) {
     if (btn) btn.classList.add('playing');
 
     let index = 0;
-    const startDelay = getPauseSetting('pauseStartMs', 0);
+    const startDelay = getProfileSetting(profile, 'pauseStartMs', AUDIO_PROFILE_DEFAULTS.pauseStartMs);
 
     const finishSequence = () => {
         if (btn) btn.classList.remove('playing');
@@ -1617,7 +1759,8 @@ function speakSegments(segments, lang) {
         }
 
         const u = new SpeechSynthesisUtterance(segment.text);
-        u.rate = parseFloat(app.settings.speed) || 1.0;
+        const rate = Number.parseFloat(profile.speed);
+        u.rate = Number.isFinite(rate) ? rate : AUDIO_PROFILE_DEFAULTS.speed;
         if (voice) {
             u.voice = voice;
             u.lang = voice.lang;
@@ -1639,35 +1782,35 @@ function speakSegments(segments, lang) {
     }
 }
 
-function speak(text, lang) {
-    speakSegments([{ text, pauseAfter: 0 }], lang);
+function speak(text, lang, profile) {
+    speakSegments([{ text, pauseAfter: 0 }], lang, profile);
 }
 
-function speakSentenceWithPauses(sentence, lang) {
-    const pauseMidSentenceMs = getPauseSetting('pauseMidSentenceMs', 350);
-    const pauseTwoWordsMs = getPauseSetting('pauseTwoWordsMs', 0);
+function speakSentenceWithPauses(sentence, lang, profile) {
+    const pauseMidSentenceMs = getProfileSetting(profile, 'pauseMidSentenceMs', AUDIO_PROFILE_DEFAULTS.pauseMidSentenceMs);
+    const pauseTwoWordsMs = getProfileSetting(profile, 'pauseTwoWordsMs', AUDIO_PROFILE_DEFAULTS.pauseTwoWordsMs);
     const segments = buildSentenceSegments(sentence, pauseMidSentenceMs, pauseTwoWordsMs);
-    speakSegments(segments, lang);
+    speakSegments(segments, lang, profile);
 }
 
-function speakWordWithSentence(word, sentence, lang) {
-    const pauseWordSentenceMs = getPauseSetting('pauseWordSentenceMs', 600);
-    const pauseMidSentenceMs = getPauseSetting('pauseMidSentenceMs', 350);
-    const pauseTwoWordsMs = getPauseSetting('pauseTwoWordsMs', 0);
+function speakWordWithSentence(word, sentence, lang, profile) {
+    const pauseWordSentenceMs = getProfileSetting(profile, 'pauseWordSentenceMs', AUDIO_PROFILE_DEFAULTS.pauseWordSentenceMs);
+    const pauseMidSentenceMs = getProfileSetting(profile, 'pauseMidSentenceMs', AUDIO_PROFILE_DEFAULTS.pauseMidSentenceMs);
+    const pauseTwoWordsMs = getProfileSetting(profile, 'pauseTwoWordsMs', AUDIO_PROFILE_DEFAULTS.pauseTwoWordsMs);
     const segments = [
         { text: word, pauseAfter: pauseWordSentenceMs },
         ...buildSentenceSegments(sentence, pauseMidSentenceMs, pauseTwoWordsMs)
     ];
-    speakSegments(segments, lang);
+    speakSegments(segments, lang, profile);
 }
 
-function speakTextWithPauses(text, lang) {
-    const pauseBetweenSentencesMs = getPauseSetting('pauseBetweenSentencesMs', 800);
-    const pauseMidSentenceMs = getPauseSetting('pauseMidSentenceMs', 350);
-    const pauseTwoWordsMs = getPauseSetting('pauseTwoWordsMs', 0);
+function speakTextWithPauses(text, lang, profile) {
+    const pauseBetweenSentencesMs = getProfileSetting(profile, 'pauseBetweenSentencesMs', AUDIO_PROFILE_DEFAULTS.pauseBetweenSentencesMs);
+    const pauseMidSentenceMs = getProfileSetting(profile, 'pauseMidSentenceMs', AUDIO_PROFILE_DEFAULTS.pauseMidSentenceMs);
+    const pauseTwoWordsMs = getProfileSetting(profile, 'pauseTwoWordsMs', AUDIO_PROFILE_DEFAULTS.pauseTwoWordsMs);
     const sentences = splitTextIntoSentences(text || '');
     if (!sentences.length) {
-        speak(text, lang);
+        speak(text, lang, profile);
         return;
     }
     const segments = [];
@@ -1678,7 +1821,7 @@ function speakTextWithPauses(text, lang) {
         }
         segments.push(...sentenceSegments);
     });
-    speakSegments(segments, lang);
+    speakSegments(segments, lang, profile);
 }
 
 function testAudio() {
@@ -1691,7 +1834,8 @@ function testAudio() {
     } else {
         lang = app.decks.length > 0 ? app.decks[0].lang : lang;
     }
-    speak("This is a test of the audio system.", lang);
+    const profile = getAudioProfile('sentence');
+    speak("This is a test of the audio system.", lang, profile);
 }
 
 // --- PERSISTENCE ---
@@ -2264,19 +2408,21 @@ function playCurrent(options = {}) {
             currentSession.startTime = Date.now();
         }
         const lang = currentSession.deck ? currentSession.deck.lang : 'en-US';
+        const profileKey = getAudioProfileKeyForEntry(entry);
+        const profile = getAudioProfile(profileKey);
         if (entry.mode === 'dictation-text') {
-            speakTextWithPauses(entry.text, lang);
+            speakTextWithPauses(entry.text, lang, profile);
             return;
         }
         if (entry.mode === 'dictation') {
-            speakSentenceWithPauses(entry.sentence, lang);
+            speakSentenceWithPauses(entry.sentence, lang, profile);
             return;
         }
         // If card has a sentence, speak word then sentence for context
         if (card.sentence && card.sentence.trim() !== '') {
-            speakWordWithSentence(card.word, card.sentence, lang);
+            speakWordWithSentence(card.word, card.sentence, lang, profile);
         } else {
-            speak(card.word, lang);
+            speak(card.word, lang, profile);
         }
     }
 }
@@ -3930,36 +4076,50 @@ function escapeRegExp(string) {
 }
 
 function initSettingsListeners() {
-    const speed = document.getElementById('setting-speed');
-    speed.value = app.settings.speed || 1.0;
-    document.getElementById('speed-val').textContent = speed.value;
-
-    speed.addEventListener('input', (e) => {
-        app.settings.speed = e.target.value;
-        document.getElementById('speed-val').textContent = e.target.value;
-        saveData();
-    });
-
-    const initPauseSlider = (inputId, valueId, settingKey, fallback) => {
+    const initAudioProfileSlider = (mode, inputId, valueId, settingKey, fallback) => {
         const input = document.getElementById(inputId);
         const valueEl = document.getElementById(valueId);
         if (!input || !valueEl) return;
-        const value = getPauseSetting(settingKey, fallback);
+        const profile = getAudioProfile(mode);
+        const value = getProfileSetting(profile, settingKey, fallback);
         input.value = value;
         valueEl.textContent = value;
         input.addEventListener('input', (e) => {
             const nextValue = getPauseValue(e.target.value, fallback);
-            app.settings[settingKey] = nextValue;
+            setAudioProfileSetting(mode, settingKey, nextValue);
             valueEl.textContent = nextValue;
             saveData();
         });
     };
 
-    initPauseSlider('setting-pause-start', 'pause-start-val', 'pauseStartMs', 0);
-    initPauseSlider('setting-pause-word-sentence', 'pause-word-sentence-val', 'pauseWordSentenceMs', 600);
-    initPauseSlider('setting-pause-between-sentences', 'pause-between-sentences-val', 'pauseBetweenSentencesMs', 800);
-    initPauseSlider('setting-pause-mid-sentence', 'pause-mid-sentence-val', 'pauseMidSentenceMs', 350);
-    initPauseSlider('setting-pause-two-words', 'pause-two-words-val', 'pauseTwoWordsMs', 0);
+    initAudioProfileSlider('dictationText', 'setting-speed-text', 'speed-text-val', 'speed', AUDIO_PROFILE_DEFAULTS.speed);
+    initAudioProfileSlider('dictationText', 'setting-pause-start-text', 'pause-start-text-val', 'pauseStartMs', AUDIO_PROFILE_DEFAULTS.pauseStartMs);
+    initAudioProfileSlider('dictationText', 'setting-pause-between-sentences-text', 'pause-between-sentences-text-val', 'pauseBetweenSentencesMs', AUDIO_PROFILE_DEFAULTS.pauseBetweenSentencesMs);
+    initAudioProfileSlider('dictationText', 'setting-pause-mid-sentence-text', 'pause-mid-sentence-text-val', 'pauseMidSentenceMs', AUDIO_PROFILE_DEFAULTS.pauseMidSentenceMs);
+    initAudioProfileSlider('dictationText', 'setting-pause-two-words-text', 'pause-two-words-text-val', 'pauseTwoWordsMs', AUDIO_PROFILE_DEFAULTS.pauseTwoWordsMs);
+
+    initAudioProfileSlider('sentence', 'setting-speed-sentence', 'speed-sentence-val', 'speed', AUDIO_PROFILE_DEFAULTS.speed);
+    initAudioProfileSlider('sentence', 'setting-pause-start-sentence', 'pause-start-sentence-val', 'pauseStartMs', AUDIO_PROFILE_DEFAULTS.pauseStartMs);
+    initAudioProfileSlider('sentence', 'setting-pause-mid-sentence-sentence', 'pause-mid-sentence-sentence-val', 'pauseMidSentenceMs', AUDIO_PROFILE_DEFAULTS.pauseMidSentenceMs);
+    initAudioProfileSlider('sentence', 'setting-pause-two-words-sentence', 'pause-two-words-sentence-val', 'pauseTwoWordsMs', AUDIO_PROFILE_DEFAULTS.pauseTwoWordsMs);
+
+    initAudioProfileSlider('word', 'setting-speed-word', 'speed-word-val', 'speed', AUDIO_PROFILE_DEFAULTS.speed);
+    initAudioProfileSlider('word', 'setting-pause-start-word', 'pause-start-word-val', 'pauseStartMs', AUDIO_PROFILE_DEFAULTS.pauseStartMs);
+    initAudioProfileSlider('word', 'setting-pause-word-sentence-word', 'pause-word-sentence-word-val', 'pauseWordSentenceMs', AUDIO_PROFILE_DEFAULTS.pauseWordSentenceMs);
+    initAudioProfileSlider('word', 'setting-pause-mid-sentence-word', 'pause-mid-sentence-word-val', 'pauseMidSentenceMs', AUDIO_PROFILE_DEFAULTS.pauseMidSentenceMs);
+    initAudioProfileSlider('word', 'setting-pause-two-words-word', 'pause-two-words-word-val', 'pauseTwoWordsMs', AUDIO_PROFILE_DEFAULTS.pauseTwoWordsMs);
+
+    document.querySelectorAll('.settings-toggle').forEach((btn) => {
+        const panelId = btn.getAttribute('data-panel');
+        const panel = panelId ? document.getElementById(panelId) : null;
+        if (!panel) return;
+        btn.setAttribute('aria-expanded', 'false');
+        btn.addEventListener('click', () => {
+            const isOpen = panel.classList.toggle('open');
+            btn.classList.toggle('active', isOpen);
+            btn.setAttribute('aria-expanded', String(isOpen));
+        });
+    });
 
     const voiceModeEl = document.getElementById('setting-voice-mode');
     if (voiceModeEl) {
