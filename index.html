@@ -336,12 +336,46 @@
     .audio-trigger:active { transform: scale(0.95); }
     .audio-trigger.playing { animation: pulse 1.5s infinite; }
     .audio-trigger svg { width: 50px; height: 50px; fill: white; }
+    .audio-trigger.disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        box-shadow: none;
+        pointer-events: none;
+    }
     .audio-label {
         margin-top: var(--space-1);
         font-size: var(--font-small);
         font-weight: 700;
         color: var(--text-sub);
         letter-spacing: 0.02em;
+    }
+    .dictation-repeat-status {
+        font-size: 0.85rem;
+        color: var(--text-sub);
+        text-align: center;
+        margin-bottom: var(--space-3);
+    }
+    .dictation-score {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--primary-dark);
+        margin-top: var(--space-2);
+    }
+    .dictation-error-list {
+        margin-top: var(--space-1);
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 4px;
+        font-size: 0.95rem;
+    }
+    .dictation-error-list li {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 10px;
+        border-radius: 10px;
+        background: rgba(99, 102, 241, 0.08);
+        color: var(--text-main);
     }
 
     .word-input {
@@ -747,6 +781,18 @@
                         <option value="audio">On audio</option>
                     </select>
                 </label>
+                <label style="display:block; margin-top:8px;">
+                    Dictation repeats
+                    <select id="setting-dictation-repeats" style="width:100%; margin-top:4px;">
+                        <option value="0">No repeats</option>
+                        <option value="1">1 repeat</option>
+                        <option value="2">2 repeats</option>
+                        <option value="3">3 repeats</option>
+                    </select>
+                </label>
+                <p class="text-small" style="color: var(--text-sub);">
+                    Dictation sentences play once automatically. Repeats are extra plays after the first.
+                </p>
             </div>
         </div>
 
@@ -1022,7 +1068,9 @@ let app = {
         /* answer strictness: 'strict' = case-sensitive; 'lenient' = case-insensitive */
         strictness: 'strict',
         /* when to start timing user response: 'show' or 'audio' */
-        timerStart: 'audio'
+        timerStart: 'audio',
+        /* number of extra repeats allowed after the first dictation play */
+        dictationRepeats: 1
     }
 };
 
@@ -1684,6 +1732,7 @@ function nextCard() {
                 ? `Dictation text with ${entry.sentenceCount || 1} sentence${entry.sentenceCount === 1 ? '' : 's'}. Listen and type the full text.`
                 : `Dictation sentence ${entry.sentenceIndex} of ${entry.sentenceCount}. Listen and type the full sentence.`}
         </p>
+        <div class="dictation-repeat-status" id="dictation-repeat-status"></div>
     ` : '';
     const html = `
         <div class="practice-header">
@@ -1727,15 +1776,20 @@ function nextCard() {
     const input = document.getElementById('p-input');
     applySuggestionSettingToInput(input);
     input.focus();
+    if (isDictation) {
+        initDictationPlayback(entry);
+        updateDictationRepeatStatus(entry);
+    }
     
     // Set timer if start on show
     if (app.settings.timerStart === 'show') {
         currentSession.startTime = Date.now();
     }
-    // Autoplay audio if enabled
-    if (app.settings.autoplay) {
+    // Autoplay audio if enabled, dictation always plays once
+    const shouldAutoplay = isDictation ? true : app.settings.autoplay;
+    if (shouldAutoplay) {
         setTimeout(() => {
-            playCurrent();
+            playCurrent({ isAuto: true });
         }, 300);
     }
 
@@ -1767,10 +1821,60 @@ function applySuggestionSettingToInput(input) {
     }
 }
 
-function playCurrent() {
+function initDictationPlayback(entry) {
+    if (!entry || (entry.mode !== 'dictation' && entry.mode !== 'dictation-text')) return;
+    entry.dictationPlayedOnce = false;
+    entry.dictationRepeatsLeft = Number.isFinite(app.settings.dictationRepeats)
+        ? Math.max(0, app.settings.dictationRepeats)
+        : 1;
+}
+
+function updateDictationRepeatStatus(entry) {
+    if (!entry || (entry.mode !== 'dictation' && entry.mode !== 'dictation-text')) return;
+    const statusEl = document.getElementById('dictation-repeat-status');
+    const audioBtn = document.querySelector('.audio-trigger');
+    if (!statusEl) return;
+    const repeatsLeft = Number(entry.dictationRepeatsLeft) || 0;
+    const playedOnce = Boolean(entry.dictationPlayedOnce);
+    if (!playedOnce) {
+        statusEl.textContent = 'First listen is playing.';
+        if (audioBtn) audioBtn.classList.remove('disabled');
+        return;
+    }
+    if (repeatsLeft > 0) {
+        statusEl.textContent = `Repeats left: ${repeatsLeft}`;
+        if (audioBtn) audioBtn.classList.remove('disabled');
+        return;
+    }
+    statusEl.textContent = 'No repeats left.';
+    if (audioBtn) audioBtn.classList.add('disabled');
+}
+
+function consumeDictationPlay(entry) {
+    if (!entry || (entry.mode !== 'dictation' && entry.mode !== 'dictation-text')) return true;
+    if (!entry.dictationPlayedOnce) {
+        entry.dictationPlayedOnce = true;
+        updateDictationRepeatStatus(entry);
+        return true;
+    }
+    const repeatsLeft = Number(entry.dictationRepeatsLeft) || 0;
+    if (repeatsLeft <= 0) {
+        updateDictationRepeatStatus(entry);
+        return false;
+    }
+    entry.dictationRepeatsLeft = repeatsLeft - 1;
+    updateDictationRepeatStatus(entry);
+    return true;
+}
+
+function playCurrent(options = {}) {
     if (!currentSession.currentEntry) return;
     const card = currentSession.currentCard;
     const entry = currentSession.currentEntry;
+    if (entry.mode === 'dictation' || entry.mode === 'dictation-text') {
+        const canPlay = consumeDictationPlay(entry);
+        if (!canPlay) return;
+    }
     // Play custom audio if URL exists
     if (entry.mode !== 'dictation' && card && card.audioUrl) {
         try {
@@ -1914,14 +2018,15 @@ function checkDictationAnswer(userRaw) {
     const entry = currentSession.currentEntry;
     if (!entry) return;
     const correctSentence = entry.sentence || '';
-    const isCorrect = isSentenceCorrect(correctSentence, userRaw, app.settings.strictness);
+    const analysis = analyzeDictationErrors(correctSentence, userRaw);
+    const isCorrect = isSentenceCorrect(correctSentence, userRaw, 'strict');
     currentSession.isAnswered = true;
     currentSession.lastAnswerCorrect = isCorrect;
     document.getElementById('btn-check').classList.add('hidden');
     input.disabled = true;
     const feedback = document.getElementById('feedback');
     const elapsed = getElapsedSeconds();
-    const { mistakeCards, fallbackCard } = resolveDictationRatings(entry, userRaw);
+    const { mistakeCards, fallbackCard } = resolveDictationRatings(entry, userRaw, 'strict');
     const ratedCards = mistakeCards.length ? mistakeCards : (fallbackCard ? [fallbackCard] : []);
     ratedCards.forEach(card => {
         const isCardCorrect = !mistakeCards.includes(card);
@@ -1942,16 +2047,19 @@ function checkDictationAnswer(userRaw) {
         feedback.innerHTML = `
             <div class="feedback-positive">Sentence correct!</div>
             <div class="feedback-sub">Nice work finishing that dictation.</div>
+            <div class="dictation-score">Score: <strong>100%</strong></div>
         `;
     } else {
         input.style.color = 'var(--error)';
-        const diffMarkup = getSentenceDiffMarkup(correctSentence, userRaw, app.settings.strictness);
+        const diffMarkup = getSentenceDiffMarkup(correctSentence, userRaw, 'strict');
         const mistakeList = mistakeCards.map(card => card.word).join(', ');
         feedback.innerHTML = `
             <div class="diff-display">
                 <span class="diff-line">${diffMarkup}</span>
             </div>
             <div class="feedback-sub">Review these words: <strong>${mistakeList || 'Check the sentence again'}</strong>.</div>
+            <div class="dictation-score">Score: <strong>${analysis.score}%</strong></div>
+            <ul class="dictation-error-list">${buildDictationErrorListMarkup(analysis)}</ul>
         `;
     }
     feedback.innerHTML += `
@@ -1966,14 +2074,15 @@ function checkDictationTextAnswer(userRaw) {
     const entry = currentSession.currentEntry;
     if (!entry) return;
     const correctText = entry.text || '';
-    const isCorrect = isTextCorrect(correctText, userRaw, app.settings.strictness);
+    const analysis = analyzeDictationErrors(correctText, userRaw);
+    const isCorrect = isTextCorrect(correctText, userRaw, 'strict');
     currentSession.isAnswered = true;
     currentSession.lastAnswerCorrect = isCorrect;
     document.getElementById('btn-check').classList.add('hidden');
     input.disabled = true;
     const feedback = document.getElementById('feedback');
     const elapsed = getElapsedSeconds();
-    const mistakeCards = applyDictationTextStats(entry.deck, correctText, userRaw, elapsed);
+    const mistakeCards = applyDictationTextStats(entry.deck, correctText, userRaw, elapsed, 'strict');
     if (entry.deck) {
         entry.deck.lastPracticed = Date.now();
         saveData();
@@ -1991,15 +2100,18 @@ function checkDictationTextAnswer(userRaw) {
         feedback.innerHTML = `
             <div class="feedback-positive">Text correct!</div>
             <div class="feedback-sub">Great work completing the full dictation.</div>
+            <div class="dictation-score">Score: <strong>100%</strong></div>
         `;
     } else {
         input.style.color = 'var(--error)';
-        const diffMarkup = getSentenceDiffMarkup(correctText, userRaw, app.settings.strictness);
+        const diffMarkup = getSentenceDiffMarkup(correctText, userRaw, 'strict');
         feedback.innerHTML = `
             <div class="diff-display">
                 <span class="diff-line">${diffMarkup}</span>
             </div>
             <div class="feedback-sub">Mistakes are highlighted in red. Focus on those words next.</div>
+            <div class="dictation-score">Score: <strong>${analysis.score}%</strong></div>
+            <ul class="dictation-error-list">${buildDictationErrorListMarkup(analysis)}</ul>
         `;
     }
     feedback.innerHTML += `
@@ -3060,6 +3172,181 @@ function getSentenceDiffMarkup(correctSentence, userSentence, strictness) {
     }).join('');
 }
 
+function getDictationTokens(text) {
+    const tokens = String(text || '').match(/[\p{L}\p{N}']+|[^\p{L}\p{N}']+/gu) || [];
+    return tokens.map(token => token.trim()).filter(Boolean).map(token => ({
+        value: token,
+        type: /[\p{L}\p{N}']+/u.test(token) ? 'word' : 'punct'
+    }));
+}
+
+function getLcsMatches(correctTokens, userTokens) {
+    const m = correctTokens.length;
+    const n = userTokens.length;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i += 1) {
+        for (let j = 1; j <= n; j += 1) {
+            if (correctTokens[i - 1] === userTokens[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    const matches = [];
+    let i = m;
+    let j = n;
+    while (i > 0 && j > 0) {
+        if (correctTokens[i - 1] === userTokens[j - 1]) {
+            matches.push({ correctIndex: i - 1, userIndex: j - 1 });
+            i -= 1;
+            j -= 1;
+        } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+    return matches.reverse();
+}
+
+function isGrammarEndingMismatch(expectedWord, actualWord) {
+    const expected = String(expectedWord || '').toLowerCase();
+    const actual = String(actualWord || '').toLowerCase();
+    if (!expected || !actual || expected === actual) return false;
+    if (expected.startsWith(actual) || actual.startsWith(expected)) {
+        const diff = Math.abs(expected.length - actual.length);
+        return diff > 0 && diff <= 4;
+    }
+    const minStem = Math.min(expected.length, actual.length) - 2;
+    if (minStem > 1 && expected.slice(0, minStem) === actual.slice(0, minStem)) {
+        return true;
+    }
+    return false;
+}
+
+function analyzeDictationErrors(correctSentence, userSentence) {
+    const expectedTokens = getDictationTokens(correctSentence);
+    const actualTokens = getDictationTokens(userSentence);
+    const expectedWords = expectedTokens.filter(token => token.type === 'word').map(token => token.value);
+    const actualWords = actualTokens.filter(token => token.type === 'word').map(token => token.value);
+    const expectedPunct = expectedTokens.filter(token => token.type === 'punct').map(token => token.value);
+    const actualPunct = actualTokens.filter(token => token.type === 'punct').map(token => token.value);
+
+    const normalizedExpected = expectedWords.map(word => word.toLowerCase());
+    const normalizedActual = actualWords.map(word => word.toLowerCase());
+    const wordMatches = getLcsMatches(normalizedExpected, normalizedActual);
+    const matchedExpected = new Set(wordMatches.map(match => match.correctIndex));
+    const matchedActual = new Set(wordMatches.map(match => match.userIndex));
+
+    let capitalization = 0;
+    wordMatches.forEach(match => {
+        const expectedWord = expectedWords[match.correctIndex];
+        const actualWord = actualWords[match.userIndex];
+        if (expectedWord && actualWord && expectedWord !== actualWord && expectedWord.toLowerCase() === actualWord.toLowerCase()) {
+            capitalization += 1;
+        }
+    });
+
+    const unmatchedExpected = normalizedExpected.map((_, idx) => idx).filter(idx => !matchedExpected.has(idx));
+    const unmatchedActual = normalizedActual.map((_, idx) => idx).filter(idx => !matchedActual.has(idx));
+
+    const actualIndexMap = new Map();
+    unmatchedActual.forEach(idx => {
+        const word = normalizedActual[idx];
+        if (!actualIndexMap.has(word)) actualIndexMap.set(word, []);
+        actualIndexMap.get(word).push(idx);
+    });
+
+    let wordOrder = 0;
+    const remainingExpected = [];
+    const usedActualForOrder = new Set();
+    unmatchedExpected.forEach(idx => {
+        const word = normalizedExpected[idx];
+        const pool = actualIndexMap.get(word);
+        if (pool && pool.length) {
+            const matchedIndex = pool.shift();
+            usedActualForOrder.add(matchedIndex);
+            wordOrder += 1;
+        } else {
+            remainingExpected.push(idx);
+        }
+    });
+    const remainingActual = unmatchedActual.filter(idx => !usedActualForOrder.has(idx));
+
+    let spelling = 0;
+    let grammarEnding = 0;
+    const remainingExpectedSet = new Set(remainingExpected);
+    const remainingActualSet = new Set(remainingActual);
+    const maxLen = Math.max(expectedWords.length, actualWords.length);
+    for (let i = 0; i < maxLen; i += 1) {
+        if (!remainingExpectedSet.has(i) || !remainingActualSet.has(i)) continue;
+        const expectedWord = expectedWords[i];
+        const actualWord = actualWords[i];
+        if (!expectedWord || !actualWord) continue;
+        if (expectedWord.toLowerCase() === actualWord.toLowerCase()) {
+            if (expectedWord !== actualWord) {
+                capitalization += 1;
+            }
+        } else if (isGrammarEndingMismatch(expectedWord, actualWord)) {
+            grammarEnding += 1;
+        } else {
+            spelling += 1;
+        }
+        remainingExpectedSet.delete(i);
+        remainingActualSet.delete(i);
+    }
+
+    const missingWord = remainingExpectedSet.size;
+    const extraWord = remainingActualSet.size;
+
+    const punctuationMatches = getLcsMatches(expectedPunct, actualPunct);
+    const punctuationMissing = Math.max(expectedPunct.length - punctuationMatches.length, 0);
+    const punctuationExtra = Math.max(actualPunct.length - punctuationMatches.length, 0);
+    const punctuation = punctuationMissing + punctuationExtra;
+
+    const totalErrors = spelling + capitalization + punctuation + grammarEnding + missingWord + extraWord + wordOrder;
+    const totalUnits = expectedWords.length + expectedPunct.length || 1;
+    const score = Math.max(0, Math.round(((totalUnits - totalErrors) / totalUnits) * 100));
+
+    return {
+        score,
+        totalErrors,
+        counts: {
+            spelling,
+            capitalization,
+            punctuation,
+            grammarEnding,
+            missingWord,
+            extraWord,
+            wordOrder
+        }
+    };
+}
+
+function buildDictationErrorListMarkup(analysis) {
+    const rows = [];
+    const labels = [
+        ['spelling', 'Spelling'],
+        ['capitalization', 'Capitalization'],
+        ['punctuation', 'Punctuation'],
+        ['grammarEnding', 'Grammar ending'],
+        ['missingWord', 'Missing word'],
+        ['extraWord', 'Extra word'],
+        ['wordOrder', 'Word order']
+    ];
+    labels.forEach(([key, label]) => {
+        const count = analysis.counts[key] || 0;
+        if (count > 0) {
+            rows.push(`<li><span>${label}</span><strong>${count}</strong></li>`);
+        }
+    });
+    if (!rows.length) {
+        return '<li><span>Perfect sentence</span><strong>0</strong></li>';
+    }
+    return rows.join('');
+}
+
 function isSentenceCorrect(correctSentence, userSentence, strictness) {
     if (strictness === 'strict') {
         return correctSentence.trim() === userSentence.trim();
@@ -3080,8 +3367,7 @@ function isTextCorrect(correctText, userText, strictness) {
     return correctTokens.every((token, index) => token === userTokens[index]);
 }
 
-function resolveDictationRatings(entry, userSentence) {
-    const strictness = app.settings.strictness;
+function resolveDictationRatings(entry, userSentence, strictness = 'strict') {
     const correctTokens = tokenizeWords(entry.sentence || '');
     const userTokens = tokenizeWords(userSentence);
     const maxLen = Math.max(correctTokens.length, userTokens.length);
@@ -3143,9 +3429,8 @@ function getOrCreateCardForWord(deck, word, sentence) {
     return card;
 }
 
-function applyDictationTextStats(deck, correctText, userText, elapsedSeconds) {
+function applyDictationTextStats(deck, correctText, userText, elapsedSeconds, strictness = 'strict') {
     if (!deck) return [];
-    const strictness = app.settings.strictness;
     const correctWordTokens = getWordTokensWithSentence(correctText);
     const normalizedCorrectWords = correctWordTokens.map(token => normalizeToken(token.word, strictness));
     const userWords = tokenizeWords(userText).map(token => normalizeToken(token, strictness));
@@ -3318,6 +3603,16 @@ function initSettingsListeners() {
         timerEl.value = app.settings.timerStart || 'audio';
         timerEl.addEventListener('change', (e) => {
             app.settings.timerStart = e.target.value;
+            saveData();
+        });
+    }
+    const dictationRepeatsEl = document.getElementById('setting-dictation-repeats');
+    if (dictationRepeatsEl) {
+        dictationRepeatsEl.value = Number.isFinite(app.settings.dictationRepeats)
+            ? String(app.settings.dictationRepeats)
+            : '1';
+        dictationRepeatsEl.addEventListener('change', (e) => {
+            app.settings.dictationRepeats = Number(e.target.value);
             saveData();
         });
     }
