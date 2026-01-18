@@ -68,7 +68,7 @@
     header {
         padding: var(--space-2);
         background: linear-gradient(135deg, #ffffff 0%, #eef2ff 60%, #ffe5d0 100%);
-        text-align: center;
+        text-align: left;
         font-weight: 800;
         font-size: var(--font-h2);
         color: var(--primary);
@@ -77,7 +77,20 @@
         flex-shrink: 0;
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 6px;
+    }
+
+    .header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-2);
+    }
+
+    .app-title {
+        font-size: var(--font-h2);
+        font-weight: 800;
+        color: var(--primary);
     }
 
     .app-tagline {
@@ -85,6 +98,81 @@
         font-weight: 600;
         color: var(--text-sub);
         letter-spacing: 0.02em;
+    }
+
+    .language-filter {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .language-filter-btn {
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        background: #ffffff;
+        color: var(--text-main);
+        border-radius: 999px;
+        padding: 6px 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        box-shadow: 0 6px 14px -10px rgba(15, 23, 42, 0.4);
+    }
+
+    .language-filter-btn span.flag {
+        font-size: 1.1rem;
+    }
+
+    .language-filter-btn svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+        opacity: 0.7;
+    }
+
+    .language-filter-menu {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        background: #ffffff;
+        border-radius: 14px;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        box-shadow: 0 12px 28px -18px rgba(15, 23, 42, 0.5);
+        min-width: 180px;
+        padding: 8px;
+        display: none;
+        z-index: 50;
+    }
+
+    .language-filter-menu.open {
+        display: grid;
+        gap: 4px;
+    }
+
+    .language-filter-option {
+        border: none;
+        background: transparent;
+        text-align: left;
+        padding: 8px 10px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.9rem;
+        color: var(--text-main);
+    }
+
+    .language-filter-option.active {
+        background: var(--bg-card-soft);
+        color: var(--primary-dark);
+        font-weight: 600;
+    }
+
+    .language-filter-option:hover {
+        background: rgba(99, 102, 241, 0.12);
     }
 
     main {
@@ -796,7 +884,17 @@
 <body>
 
 <header>
-    SpellMaster
+    <div class="header-top">
+        <div class="app-title">SpellMaster</div>
+        <div class="language-filter">
+            <button class="language-filter-btn" id="language-filter-btn" type="button" onclick="toggleLanguageFilter()" aria-haspopup="listbox" aria-expanded="false">
+                <span class="flag" id="language-filter-flag">🌐</span>
+                <span id="language-filter-label">All languages</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5H7z"/></svg>
+            </button>
+            <div class="language-filter-menu" id="language-filter-menu" role="listbox" aria-label="Language filter"></div>
+        </div>
+    </div>
     <span class="app-tagline">Make spelling feel like a game</span>
 </header>
 
@@ -1144,7 +1242,9 @@ let app = {
         /* when to start timing user response: 'show' or 'audio' */
         timerStart: 'audio',
         /* number of extra repeats allowed after the first dictation play */
-        dictationRepeats: 1
+        dictationRepeats: 1,
+        /* global language filter */
+        languageFilter: 'all'
     }
 };
 
@@ -1225,6 +1325,141 @@ function initAudio() {
 
 function normalizeLangCode(lang) {
     return lang ? String(lang).replace('_', '-').toLowerCase() : '';
+}
+
+function getLanguageFlag(lang) {
+    const normalized = normalizeLangCode(lang);
+    if (!normalized || normalized === 'all') return '🌐';
+    const regionMap = {
+        'en-us': '🇺🇸',
+        'en-gb': '🇬🇧',
+        'es-es': '🇪🇸',
+        'fr-fr': '🇫🇷',
+        'de-de': '🇩🇪',
+        'it-it': '🇮🇹'
+    };
+    if (regionMap[normalized]) return regionMap[normalized];
+    const baseMap = {
+        en: '🇺🇸',
+        es: '🇪🇸',
+        fr: '🇫🇷',
+        de: '🇩🇪',
+        it: '🇮🇹'
+    };
+    const base = normalized.split('-')[0];
+    return baseMap[base] || '🏳️';
+}
+
+function getLanguageLabel(lang) {
+    const normalized = normalizeLangCode(lang);
+    if (!normalized || normalized === 'all') return 'All languages';
+    const labels = {
+        'en-us': 'English (US)',
+        'en-gb': 'English (UK)',
+        'es-es': 'Spanish',
+        'fr-fr': 'French',
+        'de-de': 'German',
+        'it-it': 'Italian'
+    };
+    return labels[normalized] || lang;
+}
+
+function getAvailableLanguages() {
+    const unique = new Map();
+    app.decks.forEach(deck => {
+        if (!deck || !deck.lang) return;
+        const key = String(deck.lang);
+        if (!unique.has(key)) {
+            unique.set(key, {
+                value: key,
+                label: getLanguageLabel(key),
+                flag: getLanguageFlag(key)
+            });
+        }
+    });
+    return Array.from(unique.values()).sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function getFilteredDecks() {
+    const filter = app.settings.languageFilter || 'all';
+    if (filter === 'all') return app.decks;
+    const normalizedFilter = normalizeLangCode(filter);
+    return app.decks.filter(deck => normalizeLangCode(deck.lang) === normalizedFilter);
+}
+
+function updateLanguageFilterOptions() {
+    const menu = document.getElementById('language-filter-menu');
+    if (!menu) return;
+    const filter = app.settings.languageFilter || 'all';
+    const options = [
+        { value: 'all', label: 'All languages', flag: '🌐' },
+        ...getAvailableLanguages()
+    ];
+    menu.innerHTML = options.map(option => `
+        <button type="button" class="language-filter-option ${option.value === filter ? 'active' : ''}" data-value="${option.value}">
+            <span class="flag">${option.flag}</span>
+            <span>${option.label}</span>
+        </button>
+    `).join('');
+    menu.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setLanguageFilter(btn.dataset.value);
+            closeLanguageFilter();
+        });
+    });
+}
+
+function updateLanguageFilterUI() {
+    const flagEl = document.getElementById('language-filter-flag');
+    const labelEl = document.getElementById('language-filter-label');
+    if (!flagEl || !labelEl) return;
+    const filter = app.settings.languageFilter || 'all';
+    flagEl.textContent = getLanguageFlag(filter);
+    labelEl.textContent = getLanguageLabel(filter);
+}
+
+function toggleLanguageFilter() {
+    const menu = document.getElementById('language-filter-menu');
+    const btn = document.getElementById('language-filter-btn');
+    if (!menu || !btn) return;
+    const shouldOpen = !menu.classList.contains('open');
+    if (shouldOpen) {
+        updateLanguageFilterOptions();
+        menu.classList.add('open');
+    } else {
+        menu.classList.remove('open');
+    }
+    btn.setAttribute('aria-expanded', String(shouldOpen));
+}
+
+function closeLanguageFilter() {
+    const menu = document.getElementById('language-filter-menu');
+    const btn = document.getElementById('language-filter-btn');
+    if (!menu || !btn) return;
+    menu.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+}
+
+function setLanguageFilter(value) {
+    app.settings.languageFilter = value || 'all';
+    saveData();
+    updateLanguageFilterUI();
+    updateLanguageFilterOptions();
+    renderDeckList();
+    renderProgress();
+    if (!currentSession.isActive) {
+        renderPracticeHome();
+    }
+}
+
+function initLanguageFilter() {
+    updateLanguageFilterOptions();
+    updateLanguageFilterUI();
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.language-filter')) {
+            closeLanguageFilter();
+        }
+    });
 }
 
 function getBestVoiceForLang(lang) {
@@ -1489,6 +1724,8 @@ function loadData() {
         }
     });
     renderDeckList();
+    updateLanguageFilterOptions();
+    updateLanguageFilterUI();
     initSettingsListeners();
     renderPracticeHome();
 }
@@ -1585,8 +1822,12 @@ function startPracticeFromSelection() {
 }
 
 function startTodayPractice() {
-    if (!app.decks.length) return;
-    const deckIds = app.decks.map(deck => deck.id);
+    const decks = getFilteredDecks();
+    if (!decks.length) {
+        alert("No packs match this language filter yet.");
+        return;
+    }
+    const deckIds = decks.map(deck => deck.id);
     startPractice(deckIds);
 }
 
@@ -1687,6 +1928,19 @@ function renderPracticeHome() {
                     <button class="btn-secondary" onclick="openPasteList()">Paste list</button>
                     <button class="btn-secondary" onclick="triggerBackupRestore()">Restore backup</button>
                 </div>
+            </div>
+        `;
+        return;
+    }
+    const filteredDecks = getFilteredDecks();
+    if (filteredDecks.length === 0) {
+        container.innerHTML = `
+            <div class="card" style="text-align:center;">
+                <h2 style="margin-top:0;">No packs in this language</h2>
+                <p style="color: var(--text-sub); margin-bottom:1.5rem;">
+                    Try a different language filter to see your packs.
+                </p>
+                <button class="btn-secondary" onclick="toggleLanguageFilter()">Change language filter</button>
             </div>
         `;
         return;
@@ -2302,6 +2556,7 @@ function rateCard(quality) {
 function renderDeckList() {
     const list = document.getElementById('deck-list');
     list.innerHTML = '';
+    const filteredDecks = getFilteredDecks();
     
     if (app.decks.length === 0) {
         list.innerHTML = `<div style="text-align:center; padding:var(--space-4); color:var(--text-sub);">
@@ -2309,8 +2564,14 @@ function renderDeckList() {
         </div>`;
         return;
     }
+    if (filteredDecks.length === 0) {
+        list.innerHTML = `<div style="text-align:center; padding:var(--space-4); color:var(--text-sub);">
+            No packs match this language filter.
+        </div>`;
+        return;
+    }
 
-    app.decks.forEach(deck => {
+    filteredDecks.forEach(deck => {
         const dueCount = getDueCount(deck);
         const dictationLabel = isDictationDeck(deck) ? ' • Dictation text' : '';
         const div = document.createElement('div');
@@ -2327,6 +2588,7 @@ function renderDeckList() {
         `;
         list.appendChild(div);
     });
+    updateLanguageFilterOptions();
 }
 
 // --- PROGRESS RENDERING ---
@@ -2337,8 +2599,13 @@ function renderProgress() {
     overviewEl.innerHTML = '';
     detailsEl.innerHTML = '';
     progressTroubleEntries = [];
+    const filteredDecks = getFilteredDecks();
     if (app.decks.length === 0) {
         overviewEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">No data yet.</div>';
+        return;
+    }
+    if (filteredDecks.length === 0) {
+        overviewEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">No data for this language filter.</div>';
         return;
     }
     let total = 0;
@@ -2346,7 +2613,7 @@ function renderProgress() {
     let dueTotal = 0;
     const troubleList = [];
     const now = Date.now();
-    app.decks.forEach(deck => {
+    filteredDecks.forEach(deck => {
         deck.cards.forEach(card => {
             total++;
             if (card.due <= now) {
@@ -3028,7 +3295,8 @@ function getTodayCounts(now = Date.now()) {
     let newCount = 0;
     let troubleCount = 0;
     let totalCards = 0;
-    app.decks.forEach(deck => {
+    const filteredDecks = getFilteredDecks();
+    filteredDecks.forEach(deck => {
         deck.cards.forEach(card => {
             totalCards++;
             if (card.due <= now) dueCount++;
@@ -3040,7 +3308,7 @@ function getTodayCounts(now = Date.now()) {
 }
 
 function getTodayEntries(now = Date.now()) {
-    const selectedDecks = app.decks;
+    const selectedDecks = getFilteredDecks();
     let entries = selectedDecks.flatMap(deck => {
         if (isDictationDeck(deck) && !deckHasDictationStats(deck)) {
             return buildDictationTextEntry(deck);
@@ -3851,6 +4119,7 @@ function resetApp() {
 // --- BOOTSTRAP ---
 initAudio();
 loadData();
+initLanguageFilter();
 initCardInputListeners();
 document.addEventListener('keydown', handlePracticeKeydown);
 
