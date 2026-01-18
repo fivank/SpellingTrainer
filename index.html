@@ -603,6 +603,80 @@
         color: var(--text-sub);
         font-weight: 600;
     }
+
+    .practice-preview {
+        margin-top: var(--space-3);
+        text-align: left;
+        background: #ffffff;
+        border-radius: var(--radius-sm);
+        border: 1px solid rgba(99, 102, 241, 0.15);
+        padding: var(--space-2);
+    }
+
+    .practice-preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: var(--space-1);
+        margin-bottom: var(--space-1);
+    }
+
+    .practice-preview-title {
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .practice-preview-count {
+        font-size: var(--font-small);
+        color: var(--text-sub);
+    }
+
+    .practice-preview-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: var(--space-1);
+    }
+
+    .practice-preview-item {
+        padding: var(--space-1);
+        border-radius: 10px;
+        background: var(--bg-card-soft);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .practice-preview-item-title {
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 2px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .practice-preview-tag {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: #9a5a05;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .practice-preview-pack {
+        font-size: var(--font-small);
+        color: var(--text-sub);
+    }
+
+    .practice-preview-note {
+        font-size: var(--font-small);
+        color: var(--text-sub);
+        margin-top: var(--space-1);
+    }
     .progress-track {
         width: 100%;
         height: 12px;
@@ -1620,7 +1694,27 @@ function renderPracticeHome() {
     const now = Date.now();
     const { dueCount, newCount, troubleCount, totalCards } = getTodayCounts(now);
     const isStartDisabled = totalCards === 0;
-    const startCopy = isStartDisabled ? 'Add words to start playing' : 'Press Start to begin today’s challenge.';
+    const startCopy = isStartDisabled
+        ? 'Add words to start playing.'
+        : 'Here’s what is coming next. Start when you’re ready.';
+    const todayEntries = getTodayEntries(now);
+    const previewLimit = 6;
+    const previewEntries = todayEntries.slice(0, previewLimit);
+    const previewItems = previewEntries.map(entry => {
+        const preview = formatPracticePreviewEntry(entry);
+        return `
+            <li class="practice-preview-item">
+                <div class="practice-preview-item-title">
+                    <span class="practice-preview-tag">${preview.type}</span>
+                    <span>${preview.text}</span>
+                </div>
+                <div class="practice-preview-pack">Pack: ${preview.pack}</div>
+            </li>
+        `;
+    }).join('');
+    const previewNote = todayEntries.length > previewLimit
+        ? `Showing ${previewLimit} of ${todayEntries.length} items.`
+        : `Showing ${todayEntries.length || 0} item${todayEntries.length === 1 ? '' : 's'}.`;
 
     container.innerHTML = `
         <div class="card" style="text-align:center;">
@@ -1631,6 +1725,20 @@ function renderPracticeHome() {
                 <div><strong>Due now:</strong> ${dueCount}</div>
                 <div><strong>New:</strong> ${newCount}</div>
                 <div><strong>Trouble:</strong> ${troubleCount}</div>
+            </div>
+            <div class="practice-preview">
+                <div class="practice-preview-header">
+                    <div class="practice-preview-title">Up next</div>
+                    <div class="practice-preview-count">${todayEntries.length} total</div>
+                </div>
+                ${todayEntries.length === 0
+                    ? '<div class="practice-preview-note">No practice items available yet.</div>'
+                    : `
+                        <ul class="practice-preview-list">
+                            ${previewItems}
+                        </ul>
+                        <div class="practice-preview-note">${previewNote}</div>
+                    `}
             </div>
             <div style="margin-top:var(--space-3); display:grid; gap:var(--space-1);">
                 <button class="btn-secondary" onclick="navTo('words')">Go to Packs</button>
@@ -2929,6 +3037,57 @@ function getTodayCounts(now = Date.now()) {
         });
     });
     return { dueCount, newCount, troubleCount, totalCards };
+}
+
+function getTodayEntries(now = Date.now()) {
+    const selectedDecks = app.decks;
+    let entries = selectedDecks.flatMap(deck => {
+        if (isDictationDeck(deck) && !deckHasDictationStats(deck)) {
+            return buildDictationTextEntry(deck);
+        }
+        if (isDictationDeck(deck)) {
+            return buildDictationEntries(deck);
+        }
+        return buildWordEntries(deck, now, true);
+    }).sort((a, b) => {
+        if (a.mode === 'dictation' || b.mode === 'dictation') return 0;
+        if (a.mode === 'dictation-text' || b.mode === 'dictation-text') return 0;
+        return a.card.due - b.card.due;
+    });
+
+    if (entries.length === 0) {
+        entries = selectedDecks.flatMap(deck => {
+            if (isDictationDeck(deck) && !deckHasDictationStats(deck)) {
+                return buildDictationTextEntry(deck);
+            }
+            if (isDictationDeck(deck)) {
+                return buildDictationEntries(deck);
+            }
+            return buildWordEntries(deck, now, false);
+        });
+    }
+
+    return entries;
+}
+
+function formatPracticePreviewEntry(entry) {
+    const pack = escapeHtml(entry.deck?.name || 'Unknown pack');
+    if (entry.mode === 'dictation-text') {
+        const text = truncatePreviewText(entry.text || 'Dictation text');
+        return { type: 'Text', text: escapeHtml(text), pack };
+    }
+    if (entry.mode === 'dictation') {
+        const text = truncatePreviewText(entry.sentence || 'Dictation sentence');
+        return { type: 'Sentence', text: escapeHtml(text), pack };
+    }
+    const word = entry.card?.word || 'Word';
+    return { type: 'Word', text: escapeHtml(word), pack };
+}
+
+function truncatePreviewText(text, limit = 80) {
+    const safeText = String(text || '').trim();
+    if (safeText.length <= limit) return safeText;
+    return `${safeText.slice(0, limit - 1)}…`;
 }
 
 function createSampleDeck() {
