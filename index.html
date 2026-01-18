@@ -1046,19 +1046,19 @@
                 </div>
                 <div style="margin-top:var(--space-2);">
                     <label>Silence at start: <span id="pause-start-text-val">0</span> ms</label>
-                    <input type="range" id="setting-pause-start-text" min="0" max="2000" step="50" value="0">
+                    <input type="range" id="setting-pause-start-text" min="0" max="2000" step="5" value="0">
                 </div>
                 <div>
                     <label>Pause between sentences: <span id="pause-between-sentences-text-val">800</span> ms</label>
-                    <input type="range" id="setting-pause-between-sentences-text" min="0" max="3000" step="50" value="800">
+                    <input type="range" id="setting-pause-between-sentences-text" min="0" max="3000" step="5" value="800">
                 </div>
                 <div>
                     <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-text-val">350</span> ms</label>
-                    <input type="range" id="setting-pause-mid-sentence-text" min="0" max="1500" step="50" value="350">
+                    <input type="range" id="setting-pause-mid-sentence-text" min="0" max="1500" step="5" value="350">
                 </div>
                 <div>
-                    <label>Pause every 2 words: <span id="pause-two-words-text-val">0</span> ms</label>
-                    <input type="range" id="setting-pause-two-words-text" min="0" max="1500" step="50" value="0">
+                    <label>Pause after every word: <span id="pause-two-words-text-val">0</span> ms</label>
+                    <input type="range" id="setting-pause-two-words-text" min="0" max="1500" step="5" value="0">
                 </div>
             </div>
 
@@ -1072,15 +1072,15 @@
                 </div>
                 <div style="margin-top:var(--space-2);">
                     <label>Silence at start: <span id="pause-start-sentence-val">0</span> ms</label>
-                    <input type="range" id="setting-pause-start-sentence" min="0" max="2000" step="50" value="0">
+                    <input type="range" id="setting-pause-start-sentence" min="0" max="2000" step="5" value="0">
                 </div>
                 <div>
                     <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-sentence-val">350</span> ms</label>
-                    <input type="range" id="setting-pause-mid-sentence-sentence" min="0" max="1500" step="50" value="350">
+                    <input type="range" id="setting-pause-mid-sentence-sentence" min="0" max="1500" step="5" value="350">
                 </div>
                 <div>
-                    <label>Pause every 2 words: <span id="pause-two-words-sentence-val">0</span> ms</label>
-                    <input type="range" id="setting-pause-two-words-sentence" min="0" max="1500" step="50" value="0">
+                    <label>Pause after every word: <span id="pause-two-words-sentence-val">0</span> ms</label>
+                    <input type="range" id="setting-pause-two-words-sentence" min="0" max="1500" step="5" value="0">
                 </div>
             </div>
 
@@ -1094,19 +1094,19 @@
                 </div>
                 <div style="margin-top:var(--space-2);">
                     <label>Silence at start: <span id="pause-start-word-val">0</span> ms</label>
-                    <input type="range" id="setting-pause-start-word" min="0" max="2000" step="50" value="0">
+                    <input type="range" id="setting-pause-start-word" min="0" max="2000" step="5" value="0">
                 </div>
                 <div>
                     <label>Pause between word &amp; sentence: <span id="pause-word-sentence-word-val">600</span> ms</label>
-                    <input type="range" id="setting-pause-word-sentence-word" min="0" max="2000" step="50" value="600">
+                    <input type="range" id="setting-pause-word-sentence-word" min="0" max="2000" step="5" value="600">
                 </div>
                 <div>
                     <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-word-val">350</span> ms</label>
-                    <input type="range" id="setting-pause-mid-sentence-word" min="0" max="1500" step="50" value="350">
+                    <input type="range" id="setting-pause-mid-sentence-word" min="0" max="1500" step="5" value="350">
                 </div>
                 <div>
-                    <label>Pause every 2 words: <span id="pause-two-words-word-val">0</span> ms</label>
-                    <input type="range" id="setting-pause-two-words-word" min="0" max="1500" step="50" value="0">
+                    <label>Pause after every word: <span id="pause-two-words-word-val">0</span> ms</label>
+                    <input type="range" id="setting-pause-two-words-word" min="0" max="1500" step="5" value="0">
                 </div>
             </div>
         </div>
@@ -1688,21 +1688,20 @@ function buildSentenceSegments(sentence, pauseMs, pauseTwoWordsMs = 0) {
     const segments = [];
     parts.forEach((part, partIndex) => {
         const words = part.split(/\s+/).filter(Boolean);
-        if (pauseTwoWordsMs > 0 && words.length > 2) {
-            for (let i = 0; i < words.length; i += 2) {
-                const chunk = words.slice(i, i + 2).join(' ');
-                const isLastChunk = i + 2 >= words.length;
-                const pauseAfter = isLastChunk
+        if (pauseTwoWordsMs > 0 && words.length > 1) {
+            words.forEach((word, wordIndex) => {
+                const isLastWord = wordIndex === words.length - 1;
+                const pauseAfter = isLastWord
                     ? (partIndex < parts.length - 1 ? pauseMs : 0)
                     : pauseTwoWordsMs;
-                segments.push({ text: chunk, pauseAfter });
-            }
-        } else {
-            segments.push({
-                text: part,
-                pauseAfter: partIndex < parts.length - 1 ? pauseMs : 0
+                segments.push({ text: word, pauseAfter });
             });
+            return;
         }
+        segments.push({
+            text: part,
+            pauseAfter: partIndex < parts.length - 1 ? pauseMs : 0
+        });
     });
     return segments;
 }
@@ -2112,26 +2111,24 @@ function renderPracticeHome() {
         : `Showing ${todayEntries.length || 0} item${todayEntries.length === 1 ? '' : 's'}.`;
 
     container.innerHTML = `
-        <div class="card" style="text-align:center;">
-            <h2 style="margin-top:0;">Today</h2>
-            <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s challenge</button>
-            <div class="practice-preview">
-                <div class="practice-preview-header">
-                    <div class="practice-preview-title">Up next</div>
-                    <div class="practice-preview-count">${todayEntries.length} total</div>
-                </div>
-                ${todayEntries.length === 0
-                    ? '<div class="practice-preview-note">No practice items available yet.</div>'
-                    : `
-                        <ul class="practice-preview-list">
-                            ${previewItems}
-                        </ul>
-                        <div class="practice-preview-note">${previewNote}</div>
-                    `}
+        <h2 style="margin-top:0; text-align:center;">Today</h2>
+        <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s challenge</button>
+        <div class="practice-preview">
+            <div class="practice-preview-header">
+                <div class="practice-preview-title">Up next</div>
+                <div class="practice-preview-count">${todayEntries.length} total</div>
             </div>
-            <div style="margin-top:var(--space-3); display:grid; gap:var(--space-1);">
-                <button class="btn-secondary" onclick="navTo('words')">Go to Packs</button>
-            </div>
+            ${todayEntries.length === 0
+                ? '<div class="practice-preview-note">No practice items available yet.</div>'
+                : `
+                    <ul class="practice-preview-list">
+                        ${previewItems}
+                    </ul>
+                    <div class="practice-preview-note">${previewNote}</div>
+                `}
+        </div>
+        <div style="margin-top:var(--space-3); display:grid; gap:var(--space-1);">
+            <button class="btn-secondary" onclick="navTo('words')">Go to Packs</button>
         </div>
     `;
 }
