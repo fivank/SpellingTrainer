@@ -1946,11 +1946,8 @@ function renderPracticeHome() {
         return;
     }
     const now = Date.now();
-    const { dueCount, newCount, troubleCount, totalCards } = getTodayCounts(now);
+    const { totalCards } = getTodayCounts(now);
     const isStartDisabled = totalCards === 0;
-    const startCopy = isStartDisabled
-        ? 'Add words to start playing.'
-        : 'Here’s what is coming next. Start when you’re ready.';
     const todayEntries = getTodayEntries(now);
     const previewLimit = 6;
     const previewEntries = todayEntries.slice(0, previewLimit);
@@ -1973,13 +1970,7 @@ function renderPracticeHome() {
     container.innerHTML = `
         <div class="card" style="text-align:center;">
             <h2 style="margin-top:0;">Today</h2>
-            <p style="color: var(--text-sub); margin-bottom:1.5rem;">${startCopy}</p>
             <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s challenge</button>
-            <div style="margin-top:1.5rem; display:grid; gap:6px; text-align:left;">
-                <div><strong>Due now:</strong> ${dueCount}</div>
-                <div><strong>New:</strong> ${newCount}</div>
-                <div><strong>Trouble:</strong> ${troubleCount}</div>
-            </div>
             <div class="practice-preview">
                 <div class="practice-preview-header">
                     <div class="practice-preview-title">Up next</div>
