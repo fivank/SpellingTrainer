@@ -2379,18 +2379,16 @@ function checkDictationAnswer(userRaw) {
     input.disabled = true;
     const feedback = document.getElementById('feedback');
     const elapsed = getElapsedSeconds();
-    const { mistakeCards, fallbackCard } = resolveDictationRatings(entry, userRaw, 'strict');
-    const ratedCards = mistakeCards.length ? mistakeCards : (fallbackCard ? [fallbackCard] : []);
-    ratedCards.forEach(card => {
-        const isCardCorrect = !mistakeCards.includes(card);
-        applyDictationRating(card, entry.deck, elapsed, isCardCorrect);
-        currentSession.totalAttempts += 1;
-        if (isCardCorrect) {
-            currentSession.correctAttempts += 1;
-        } else {
+    const { mistakeCards, totalWords } = applyDictationSentenceStats(entry, userRaw, elapsed, 'strict');
+    currentSession.totalAttempts += totalWords;
+    if (mistakeCards.length) {
+        currentSession.correctAttempts += Math.max(totalWords - mistakeCards.length, 0);
+        mistakeCards.forEach(card => {
             currentSession.troubleEntries.push({ deck: entry.deck, card });
-        }
-    });
+        });
+    } else {
+        currentSession.correctAttempts += totalWords;
+    }
     if (entry.deck && isDictationDeck(entry.deck)) {
         entry.deck.dictationStatsReady = true;
     }
@@ -2435,12 +2433,12 @@ function checkDictationTextAnswer(userRaw) {
     input.disabled = true;
     const feedback = document.getElementById('feedback');
     const elapsed = getElapsedSeconds();
-    const mistakeCards = applyDictationTextStats(entry.deck, correctText, userRaw, elapsed, 'strict');
+    const { mistakeCards, totalWords } = applyDictationTextStats(entry.deck, correctText, userRaw, elapsed, 'strict');
     if (entry.deck) {
         entry.deck.lastPracticed = Date.now();
-        saveData();
+        entry.deck.dictationStatsReady = true;
     }
-    const totalWords = tokenizeWords(correctText).length || 1;
+    saveData();
     currentSession.totalAttempts += totalWords;
     if (isCorrect) {
         currentSession.correctAttempts += totalWords;
@@ -3785,33 +3783,23 @@ function isTextCorrect(correctText, userText, strictness) {
     return correctTokens.every((token, index) => token === userTokens[index]);
 }
 
-function resolveDictationRatings(entry, userSentence, strictness = 'strict') {
+function applyDictationSentenceStats(entry, userSentence, elapsedSeconds, strictness = 'strict') {
+    if (!entry || !entry.deck) return { mistakeCards: [], totalWords: 0 };
     const correctTokens = tokenizeWords(entry.sentence || '');
-    const userTokens = tokenizeWords(userSentence);
-    const maxLen = Math.max(correctTokens.length, userTokens.length);
-    const mistakeCounts = new Map();
-    for (let i = 0; i < maxLen; i += 1) {
-        const correctToken = correctTokens[i];
-        if (!correctToken) continue;
-        const userToken = userTokens[i];
-        const normalizedCorrect = normalizeToken(correctToken, strictness);
-        const normalizedUser = userToken ? normalizeToken(userToken, strictness) : '';
-        if (!userToken || normalizedCorrect !== normalizedUser) {
-            const prev = mistakeCounts.get(normalizedCorrect) || 0;
-            mistakeCounts.set(normalizedCorrect, prev + 1);
-        }
-    }
+    const normalizedCorrect = correctTokens.map(token => normalizeToken(token, strictness));
+    const normalizedUser = tokenizeWords(userSentence).map(token => normalizeToken(token, strictness));
+    const matchIndices = getLcsMatchIndices(normalizedCorrect, normalizedUser);
     const mistakeCards = [];
-    entry.cards.forEach(card => {
-        const normalized = normalizeToken(card.word || '', strictness);
-        const remaining = mistakeCounts.get(normalized) || 0;
-        if (remaining > 0) {
+    correctTokens.forEach((token, index) => {
+        const card = getOrCreateCardForWord(entry.deck, token, entry.sentence);
+        const isCorrect = matchIndices.has(index);
+        applyDictationRating(card, entry.deck, elapsedSeconds, isCorrect);
+        if (!isCorrect) {
             mistakeCards.push(card);
-            mistakeCounts.set(normalized, remaining - 1);
         }
     });
-    const fallbackCard = mistakeCards.length ? null : pickMostDifficultCard(entry.cards);
-    return { mistakeCards, fallbackCard };
+    entry.deck.dictationStatsReady = true;
+    return { mistakeCards, totalWords: correctTokens.length || 1 };
 }
 
 function getWordTokensWithSentence(text) {
@@ -3848,21 +3836,22 @@ function getOrCreateCardForWord(deck, word, sentence) {
 }
 
 function applyDictationTextStats(deck, correctText, userText, elapsedSeconds, strictness = 'strict') {
-    if (!deck) return [];
+    if (!deck) return { mistakeCards: [], totalWords: 0 };
     const correctWordTokens = getWordTokensWithSentence(correctText);
     const normalizedCorrectWords = correctWordTokens.map(token => normalizeToken(token.word, strictness));
     const userWords = tokenizeWords(userText).map(token => normalizeToken(token, strictness));
     const matchIndices = getLcsMatchIndices(normalizedCorrectWords, userWords);
     const mistakeCards = [];
     correctWordTokens.forEach((token, index) => {
-        if (matchIndices.has(index)) return;
         const card = getOrCreateCardForWord(deck, token.word, token.sentence);
-        applyDictationRating(card, deck, elapsedSeconds, false);
-        mistakeCards.push(card);
+        const isCorrect = matchIndices.has(index);
+        applyDictationRating(card, deck, elapsedSeconds, isCorrect);
+        if (!isCorrect) {
+            mistakeCards.push(card);
+        }
     });
     deck.dictationStatsReady = true;
-    saveData();
-    return mistakeCards;
+    return { mistakeCards, totalWords: correctWordTokens.length || 1 };
 }
 
 function applyDictationRating(card, deck, elapsedSeconds, isCorrect) {
