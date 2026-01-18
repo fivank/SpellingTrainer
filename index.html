@@ -2919,8 +2919,8 @@ function saveDeck() {
     const rawInput = document.getElementById('new-deck-text').value;
     const parsedInput = parseDeckTextInput(rawInput);
     if (!name) return;
-    
-    app.decks.push({
+
+    const newDeck = {
         id: generateDeckId(),
         name,
         lang,
@@ -2929,7 +2929,11 @@ function saveDeck() {
         lastPracticed: null,
         text: parsedInput.text,
         dictationStatsReady: false
-    });
+    };
+    if (newDeck.text) {
+        syncCardsWithDictationText(newDeck, newDeck.text);
+    }
+    app.decks.push(newDeck);
     saveData();
     closeDeckModal();
     renderDeckList();
@@ -2998,6 +3002,38 @@ function syncCardsWithDictationText(deck, text) {
         return buildCardEntry(token.word, token.sentence);
     });
     deck.cards = nextCards;
+}
+
+function populateSentencesFromText(deck) {
+    if (!deck || !deck.text || !deck.text.trim()) return;
+    const tokens = getWordTokensWithSentence(deck.text);
+    const tokenMap = new Map();
+    tokens.forEach(token => {
+        const normalized = normalizeToken(token.word, 'lenient');
+        if (!normalized || tokenMap.has(normalized)) return;
+        tokenMap.set(normalized, { word: token.word, sentence: token.sentence });
+    });
+    if (!deck.cards.length) {
+        deck.cards = Array.from(tokenMap.values()).map(token => buildCardEntry(token.word, token.sentence));
+        return;
+    }
+    const existingMap = new Map();
+    deck.cards.forEach(card => {
+        existingMap.set(normalizeToken(card.word || '', 'lenient'), card);
+    });
+    tokenMap.forEach((token, normalized) => {
+        const existing = existingMap.get(normalized);
+        if (existing) {
+            if (!existing.sentence) {
+                existing.sentence = token.sentence;
+            }
+            if (!existing.word) {
+                existing.word = token.word;
+            }
+            return;
+        }
+        deck.cards.push(buildCardEntry(token.word, token.sentence));
+    });
 }
 
 function saveDictationText() {
@@ -4055,7 +4091,7 @@ function normalizeImportedDecks(raw) {
             incorrectCount: Number(card.incorrectCount) || 0,
             avgTime: Number(card.avgTime) || 0
         })).filter(card => card.word) : [];
-        return {
+        const normalizedDeck = {
             id: existingId ? deck.id : generateDeckId(),
             name: deck.name ? String(deck.name) : 'Imported Pack',
             lang: deck.lang ? String(deck.lang) : 'en-US',
@@ -4065,6 +4101,8 @@ function normalizeImportedDecks(raw) {
             text: deck.text ? String(deck.text) : '',
             dictationStatsReady: Boolean(deck.dictationStatsReady)
         };
+        populateSentencesFromText(normalizedDeck);
+        return normalizedDeck;
     });
 }
 
