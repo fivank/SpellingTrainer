@@ -1006,6 +1006,13 @@
                 <p class="text-small" style="color: var(--text-sub);">
                     Dictation sentences play once automatically. Repeats are extra plays after the first.
                 </p>
+                <label style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+                    <span>Pronounce punctuation in sentence practice</span>
+                    <label class="toggle"><input type="checkbox" id="setting-pronounce-punctuation"><span class="slider"></span></label>
+                </label>
+                <p class="text-small" style="color: var(--text-sub); margin-top:6px;">
+                    When enabled, sentence dictation will say “comma,” “period,” and other punctuation aloud.
+                </p>
             </div>
         </div>
 
@@ -1342,6 +1349,8 @@ let app = {
         timerStart: 'audio',
         /* number of extra repeats allowed after the first dictation play */
         dictationRepeats: 1,
+        /* whether sentence practice should pronounce punctuation */
+        pronounceSentencePunctuation: false,
         /* global language filter */
         languageFilter: 'all'
     }
@@ -1706,6 +1715,64 @@ function buildSentenceSegments(sentence, pauseMs, pauseTwoWordsMs = 0) {
     return segments;
 }
 
+const PUNCTUATION_LABELS = {
+    ',': 'comma',
+    '.': 'period',
+    '?': 'question mark',
+    '!': 'exclamation point',
+    ':': 'colon',
+    ';': 'semicolon',
+    '…': 'ellipsis',
+    '...': 'ellipsis',
+    '-': 'dash',
+    '—': 'dash',
+    '–': 'dash',
+    '(': 'open parenthesis',
+    ')': 'close parenthesis',
+    '"': 'quote',
+    '“': 'quote',
+    '”': 'quote',
+    '‘': 'quote',
+    '’': 'quote'
+};
+
+function expandPunctuationToken(token) {
+    const trimmed = token.trim();
+    if (!trimmed) return [];
+    if (PUNCTUATION_LABELS[trimmed]) return [trimmed];
+    return Array.from(trimmed).filter(char => PUNCTUATION_LABELS[char]);
+}
+
+function buildSentenceSegmentsWithPunctuation(sentence, pauseMs, pauseTwoWordsMs = 0) {
+    const tokens = getDictationTokens(sentence);
+    const segments = [];
+    tokens.forEach((token) => {
+        if (token.type === 'word') {
+            segments.push({ text: token.value, pauseAfter: 0, tokenType: 'word' });
+            return;
+        }
+        const punctuationTokens = expandPunctuationToken(token.value);
+        punctuationTokens.forEach((punct) => {
+            const label = PUNCTUATION_LABELS[punct];
+            if (!label) return;
+            segments.push({ text: label, pauseAfter: pauseMs, tokenType: 'punct' });
+        });
+    });
+    if (pauseTwoWordsMs > 0) {
+        segments.forEach((segment, index) => {
+            if (segment.tokenType !== 'word') return;
+            const next = segments[index + 1];
+            if (next && next.tokenType === 'word') {
+                segment.pauseAfter = pauseTwoWordsMs;
+            }
+        });
+    }
+    if (segments.length > 0) {
+        segments[segments.length - 1].pauseAfter = 0;
+    }
+    return segments.map(({ text, pauseAfter }) => ({ text, pauseAfter }));
+}
+
 function speakSegments(segments, lang, profile = AUDIO_PROFILE_DEFAULTS) {
     if (!('speechSynthesis' in window)) {
         alert("Your browser does not support Audio. Please try Chrome or Safari.");
@@ -1788,7 +1855,9 @@ function speak(text, lang, profile) {
 function speakSentenceWithPauses(sentence, lang, profile) {
     const pauseMidSentenceMs = getProfileSetting(profile, 'pauseMidSentenceMs', AUDIO_PROFILE_DEFAULTS.pauseMidSentenceMs);
     const pauseTwoWordsMs = getProfileSetting(profile, 'pauseTwoWordsMs', AUDIO_PROFILE_DEFAULTS.pauseTwoWordsMs);
-    const segments = buildSentenceSegments(sentence, pauseMidSentenceMs, pauseTwoWordsMs);
+    const segments = app.settings.pronounceSentencePunctuation
+        ? buildSentenceSegmentsWithPunctuation(sentence, pauseMidSentenceMs, pauseTwoWordsMs)
+        : buildSentenceSegments(sentence, pauseMidSentenceMs, pauseTwoWordsMs);
     speakSegments(segments, lang, profile);
 }
 
@@ -3666,10 +3735,52 @@ function buildDictationTextEntry(deck) {
     }];
 }
 
+function compareCardImportance(a, b) {
+    const aErrors = a.incorrectCount || 0;
+    const bErrors = b.incorrectCount || 0;
+    if (bErrors !== aErrors) return bErrors - aErrors;
+    const aTime = a.avgTime || 0;
+    const bTime = b.avgTime || 0;
+    if (bTime !== aTime) return bTime - aTime;
+    const aInterval = a.interval || 0;
+    const bInterval = b.interval || 0;
+    if (aInterval !== bInterval) return aInterval - bInterval;
+    return (b.word || '').length - (a.word || '').length;
+}
+
+function limitWordEntriesBySentence(cards, maxPerSentence = 2) {
+    const withSentence = new Map();
+    const noSentence = [];
+    cards.forEach((card) => {
+        const sentence = (card.sentence || '').trim();
+        if (!sentence) {
+            noSentence.push(card);
+            return;
+        }
+        if (!withSentence.has(sentence)) {
+            withSentence.set(sentence, []);
+        }
+        withSentence.get(sentence).push(card);
+    });
+
+    const selected = [];
+    withSentence.forEach((group) => {
+        if (group.length <= maxPerSentence) {
+            selected.push(...group);
+            return;
+        }
+        const top = group.slice().sort(compareCardImportance).slice(0, maxPerSentence);
+        selected.push(...top);
+    });
+
+    return [...noSentence, ...selected];
+}
+
 function buildWordEntries(deck, now = Date.now(), dueOnly = true) {
     if (!deck || !Array.isArray(deck.cards)) return [];
     const cards = dueOnly ? deck.cards.filter(card => card.due <= now) : deck.cards;
-    return cards.map(card => ({ deck, card, mode: 'word' }));
+    const limitedCards = limitWordEntriesBySentence(cards, 2);
+    return limitedCards.map(card => ({ deck, card, mode: 'word' }));
 }
 
 function pickMostDifficultCard(cards) {
@@ -4215,6 +4326,14 @@ function initSettingsListeners() {
             : '1';
         dictationRepeatsEl.addEventListener('change', (e) => {
             app.settings.dictationRepeats = Number(e.target.value);
+            saveData();
+        });
+    }
+    const pronouncePunctuationEl = document.getElementById('setting-pronounce-punctuation');
+    if (pronouncePunctuationEl) {
+        pronouncePunctuationEl.checked = Boolean(app.settings.pronounceSentencePunctuation);
+        pronouncePunctuationEl.addEventListener('change', (e) => {
+            app.settings.pronounceSentencePunctuation = e.target.checked;
             saveData();
         });
     }
