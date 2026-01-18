@@ -1225,20 +1225,18 @@
             <h3>Manage Cards</h3>
             <button class="btn-icon" onclick="closeCardsModal()">✕</button>
         </div>
-        <div id="dictation-text-panel" style="margin-bottom:1rem; display:none;">
-            <label for="edit-deck-text-inline">Dictation Text</label>
-            <textarea id="edit-deck-text-inline" rows="5" placeholder="Edit the full dictation passage." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical; margin-bottom:8px;"></textarea>
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-1); flex-wrap:wrap;">
-                <small class="text-small" style="color: var(--text-sub);">Saving updates words and sentences to match the text.</small>
-                <button class="btn-secondary" onclick="saveDictationText()">Save Dictation Text</button>
-            </div>
-        </div>
         <div style="margin-bottom:1rem;">
-            <input type="text" id="new-card-word" placeholder="Word to spell" style="margin-bottom:8px;">
-            <input type="text" id="new-card-sentence" placeholder="Sentence (optional)" style="margin-bottom:8px;">
-            <!-- Optional audio URL input to support custom pronunciation files -->
-            <input type="text" id="new-card-audio" placeholder="Audio URL (optional)" style="margin-bottom:8px;">
-            <button class="btn-primary" onclick="addCardToDeck()">Add Card</button>
+            <button class="btn-primary" id="open-new-card" onclick="openNewCardForm()" style="width:100%;">Add a new worf</button>
+            <div id="new-card-form" class="hidden" style="margin-top:var(--space-2);">
+                <input type="text" id="new-card-word" placeholder="Word to spell" style="margin-bottom:8px;">
+                <input type="text" id="new-card-sentence" placeholder="Sentence (optional)" style="margin-bottom:8px;">
+                <!-- Optional audio URL input to support custom pronunciation files -->
+                <input type="text" id="new-card-audio" placeholder="Audio URL (optional)" style="margin-bottom:8px;">
+                <div style="display:flex; gap:var(--space-1);">
+                    <button class="btn-secondary" onclick="closeNewCardForm()" style="flex:1;">Cancel</button>
+                    <button class="btn-primary" onclick="addCardToDeck()" style="flex:1;">Add Card</button>
+                </div>
+            </div>
         </div>
         <div style="flex:1; overflow-y:auto; border-top:1px solid #eee; padding-top:var(--space-1);" id="cards-list-content">
             <!-- Cards list -->
@@ -1275,7 +1273,8 @@
         </div>
         <div class="deck-actions">
             <button class="btn-primary" onclick="openDeckStats()">Stats</button>
-            <button class="btn-secondary" onclick="openDeckEditor()">Edit Words</button>
+            <button class="btn-secondary" onclick="openDeckEditor()">Edit Words/Sentences</button>
+            <button class="btn-secondary" onclick="openDeckTextEditor()">Edit Whole Text</button>
             <button class="btn-secondary" onclick="openDeckMetaEditor()">Edit Name/Language</button>
             <button class="btn-secondary" onclick="exportDeck()">Export Pack</button>
             <button class="btn-secondary" style="color: var(--error); border-color: var(--error);" onclick="deleteDeck()">Delete Pack</button>
@@ -1314,11 +1313,26 @@
             <option value="de-DE">German</option>
             <option value="it-IT">Italian</option>
         </select>
-        <label for="edit-deck-text">Dictation Text (optional)</label>
-        <textarea id="edit-deck-text" rows="5" placeholder="Enter the full dictation passage." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
         <div style="display:flex; gap:var(--space-1);">
             <button class="btn-secondary" onclick="closeDeckMetaModal()" style="flex:1">Cancel</button>
             <button class="btn-primary" onclick="saveDeckMeta()" style="flex:1">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT FULL TEXT MODAL -->
+<div id="deck-text-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Edit Full Text</h3>
+            <button class="btn-icon" onclick="closeDeckTextModal()">✕</button>
+        </div>
+        <label for="edit-deck-text-full">Dictation Text</label>
+        <textarea id="edit-deck-text-full" rows="6" placeholder="Enter the full dictation passage." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical; margin-bottom:8px;"></textarea>
+        <small class="text-small" style="color: var(--text-sub);">Saving updates words and sentences to match the text.</small>
+        <div style="display:flex; gap:var(--space-1); margin-top:var(--space-2);">
+            <button class="btn-secondary" onclick="closeDeckTextModal()" style="flex:1">Cancel</button>
+            <button class="btn-primary" onclick="saveDeckText()" style="flex:1">Save</button>
         </div>
     </div>
 </div>
@@ -3011,26 +3025,13 @@ function saveDeck() {
 function manageCards(deckId) {
     activeDeckIdForEdit = deckId;
     document.getElementById('cards-modal').classList.add('open');
-    renderDictationEditor();
+    closeNewCardForm();
     renderCardList();
 }
 function closeCardsModal() {
     document.getElementById('cards-modal').classList.remove('open');
     closeCardEditModal();
-}
-
-function renderDictationEditor() {
-    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
-    const panel = document.getElementById('dictation-text-panel');
-    const textArea = document.getElementById('edit-deck-text-inline');
-    if (!panel || !textArea) return;
-    if (deck && deck.text && deck.text.trim()) {
-        panel.style.display = 'block';
-        textArea.value = deck.text || '';
-    } else {
-        panel.style.display = 'none';
-        textArea.value = '';
-    }
+    closeNewCardForm();
 }
 
 function updateDeckTextAndCards(deck, newText, shouldSync = true) {
@@ -3105,22 +3106,6 @@ function populateSentencesFromText(deck) {
     });
 }
 
-function saveDictationText() {
-    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
-    const textInput = document.getElementById('edit-deck-text-inline');
-    if (!deck || !textInput) return;
-    const nextText = textInput.value || '';
-    updateDeckTextAndCards(deck, nextText, true);
-    saveData();
-    renderDictationEditor();
-    renderCardList();
-    renderDeckList();
-    renderPracticeHome();
-    renderProgress();
-    if (document.getElementById('view-deck-progress').classList.contains('active')) {
-        renderDeckProgress(deck.id);
-    }
-}
 
 function openDeckActions(deckId) {
     activeDeckIdForEdit = deckId;
@@ -3215,13 +3200,24 @@ function openDeckMetaEditor() {
     if (!deck) return;
     document.getElementById('edit-deck-name').value = deck.name || '';
     document.getElementById('edit-deck-lang').value = deck.lang || 'en-US';
-    document.getElementById('edit-deck-text').value = deck.text || '';
     closeDeckActionsModal();
     document.getElementById('deck-meta-modal').classList.add('open');
 }
 
+function openDeckTextEditor() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    if (!deck) return;
+    document.getElementById('edit-deck-text-full').value = deck.text || '';
+    closeDeckActionsModal();
+    document.getElementById('deck-text-modal').classList.add('open');
+}
+
 function closeDeckMetaModal() {
     document.getElementById('deck-meta-modal').classList.remove('open');
+}
+
+function closeDeckTextModal() {
+    document.getElementById('deck-text-modal').classList.remove('open');
 }
 
 function saveDeckMeta() {
@@ -3229,18 +3225,31 @@ function saveDeckMeta() {
     if (!deck) return;
     const nameInput = document.getElementById('edit-deck-name');
     const langSelect = document.getElementById('edit-deck-lang');
-    const textInput = document.getElementById('edit-deck-text');
     const newName = nameInput.value.trim();
-    const newText = textInput.value;
     if (!newName) {
         alert("Pack name can't be empty.");
         return;
     }
     deck.name = newName;
     deck.lang = langSelect.value;
-    updateDeckTextAndCards(deck, newText, true);
     saveData();
     closeDeckMetaModal();
+    renderDeckList();
+    renderPracticeHome();
+    renderProgress();
+    if (document.getElementById('view-deck-progress').classList.contains('active')) {
+        renderDeckProgress(deck.id);
+    }
+}
+
+function saveDeckText() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    const textInput = document.getElementById('edit-deck-text-full');
+    if (!deck || !textInput) return;
+    updateDeckTextAndCards(deck, textInput.value || '', true);
+    saveData();
+    closeDeckTextModal();
+    renderCardList();
     renderDeckList();
     renderPracticeHome();
     renderProgress();
@@ -3388,6 +3397,24 @@ function saveCardEdits() {
     }
 }
 
+function openNewCardForm() {
+    const form = document.getElementById('new-card-form');
+    const button = document.getElementById('open-new-card');
+    if (!form || !button) return;
+    form.classList.remove('hidden');
+    button.classList.add('hidden');
+    const wordInput = document.getElementById('new-card-word');
+    if (wordInput) wordInput.focus();
+}
+
+function closeNewCardForm() {
+    const form = document.getElementById('new-card-form');
+    const button = document.getElementById('open-new-card');
+    if (!form || !button) return;
+    form.classList.add('hidden');
+    button.classList.remove('hidden');
+}
+
 function addCardToDeck() {
     const w = document.getElementById('new-card-word');
     const s = document.getElementById('new-card-sentence');
@@ -3401,7 +3428,7 @@ function addCardToDeck() {
     w.value = '';
     s.value = '';
     a.value = '';
-    w.focus();
+    closeNewCardForm();
     saveData();
     renderCardList();
     renderDeckList();
@@ -3547,11 +3574,11 @@ function getTodayCounts(now = Date.now()) {
 function getTodayEntries(now = Date.now()) {
     const selectedDecks = getFilteredDecks();
     let entries = selectedDecks.flatMap(deck => {
-        if (isDictationDeck(deck) && !deckHasDictationStats(deck)) {
-            return buildDictationTextEntry(deck);
-        }
         if (isDictationDeck(deck)) {
-            return buildDictationEntries(deck);
+            const baseEntries = deckHasDictationStats(deck)
+                ? buildDictationEntries(deck)
+                : buildDictationTextEntry(deck);
+            return [...baseEntries, ...buildWordEntries(deck, now, true)];
         }
         return buildWordEntries(deck, now, true);
     }).sort((a, b) => {
@@ -3562,11 +3589,11 @@ function getTodayEntries(now = Date.now()) {
 
     if (entries.length === 0) {
         entries = selectedDecks.flatMap(deck => {
-            if (isDictationDeck(deck) && !deckHasDictationStats(deck)) {
-                return buildDictationTextEntry(deck);
-            }
             if (isDictationDeck(deck)) {
-                return buildDictationEntries(deck);
+                const baseEntries = deckHasDictationStats(deck)
+                    ? buildDictationEntries(deck)
+                    : buildDictationTextEntry(deck);
+                return [...baseEntries, ...buildWordEntries(deck, now, false)];
             }
             return buildWordEntries(deck, now, false);
         });
@@ -3637,21 +3664,20 @@ function getDeckPracticeOptions(deck) {
     const hasWords = Array.isArray(deck.cards) && deck.cards.length > 0;
     const hasSentences = getDictationSentences(deck).length > 0;
     const hasText = isDictationDeck(deck);
-    const statsReady = !hasText || deckHasDictationStats(deck);
     const options = [
         {
             mode: 'word',
             label: 'Practice words',
             description: 'Spell individual words with sentence hints.',
             show: hasWords,
-            available: hasWords && statsReady
+            available: hasWords
         },
         {
             mode: 'sentence',
             label: 'Practice sentences',
             description: 'Type each sentence from the dictation.',
             show: hasSentences,
-            available: hasSentences && statsReady
+            available: hasSentences
         },
         {
             mode: 'text',
@@ -3661,14 +3687,6 @@ function getDeckPracticeOptions(deck) {
             available: hasText
         }
     ];
-    if (hasText && !statsReady) {
-        options.forEach(option => {
-            if (option.mode !== 'text') {
-                option.available = false;
-                option.reason = 'Complete the full text once to unlock word and sentence practice.';
-            }
-        });
-    }
     return options.filter(option => option.show);
 }
 
