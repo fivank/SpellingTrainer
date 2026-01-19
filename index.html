@@ -942,7 +942,7 @@
 <main>
     <!-- PRACTICE SCREEN -->
     <div id="view-practice" class="view active">
-        <div class="practice-wrapper" id="practice-container">
+        <div class="card practice-wrapper" id="practice-container">
             <!-- Dynamic Content -->
             <div style="text-align: center; color: var(--text-sub);">
                 <h2>Let’s practice!</h2>
@@ -1007,11 +1007,15 @@
                     Dictation sentences play once automatically. Repeats are extra plays after the first.
                 </p>
                 <label style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+                    <span>Pronounce punctuation in whole-text practice</span>
+                    <label class="toggle"><input type="checkbox" id="setting-pronounce-punctuation-text"><span class="slider"></span></label>
+                </label>
+                <label style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                     <span>Pronounce punctuation in sentence practice</span>
-                    <label class="toggle"><input type="checkbox" id="setting-pronounce-punctuation"><span class="slider"></span></label>
+                    <label class="toggle"><input type="checkbox" id="setting-pronounce-punctuation-sentence"><span class="slider"></span></label>
                 </label>
                 <p class="text-small" style="color: var(--text-sub); margin-top:6px;">
-                    When enabled, sentence dictation will say “comma,” “period,” and other punctuation aloud.
+                    When enabled, dictation will say “comma,” “period,” and other punctuation aloud.
                 </p>
             </div>
         </div>
@@ -1365,6 +1369,8 @@ let app = {
         dictationRepeats: 1,
         /* whether sentence practice should pronounce punctuation */
         pronounceSentencePunctuation: false,
+        /* whether whole-text dictation should pronounce punctuation */
+        pronounceTextPunctuation: false,
         /* global language filter */
         languageFilter: 'all'
     }
@@ -1760,27 +1766,38 @@ function expandPunctuationToken(token) {
 function buildSentenceSegmentsWithPunctuation(sentence, pauseMs, pauseTwoWordsMs = 0) {
     const tokens = getDictationTokens(sentence);
     const segments = [];
+    let wordBuffer = [];
+    const flushWords = () => {
+        if (!wordBuffer.length) return;
+        if (pauseTwoWordsMs > 0 && wordBuffer.length > 1) {
+            wordBuffer.forEach((word, wordIndex) => {
+                const isLastWord = wordIndex === wordBuffer.length - 1;
+                segments.push({
+                    text: word,
+                    pauseAfter: isLastWord ? 0 : pauseTwoWordsMs,
+                    tokenType: 'word'
+                });
+            });
+        } else {
+            segments.push({ text: wordBuffer.join(' '), pauseAfter: 0, tokenType: 'word' });
+        }
+        wordBuffer = [];
+    };
     tokens.forEach((token) => {
         if (token.type === 'word') {
-            segments.push({ text: token.value, pauseAfter: 0, tokenType: 'word' });
+            wordBuffer.push(token.value);
             return;
         }
         const punctuationTokens = expandPunctuationToken(token.value);
+        if (!punctuationTokens.length) return;
+        flushWords();
         punctuationTokens.forEach((punct) => {
             const label = PUNCTUATION_LABELS[punct];
             if (!label) return;
             segments.push({ text: label, pauseAfter: pauseMs, tokenType: 'punct' });
         });
     });
-    if (pauseTwoWordsMs > 0) {
-        segments.forEach((segment, index) => {
-            if (segment.tokenType !== 'word') return;
-            const next = segments[index + 1];
-            if (next && next.tokenType === 'word') {
-                segment.pauseAfter = pauseTwoWordsMs;
-            }
-        });
-    }
+    flushWords();
     if (segments.length > 0) {
         segments[segments.length - 1].pauseAfter = 0;
     }
@@ -1897,7 +1914,9 @@ function speakTextWithPauses(text, lang, profile) {
     }
     const segments = [];
     sentences.forEach((sentence, index) => {
-        const sentenceSegments = buildSentenceSegments(sentence, pauseMidSentenceMs, pauseTwoWordsMs);
+        const sentenceSegments = app.settings.pronounceTextPunctuation
+            ? buildSentenceSegmentsWithPunctuation(sentence, pauseMidSentenceMs, pauseTwoWordsMs)
+            : buildSentenceSegments(sentence, pauseMidSentenceMs, pauseTwoWordsMs);
         if (sentenceSegments.length && index < sentences.length - 1) {
             sentenceSegments[sentenceSegments.length - 1].pauseAfter += pauseBetweenSentencesMs;
         }
@@ -4347,10 +4366,18 @@ function initSettingsListeners() {
             saveData();
         });
     }
-    const pronouncePunctuationEl = document.getElementById('setting-pronounce-punctuation');
-    if (pronouncePunctuationEl) {
-        pronouncePunctuationEl.checked = Boolean(app.settings.pronounceSentencePunctuation);
-        pronouncePunctuationEl.addEventListener('change', (e) => {
+    const pronounceTextPunctuationEl = document.getElementById('setting-pronounce-punctuation-text');
+    if (pronounceTextPunctuationEl) {
+        pronounceTextPunctuationEl.checked = Boolean(app.settings.pronounceTextPunctuation);
+        pronounceTextPunctuationEl.addEventListener('change', (e) => {
+            app.settings.pronounceTextPunctuation = e.target.checked;
+            saveData();
+        });
+    }
+    const pronounceSentencePunctuationEl = document.getElementById('setting-pronounce-punctuation-sentence');
+    if (pronounceSentencePunctuationEl) {
+        pronounceSentencePunctuationEl.checked = Boolean(app.settings.pronounceSentencePunctuation);
+        pronounceSentencePunctuationEl.addEventListener('change', (e) => {
             app.settings.pronounceSentencePunctuation = e.target.checked;
             saveData();
         });
