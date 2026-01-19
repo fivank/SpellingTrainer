@@ -435,14 +435,15 @@
 
     .audio-stack {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
+        justify-content: center;
         gap: var(--space-1);
-        margin-bottom: var(--space-3);
+        margin-bottom: 0;
     }
     .audio-trigger {
-        width: 120px;
-        height: 120px;
+        width: 68px;
+        height: 68px;
         border-radius: 50%;
         background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         color: white;
@@ -464,7 +465,7 @@
     }
     .audio-trigger:active { transform: scale(0.95); }
     .audio-trigger.playing { animation: pulse 1.5s infinite; }
-    .audio-trigger svg { width: 50px; height: 50px; fill: white; }
+    .audio-trigger svg { width: 28px; height: 28px; fill: white; }
     .audio-trigger.disabled {
         opacity: 0.55;
         cursor: not-allowed;
@@ -472,7 +473,7 @@
         pointer-events: none;
     }
     .audio-label {
-        margin-top: var(--space-1);
+        margin-top: 0;
         font-size: var(--font-small);
         font-weight: 700;
         color: var(--text-sub);
@@ -508,7 +509,7 @@
     }
 
     .word-input {
-        font-size: 2rem;
+        font-size: 1.5rem;
         text-align: center;
         border: none;
         border-bottom: 3px solid #e5e7eb;
@@ -517,7 +518,7 @@
         color: var(--primary);
         letter-spacing: 1px;
         font-weight: bold;
-        margin-bottom: var(--space-2);
+        margin-bottom: 0;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     .word-input:focus { border-color: var(--primary); background: transparent; box-shadow: 0 12px 24px -20px rgba(99, 102, 241, 0.6); }
@@ -845,6 +846,18 @@
         margin-top: 1rem;
         display: flex;
         justify-content: center;
+    }
+    .practice-control-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        width: 100%;
+        max-width: 420px;
+        margin: 0 auto var(--space-2);
+    }
+    .practice-action {
+        padding: 12px;
+        font-size: 1rem;
     }
     .practice-options {
         display: grid;
@@ -2353,14 +2366,11 @@ function nextCard() {
         ? ''
         : `<input type="text" id="p-input" class="word-input" placeholder="${isDictation ? 'Type sentence here' : 'Type word here'}">`;
     const actionMarkup = isDictationText
-        ? `<button class="btn-primary" onclick="advanceDictationTextIntro()">Next</button>`
-        : `<button id="btn-check" class="btn-primary" style="margin-top:var(--space-2);" onclick="checkAnswer()">Check</button>`;
-    const srsMarkup = isDictationText ? '' : `
-        <div id="srs-area" class="srs-controls hidden">
-            <button class="srs-btn srs-again" onclick="rateCard(1)">Again</button>
-            <button class="srs-btn srs-hard" onclick="rateCard(2)">Hard</button>
-            <button class="srs-btn srs-good" onclick="rateCard(3)">Good</button>
-            <button class="srs-btn srs-easy" onclick="rateCard(4)">Easy</button>
+        ? `<button class="btn-primary practice-action" onclick="advanceDictationTextIntro()">Next</button>`
+        : `<button id="btn-check" class="btn-primary practice-action" onclick="checkAnswer()">Check</button>`;
+    const nextWordMarkup = isDictationText || isDictationSentence ? '' : `
+        <div id="next-word-area" class="hidden">
+            <button class="btn-primary practice-action" onclick="advanceWordEntry()">Next word</button>
         </div>
     `;
     const html = `
@@ -2376,21 +2386,22 @@ function nextCard() {
                 <div class="progress-fill" style="width:${progressPercent}%"></div>
             </div>
         </div>
-        <div class="audio-stack">
-            <div class="audio-trigger" onclick="playCurrent()" role="button" aria-label="Play audio">
-                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-            </div>
-            <div class="audio-label">Play</div>
-        </div>
         ${dictationNotice}
-        ${isDictationText ? `<div style="display:flex; justify-content:center; margin-bottom:var(--space-3);">${actionMarkup}</div>` : ''}
-        ${hasSentence ? `<p style="font-size:1.2rem; color:var(--text-sub); margin-bottom:var(--space-4); text-align:center; padding:0 var(--space-3); line-height:1.5;">${sentenceDisplay}</p>` : ''}
+        ${hasSentence ? `<p style="font-size:1.2rem; color:var(--text-sub); margin-bottom:var(--space-2); text-align:center; padding:0 var(--space-3); line-height:1.5;">${sentenceDisplay}</p>` : ''}
         
         ${feedbackMarkup}
-        ${inputMarkup}
+        <div class="practice-control-group">
+            <div class="audio-stack">
+                <div class="audio-trigger" onclick="playCurrent()" role="button" aria-label="Play audio">
+                    <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                </div>
+                <div class="audio-label">Play</div>
+            </div>
+            ${inputMarkup}
+            ${actionMarkup}
+        </div>
         ${hintMarkup}
-        ${isDictationText ? '' : actionMarkup}
-        ${srsMarkup}
+        ${nextWordMarkup}
     `;
     
     document.getElementById('practice-container').innerHTML = html;
@@ -2654,7 +2665,10 @@ function checkAnswer() {
             <div class="feedback-positive">Correct!</div>
             <div class="feedback-sub">${extraPraise}</div>
         `;
-        document.getElementById('srs-area').classList.remove('hidden');
+        const nextWordArea = document.getElementById('next-word-area');
+        if (nextWordArea) {
+            nextWordArea.classList.remove('hidden');
+        }
     } else {
         input.style.color = 'var(--error)';
         const typedValue = input.value ? input.value : '';
@@ -2668,6 +2682,10 @@ function checkAnswer() {
                 <button class="btn-secondary" onclick="retryCurrentCard()">Try again</button>
             </div>
         `;
+        const nextWordArea = document.getElementById('next-word-area');
+        if (nextWordArea) {
+            nextWordArea.classList.remove('hidden');
+        }
     }
 }
 
@@ -2810,8 +2828,16 @@ function retryCurrentCard() {
     input.style.color = 'var(--primary)';
     feedback.innerHTML = '';
     document.getElementById('btn-check').classList.remove('hidden');
-    document.getElementById('srs-area').classList.add('hidden');
+    const nextWordArea = document.getElementById('next-word-area');
+    if (nextWordArea) {
+        nextWordArea.classList.add('hidden');
+    }
     input.focus();
+}
+
+function advanceWordEntry() {
+    const quality = currentSession.lastAnswerCorrect ? 3 : 1;
+    rateCard(quality);
 }
 
 function rateCard(quality) {
