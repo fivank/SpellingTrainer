@@ -2004,33 +2004,12 @@ function startPractice(deckIds) {
     const selectedDecks = app.decks.filter(d => deckIds.includes(d.id));
     if (!selectedDecks.length) return;
     
-    // Sort by due date
     const now = Date.now();
-    let entries = selectedDecks.flatMap(deck => {
-        if (isDictationDeck(deck) && !deckHasDictationStats(deck)) {
-            return buildDictationTextEntry(deck);
-        }
-        if (isDictationDeck(deck)) {
-            return buildDictationEntries(deck);
-        }
-        return buildWordEntries(deck, now, true);
-    }).sort((a,b) => {
-        if (a.mode === 'dictation' || b.mode === 'dictation') return 0;
-        if (a.mode === 'dictation-text' || b.mode === 'dictation-text') return 0;
-        return a.card.due - b.card.due;
-    });
+    let entries = buildPracticeEntriesForDecks(selectedDecks, now, true);
     
     // If no due cards, practice all
     if (entries.length === 0) {
-        entries = selectedDecks.flatMap(deck => {
-            if (isDictationDeck(deck) && !deckHasDictationStats(deck)) {
-                return buildDictationTextEntry(deck);
-            }
-            if (isDictationDeck(deck)) {
-                return buildDictationEntries(deck);
-            }
-            return buildWordEntries(deck, now, false);
-        });
+        entries = buildPracticeEntriesForDecks(selectedDecks, now, false);
     }
 
     if (entries.length === 0) {
@@ -2306,8 +2285,9 @@ function nextCard() {
     
     const c = currentSession.currentCard;
     const entry = currentSession.currentEntry;
-    const isDictation = entry.mode === 'dictation' || entry.mode === 'dictation-text';
     const isDictationText = entry.mode === 'dictation-text';
+    const isDictationSentence = entry.mode === 'dictation';
+    const isDictation = isDictationText || isDictationSentence;
     const hasSentence = !isDictation && c && c.sentence && c.sentence.trim() !== "";
     
     // Hide target word in sentence
@@ -2325,11 +2305,26 @@ function nextCard() {
     const dictationNotice = isDictation ? `
         <p style="font-size:1rem; color:var(--text-sub); margin-bottom:var(--space-3); text-align:center;">
             ${isDictationText
-                ? `Dictation text with ${entry.sentenceCount || 1} sentence${entry.sentenceCount === 1 ? '' : 's'}. Listen and type the full text.`
+                ? `Dictation text with ${entry.sentenceCount || 1} sentence${entry.sentenceCount === 1 ? '' : 's'}. Listen once, then continue to sentence practice.`
                 : `Dictation sentence ${entry.sentenceIndex} of ${entry.sentenceCount}. Listen and type the full sentence.`}
         </p>
         <div class="dictation-repeat-status" id="dictation-repeat-status"></div>
     ` : '';
+    const feedbackMarkup = isDictationText ? '' : '<div class="feedback-area" id="feedback"></div>';
+    const inputMarkup = isDictationText
+        ? ''
+        : `<input type="text" id="p-input" class="word-input" placeholder="${isDictation ? 'Type sentence here' : 'Type word here'}">`;
+    const actionMarkup = isDictationText
+        ? `<button class="btn-primary" onclick="advanceDictationTextIntro()">Next</button>`
+        : `<button id="btn-check" class="btn-primary" style="margin-top:var(--space-2);" onclick="checkAnswer()">Check</button>`;
+    const srsMarkup = isDictationText ? '' : `
+        <div id="srs-area" class="srs-controls hidden">
+            <button class="srs-btn srs-again" onclick="rateCard(1)">Again</button>
+            <button class="srs-btn srs-hard" onclick="rateCard(2)">Hard</button>
+            <button class="srs-btn srs-good" onclick="rateCard(3)">Good</button>
+            <button class="srs-btn srs-easy" onclick="rateCard(4)">Easy</button>
+        </div>
+    `;
     const html = `
         <div class="practice-header">
             <button class="btn-secondary practice-end" onclick="endPracticeSession()">End Session</button>
@@ -2350,28 +2345,23 @@ function nextCard() {
             <div class="audio-label">Play</div>
         </div>
         ${dictationNotice}
+        ${isDictationText ? `<div style="display:flex; justify-content:center; margin-bottom:var(--space-3);">${actionMarkup}</div>` : ''}
         ${hasSentence ? `<p style="font-size:1.2rem; color:var(--text-sub); margin-bottom:var(--space-4); text-align:center; padding:0 var(--space-3); line-height:1.5;">${sentenceDisplay}</p>` : ''}
         
-        <div class="feedback-area" id="feedback"></div>
-        
-        <input type="text" id="p-input" class="word-input" placeholder="${isDictationText ? 'Type full text here' : (isDictation ? 'Type sentence here' : 'Type word here')}">
+        ${feedbackMarkup}
+        ${inputMarkup}
         ${hintMarkup}
-        
-        <button id="btn-check" class="btn-primary" style="margin-top:var(--space-2);" onclick="checkAnswer()">Check</button>
-        
-        <div id="srs-area" class="srs-controls hidden">
-            <button class="srs-btn srs-again" onclick="rateCard(1)">Again</button>
-            <button class="srs-btn srs-hard" onclick="rateCard(2)">Hard</button>
-            <button class="srs-btn srs-good" onclick="rateCard(3)">Good</button>
-            <button class="srs-btn srs-easy" onclick="rateCard(4)">Easy</button>
-        </div>
+        ${isDictationText ? '' : actionMarkup}
+        ${srsMarkup}
     `;
     
     document.getElementById('practice-container').innerHTML = html;
     
     const input = document.getElementById('p-input');
-    applySuggestionSettingToInput(input);
-    input.focus();
+    if (input) {
+        applySuggestionSettingToInput(input);
+        input.focus();
+    }
     if (isDictation) {
         initDictationPlayback(entry);
         updateDictationRepeatStatus(entry);
@@ -2390,13 +2380,15 @@ function nextCard() {
     }
 
     // Keyboard support
-    input.addEventListener("keydown", (e) => {
-        if (e.key !== "Enter") return;
-        if (currentSession.isAnswered) return;
-        e.preventDefault();
-        e.stopPropagation();
-        checkAnswer();
-    });
+    if (input) {
+        input.addEventListener("keydown", (e) => {
+            if (e.key !== "Enter") return;
+            if (currentSession.isAnswered) return;
+            e.preventDefault();
+            e.stopPropagation();
+            checkAnswer();
+        });
+    }
 }
 
 function applySuggestionSettingToInput(input) {
@@ -2420,6 +2412,10 @@ function applySuggestionSettingToInput(input) {
 function initDictationPlayback(entry) {
     if (!entry || (entry.mode !== 'dictation' && entry.mode !== 'dictation-text')) return;
     entry.dictationPlayedOnce = false;
+    if (entry.mode === 'dictation-text') {
+        entry.dictationRepeatsLeft = 0;
+        return;
+    }
     entry.dictationRepeatsLeft = Number.isFinite(app.settings.dictationRepeats)
         ? Math.max(0, app.settings.dictationRepeats)
         : 1;
@@ -2429,20 +2425,33 @@ function updateDictationRepeatStatus(entry) {
     if (!entry || (entry.mode !== 'dictation' && entry.mode !== 'dictation-text')) return;
     const statusEl = document.getElementById('dictation-repeat-status');
     const audioBtn = document.querySelector('.audio-trigger');
-    if (!statusEl) return;
+    if (!statusEl && !audioBtn) return;
     const repeatsLeft = Number(entry.dictationRepeatsLeft) || 0;
     const playedOnce = Boolean(entry.dictationPlayedOnce);
+    if (entry.mode === 'dictation-text') {
+        if (statusEl) {
+            statusEl.textContent = 'Audio plays once. Tap Next to continue.';
+        }
+        if (audioBtn) {
+            if (playedOnce) {
+                audioBtn.classList.add('disabled');
+            } else {
+                audioBtn.classList.remove('disabled');
+            }
+        }
+        return;
+    }
     if (!playedOnce) {
-        statusEl.textContent = 'First listen is playing.';
+        if (statusEl) statusEl.textContent = 'First listen is playing.';
         if (audioBtn) audioBtn.classList.remove('disabled');
         return;
     }
     if (repeatsLeft > 0) {
-        statusEl.textContent = `Repeats left: ${repeatsLeft}`;
+        if (statusEl) statusEl.textContent = `Repeats left: ${repeatsLeft}`;
         if (audioBtn) audioBtn.classList.remove('disabled');
         return;
     }
-    statusEl.textContent = 'No repeats left.';
+    if (statusEl) statusEl.textContent = 'No repeats left.';
     if (audioBtn) audioBtn.classList.add('disabled');
 }
 
@@ -2725,6 +2734,13 @@ function advanceCurrentEntry() {
     currentSession.queue.shift();
     currentSession.completedCount += 1;
     nextCard();
+}
+
+function advanceDictationTextIntro() {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+    advanceCurrentEntry();
 }
 
 function getElapsedSeconds() {
@@ -3590,34 +3606,26 @@ function getTodayCounts(now = Date.now()) {
     return { dueCount, newCount, troubleCount, totalCards };
 }
 
+function buildPracticeEntriesForDeck(deck, now = Date.now(), dueOnly = true) {
+    const entries = [];
+    if (isDictationDeck(deck)) {
+        entries.push(...buildDictationPracticeEntries(deck));
+    }
+    const wordEntries = buildWordEntries(deck, now, dueOnly).sort((a, b) => a.card.due - b.card.due);
+    entries.push(...wordEntries);
+    return entries;
+}
+
+function buildPracticeEntriesForDecks(decks, now = Date.now(), dueOnly = true) {
+    return decks.flatMap(deck => buildPracticeEntriesForDeck(deck, now, dueOnly));
+}
+
 function getTodayEntries(now = Date.now()) {
     const selectedDecks = getFilteredDecks();
-    let entries = selectedDecks.flatMap(deck => {
-        if (isDictationDeck(deck)) {
-            const baseEntries = deckHasDictationStats(deck)
-                ? buildDictationEntries(deck)
-                : buildDictationTextEntry(deck);
-            return [...baseEntries, ...buildWordEntries(deck, now, true)];
-        }
-        return buildWordEntries(deck, now, true);
-    }).sort((a, b) => {
-        if (a.mode === 'dictation' || b.mode === 'dictation') return 0;
-        if (a.mode === 'dictation-text' || b.mode === 'dictation-text') return 0;
-        return a.card.due - b.card.due;
-    });
-
+    let entries = buildPracticeEntriesForDecks(selectedDecks, now, true);
     if (entries.length === 0) {
-        entries = selectedDecks.flatMap(deck => {
-            if (isDictationDeck(deck)) {
-                const baseEntries = deckHasDictationStats(deck)
-                    ? buildDictationEntries(deck)
-                    : buildDictationTextEntry(deck);
-                return [...baseEntries, ...buildWordEntries(deck, now, false)];
-            }
-            return buildWordEntries(deck, now, false);
-        });
+        entries = buildPracticeEntriesForDecks(selectedDecks, now, false);
     }
-
     return entries;
 }
 
@@ -3625,11 +3633,11 @@ function formatPracticePreviewEntry(entry) {
     const pack = escapeHtml(entry.deck?.name || 'Unknown pack');
     if (entry.mode === 'dictation-text') {
         const text = truncatePreviewText(entry.text || 'Dictation text');
-        return { type: 'Text', text: escapeHtml(text), pack };
+        return { type: 'Dictation', text: escapeHtml(text), pack };
     }
     if (entry.mode === 'dictation') {
         const text = truncatePreviewText(entry.sentence || 'Dictation sentence');
-        return { type: 'Sentence', text: escapeHtml(text), pack };
+        return { type: 'Dictation', text: escapeHtml(text), pack };
     }
     const word = entry.card?.word || 'Word';
     return { type: 'Word', text: escapeHtml(word), pack };
@@ -3681,27 +3689,19 @@ function deckHasDictationStats(deck) {
 function getDeckPracticeOptions(deck) {
     if (!deck) return [];
     const hasWords = Array.isArray(deck.cards) && deck.cards.length > 0;
-    const hasSentences = getDictationSentences(deck).length > 0;
     const hasText = isDictationDeck(deck);
     const options = [
         {
             mode: 'word',
-            label: 'Practice words',
-            description: 'Spell individual words with sentence hints.',
+            label: 'Practice word spelling',
+            description: 'Spell individual words as you hear them.',
             show: hasWords,
             available: hasWords
         },
         {
-            mode: 'sentence',
-            label: 'Practice sentences',
-            description: 'Type each sentence from the dictation.',
-            show: hasSentences,
-            available: hasSentences
-        },
-        {
-            mode: 'text',
-            label: 'Practice full text',
-            description: 'Dictation of the entire text in one go.',
+            mode: 'dictation',
+            label: 'Practice dictation text',
+            description: 'Listen to the full text, then spell each sentence.',
             show: hasText,
             available: hasText
         }
@@ -3715,11 +3715,8 @@ function buildPracticeEntriesForMode(deck, mode) {
         const dueEntries = buildWordEntries(deck, now, true);
         return dueEntries.length ? dueEntries : buildWordEntries(deck, now, false);
     }
-    if (mode === 'sentence') {
-        return buildDictationEntries(deck);
-    }
-    if (mode === 'text') {
-        return buildDictationTextEntry(deck);
+    if (mode === 'dictation') {
+        return buildDictationPracticeEntries(deck);
     }
     return [];
 }
@@ -3759,6 +3756,14 @@ function buildDictationEntries(deck) {
             primaryCard: pickMostDifficultCard(cards)
         };
     }).filter(entry => entry.sentence);
+}
+
+function buildDictationPracticeEntries(deck) {
+    if (!isDictationDeck(deck)) return [];
+    return [
+        ...buildDictationTextEntry(deck),
+        ...buildDictationEntries(deck)
+    ];
 }
 
 function buildDictationTextEntry(deck) {
