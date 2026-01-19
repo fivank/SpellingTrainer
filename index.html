@@ -1412,6 +1412,7 @@ let currentSession = {
 
 let lastSessionSummary = null;
 let progressTroubleEntries = [];
+let deckTroubleEntries = [];
 let activeAudio = null;
 const speechPlayback = {
     sequenceId: 0,
@@ -2106,6 +2107,21 @@ function startProgressTroublePractice() {
     if (!progressTroubleEntries.length) return;
     const uniqueMap = new Map();
     progressTroubleEntries.forEach(entry => {
+        const key = `${entry.deck.id}-${entry.card.word}`;
+        if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, entry);
+        }
+    });
+    const entries = Array.from(uniqueMap.values());
+    if (!entries.length) return;
+    const selectedDecks = Array.from(new Set(entries.map(entry => entry.deck)));
+    startPracticeEntries(entries, selectedDecks);
+}
+
+function startDeckTroublePractice() {
+    if (!deckTroubleEntries.length) return;
+    const uniqueMap = new Map();
+    deckTroubleEntries.forEach(entry => {
         const key = `${entry.deck.id}-${entry.card.word}`;
         if (!uniqueMap.has(key)) {
             uniqueMap.set(key, entry);
@@ -3582,6 +3598,14 @@ function deleteCard(index) {
     renderDeckList();
 }
 
+function getCardProgressStage(card) {
+    const interval = Number(card.interval) || 0;
+    if (interval === 0) return 'new';
+    if (interval <= 3) return 'learning';
+    if (interval <= 15) return 'learned';
+    return 'mastered';
+}
+
 function renderDeckProgress(deckId) {
     const deck = app.decks.find(d => d.id === deckId);
     const overviewEl = document.getElementById('deck-progress-overview');
@@ -3600,24 +3624,21 @@ function renderDeckProgress(deckId) {
     let total = 0;
     let newWords = 0;
     let learning = 0;
+    let learned = 0;
     let mastered = 0;
-    let dueTotal = 0;
+    let troubleCount = 0;
     let sumTime = 0;
     let countTime = 0;
     const troubleList = [];
     const now = Date.now();
     deck.cards.forEach(card => {
         total++;
-        if (card.due <= now) {
-            dueTotal++;
-        }
-        if (card.interval === 0) {
-            newWords++;
-        } else if (card.interval > 15) {
-            mastered++;
-        } else {
-            learning++;
-        }
+        const stage = getCardProgressStage(card);
+        if (stage === 'new') newWords++;
+        if (stage === 'learning') learning++;
+        if (stage === 'learned') learned++;
+        if (stage === 'mastered') mastered++;
+        if ((card.incorrectCount || 0) > 0) troubleCount++;
         if (card.avgTime && card.avgTime > 0) {
             sumTime += card.avgTime;
             countTime++;
@@ -3625,6 +3646,7 @@ function renderDeckProgress(deckId) {
         troubleList.push({
             word: card.word,
             deck: deck.name,
+            cardRef: card,
             incorrect: card.incorrectCount || 0,
             avgTime: card.avgTime || 0
         });
@@ -3632,9 +3654,10 @@ function renderDeckProgress(deckId) {
     const avgTime = countTime > 0 ? (sumTime / countTime).toFixed(1) : 'N/A';
     let overviewHTML = '<table style="width:100%; border-collapse:collapse; font-size:0.95rem;">';
     overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Total words</th><td style="padding:8px 4px; text-align:right;">${total}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Due</th><td style="padding:8px 4px; text-align:right;">${dueTotal}</td></tr>`;
     overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">New</th><td style="padding:8px 4px; text-align:right;">${newWords}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Trouble</th><td style="padding:8px 4px; text-align:right;">${troubleCount}</td></tr>`;
     overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Learning</th><td style="padding:8px 4px; text-align:right;">${learning}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Learned</th><td style="padding:8px 4px; text-align:right;">${learned}</td></tr>`;
     overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Mastered</th><td style="padding:8px 4px; text-align:right;">${mastered}</td></tr>`;
     overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Average response time (s)</th><td style="padding:8px 4px; text-align:right;">${avgTime}</td></tr>`;
     overviewHTML += '</table>';
@@ -3643,7 +3666,9 @@ function renderDeckProgress(deckId) {
         if (b.incorrect !== a.incorrect) return b.incorrect - a.incorrect;
         return b.avgTime - a.avgTime;
     });
-    const topTrouble = troubleList.filter(t => t.incorrect > 0 || t.avgTime > 0).slice(0,10);
+    const troubleCandidates = troubleList.filter(t => t.incorrect > 0 || t.avgTime > 0);
+    deckTroubleEntries = troubleCandidates.map(item => ({ deck, card: item.cardRef }));
+    const topTrouble = troubleCandidates.slice(0,10);
     if (topTrouble.length > 0) {
         let detailsHTML = '<h3 style="margin-top:0;">Trouble Words</h3>';
         detailsHTML += '<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">';
@@ -3652,9 +3677,13 @@ function renderDeckProgress(deckId) {
             detailsHTML += `<tr><td style="padding:4px;">${item.word}</td><td style="padding:4px;">${item.incorrect}</td><td style="padding:4px; text-align:right;">${item.avgTime.toFixed ? item.avgTime.toFixed(1) : item.avgTime}</td></tr>`;
         });
         detailsHTML += '</table>';
+        detailsHTML += `<button class="btn-primary" style="margin-top:var(--space-2);" onclick="startDeckTroublePractice()">🪄 Practice trouble words</button>`;
         detailsEl.innerHTML = detailsHTML;
     } else {
-        detailsEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub);">No trouble words yet. Keep practicing!</div>';
+        detailsEl.innerHTML = `
+            <div style="padding:var(--space-2); color:var(--text-sub);">No trouble words yet. Keep practicing!</div>
+            <button class="btn-primary" style="margin-top:var(--space-2);" onclick="startDeckTroublePractice()" disabled>🪄 Practice trouble words</button>
+        `;
     }
     navTo('deck-progress');
 }
