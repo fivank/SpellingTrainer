@@ -1276,7 +1276,8 @@
             <button class="btn-icon" onclick="closeDeckActionsModal()">✕</button>
         </div>
         <div class="deck-actions">
-            <button class="btn-primary" onclick="openDeckStats()">Stats</button>
+            <button class="btn-primary" onclick="openDeckPracticeFromActions()">Practice now</button>
+            <button class="btn-secondary" onclick="openDeckStats()">Stats</button>
             <button class="btn-secondary" onclick="openDeckEditor()">Edit Words/Sentences</button>
             <button class="btn-secondary" onclick="openDeckTextEditor()">Edit Whole Text</button>
             <button class="btn-secondary" onclick="openDeckMetaEditor()">Edit Name/Language</button>
@@ -2209,9 +2210,9 @@ function renderPracticeHome() {
     const { totalCards } = getTodayCounts(now);
     const isStartDisabled = totalCards === 0;
     const todayEntries = getTodayEntries(now);
+    const previewEntries = getTodayPreviewEntries(todayEntries);
     const previewLimit = 6;
-    const previewEntries = todayEntries.slice(0, previewLimit);
-    const previewItems = previewEntries.map(entry => {
+    const previewItems = previewEntries.slice(0, previewLimit).map(entry => {
         const preview = formatPracticePreviewEntry(entry);
         return `
             <li class="practice-preview-item">
@@ -2223,9 +2224,9 @@ function renderPracticeHome() {
             </li>
         `;
     }).join('');
-    const previewNote = todayEntries.length > previewLimit
-        ? `Showing ${previewLimit} of ${todayEntries.length} items.`
-        : `Showing ${todayEntries.length || 0} item${todayEntries.length === 1 ? '' : 's'}.`;
+    const previewNote = previewEntries.length > previewLimit
+        ? `Showing ${previewLimit} of ${previewEntries.length} items.`
+        : `Showing ${previewEntries.length || 0} item${previewEntries.length === 1 ? '' : 's'}.`;
 
     container.innerHTML = `
         <h2 style="margin-top:0; text-align:center;">Today</h2>
@@ -2233,9 +2234,9 @@ function renderPracticeHome() {
         <div class="practice-preview">
             <div class="practice-preview-header">
                 <div class="practice-preview-title">Up next</div>
-                <div class="practice-preview-count">${todayEntries.length} total</div>
+                <div class="practice-preview-count">${previewEntries.length} total</div>
             </div>
-            ${todayEntries.length === 0
+            ${previewEntries.length === 0
                 ? '<div class="practice-preview-note">No practice items available yet.</div>'
                 : `
                     <ul class="practice-preview-list">
@@ -2880,8 +2881,7 @@ function renderDeckList() {
                 <small>${deck.lang} • ${deck.cards.length} cards • ${dueCount} due${dictationLabel}</small>
             </div>
             <div style="display:flex; gap:8px;">
-                <button class="btn-secondary" onclick="openDeckActions('${deck.id}')">Edit</button>
-                <button class="btn-primary" onclick="openPracticeOptionsModal('${deck.id}')">Practice</button>
+                <button class="btn-primary" onclick="openDeckActions('${deck.id}')">Details</button>
             </div>
         `;
         list.appendChild(div);
@@ -3199,6 +3199,12 @@ function openDeckActions(deckId) {
 
 function closeDeckActionsModal() {
     document.getElementById('deck-actions-modal').classList.remove('open');
+}
+
+function openDeckPracticeFromActions() {
+    if (!activeDeckIdForEdit) return;
+    closeDeckActionsModal();
+    openPracticeOptionsModal(activeDeckIdForEdit);
 }
 
 function openPracticeOptionsModal(deckId) {
@@ -3675,6 +3681,18 @@ function getTodayEntries(now = Date.now()) {
         entries = buildPracticeEntriesForDecks(selectedDecks, now, false);
     }
     return entries;
+}
+
+function getTodayPreviewEntries(entries) {
+    const seen = new Set();
+    return entries.filter(entry => {
+        const deckId = entry.deck?.id || 'unknown';
+        const category = entry.mode === 'word' ? 'word' : 'dictation';
+        const key = `${deckId}:${category}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 }
 
 function formatPracticePreviewEntry(entry) {
