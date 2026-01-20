@@ -554,6 +554,12 @@
     .deck-item:last-child { border: none; margin-bottom: 0; padding-bottom: 0; }
     .deck-info h3 { margin: 0 0 4px 0; font-size: 1.1rem; }
     .deck-info small { color: var(--text-sub); }
+    .deck-info .deck-progress {
+        display: block;
+        margin-top: 4px;
+        font-weight: 600;
+        color: var(--text-sub);
+    }
     
     /* --- MODAL --- */
     .modal-overlay {
@@ -813,6 +819,13 @@
         font-size: var(--font-small);
         color: var(--text-sub);
         margin-top: var(--space-1);
+    }
+    .practice-pack-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--space-1);
+        margin-bottom: var(--space-2);
     }
     .practice-home {
         display: grid;
@@ -2248,6 +2261,27 @@ function renderPracticeHome() {
     const isStartDisabled = totalCards === 0;
     const todayEntries = getTodayEntries(now);
     const previewEntries = getTodayPreviewEntries(todayEntries);
+    const todayDecks = filteredDecks.filter(deck => getDueCount(deck, now) > 0);
+    const todayDeckItems = todayDecks.map(deck => {
+        const dueCount = getDueCount(deck, now);
+        const dictationLabel = isDictationDeck(deck) ? ' • Dictation text' : '';
+        const progress = getDeckLearningProgress(deck);
+        const progressLabel = progress.allLearned
+            ? `100% known, mastering ${progress.masteryPercent}%`
+            : `Learned ${progress.learnedPercent}%`;
+        return `
+            <div class="deck-item">
+                <div class="deck-info">
+                    <h3>${deck.name}</h3>
+                    <small>${deck.lang} • ${deck.cards.length} cards • ${dueCount} due${dictationLabel}</small>
+                    <small class="deck-progress">${progressLabel}</small>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-primary" onclick="openDeckActions('${deck.id}')">Details</button>
+                </div>
+            </div>
+        `;
+    }).join('');
     const previewLimit = 6;
     const previewItems = previewEntries.slice(0, previewLimit).map(entry => {
         const preview = formatPracticePreviewEntry(entry);
@@ -2267,6 +2301,15 @@ function renderPracticeHome() {
 
     container.innerHTML = `
         <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s challenge</button>
+        <div class="card">
+            <div class="practice-pack-header">
+                <h3 style="margin:0;">Today’s packs</h3>
+                <div class="text-small" style="color:var(--text-sub);">${todayDecks.length} pack${todayDecks.length === 1 ? '' : 's'}</div>
+            </div>
+            ${todayDecks.length === 0
+                ? '<div class="practice-preview-note">No packs due today.</div>'
+                : todayDeckItems}
+        </div>
         <div class="practice-preview">
             <div class="practice-preview-header">
                 <div class="practice-preview-title">Up next</div>
@@ -3615,6 +3658,31 @@ function getCardProgressStage(card) {
     if (interval <= 3) return 'learning';
     if (interval <= 15) return 'learned';
     return 'mastered';
+}
+
+function getDeckLearningProgress(deck) {
+    const total = deck.cards.length;
+    if (total === 0) {
+        return {
+            learnedPercent: 0,
+            masteryPercent: 0,
+            allLearned: false
+        };
+    }
+    let learnedCount = 0;
+    let masteredCount = 0;
+    deck.cards.forEach(card => {
+        const stage = getCardProgressStage(card);
+        if (stage === 'learned' || stage === 'mastered') learnedCount++;
+        if (stage === 'mastered') masteredCount++;
+    });
+    const learnedPercent = Math.round((learnedCount / total) * 100);
+    const masteryPercent = Math.round((masteredCount / total) * 100);
+    return {
+        learnedPercent,
+        masteryPercent,
+        allLearned: learnedCount === total
+    };
 }
 
 function renderDeckProgress(deckId) {
