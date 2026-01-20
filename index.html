@@ -962,15 +962,8 @@
 <main>
     <!-- PRACTICE SCREEN -->
     <div id="view-practice" class="view active">
-        <div class="card practice-wrapper" id="practice-container">
-            <!-- Dynamic Content -->
-            <div style="text-align: center; color: var(--text-sub);">
-                <h2>Let’s practice!</h2>
-                <p>Tap start when you’re ready.</p>
-                <br>
-                <button class="btn-primary" onclick="startTodayPractice()">Start today’s challenge</button>
-            </div>
-        </div>
+        <h2>Today</h2>
+        <div id="practice-container"></div>
     </div>
 
     <!-- WORDS / DECKS SCREEN -->
@@ -2212,6 +2205,7 @@ function scheduleSpeechTimeout(handler, delay) {
 function renderPracticeHome() {
     const container = document.getElementById('practice-container');
     if (!container) return;
+    container.className = '';
 
     if (app.decks.length === 0) {
         container.innerHTML = `
@@ -2265,24 +2259,25 @@ function renderPracticeHome() {
         : `Showing ${previewEntries.length || 0} item${previewEntries.length === 1 ? '' : 's'}.`;
 
     container.innerHTML = `
-        <h2 style="margin-top:0; text-align:center;">Today</h2>
-        <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s challenge</button>
-        <div class="practice-preview">
-            <div class="practice-preview-header">
-                <div class="practice-preview-title">Up next</div>
-                <div class="practice-preview-count">${previewEntries.length} total</div>
+        <div class="card">
+            <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s challenge</button>
+            <div class="practice-preview">
+                <div class="practice-preview-header">
+                    <div class="practice-preview-title">Up next</div>
+                    <div class="practice-preview-count">${previewEntries.length} total</div>
+                </div>
+                ${previewEntries.length === 0
+                    ? '<div class="practice-preview-note">No practice items available yet.</div>'
+                    : `
+                        <ul class="practice-preview-list">
+                            ${previewItems}
+                        </ul>
+                        <div class="practice-preview-note">${previewNote}</div>
+                    `}
             </div>
-            ${previewEntries.length === 0
-                ? '<div class="practice-preview-note">No practice items available yet.</div>'
-                : `
-                    <ul class="practice-preview-list">
-                        ${previewItems}
-                    </ul>
-                    <div class="practice-preview-note">${previewNote}</div>
-                `}
-        </div>
-        <div style="margin-top:var(--space-3); display:grid; gap:var(--space-1);">
-            <button class="btn-secondary" onclick="navTo('words')">Go to Packs</button>
+            <div style="margin-top:var(--space-3); display:grid; gap:var(--space-1);">
+                <button class="btn-secondary" onclick="navTo('words')">Go to Packs</button>
+            </div>
         </div>
     `;
 }
@@ -2397,34 +2392,36 @@ function nextCard() {
         </div>
     `;
     const html = `
-        <div class="practice-header">
-            <button class="btn-secondary practice-end" onclick="endPracticeSession()">End Session</button>
-        </div>
-        <div class="practice-progress">
-            <div class="practice-progress-header">
-                <span>Progress</span>
-                <span>${currentIndex} / ${totalCount}</span>
+        <div class="card practice-wrapper">
+            <div class="practice-header">
+                <button class="btn-secondary practice-end" onclick="endPracticeSession()">End Session</button>
             </div>
-            <div class="progress-track" aria-hidden="true">
-                <div class="progress-fill" style="width:${progressPercent}%"></div>
-            </div>
-        </div>
-        ${dictationNotice}
-        ${hasSentence ? `<p style="font-size:1.2rem; color:var(--text-sub); margin-bottom:var(--space-2); text-align:center; padding:0 var(--space-3); line-height:1.5;">${sentenceDisplay}</p>` : ''}
-        
-        ${feedbackMarkup}
-        <div class="practice-control-group">
-            <div class="audio-stack">
-                <div class="audio-trigger" onclick="playCurrent()" role="button" aria-label="Play audio">
-                    <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            <div class="practice-progress">
+                <div class="practice-progress-header">
+                    <span>Progress</span>
+                    <span>${currentIndex} / ${totalCount}</span>
                 </div>
-                <div class="audio-label">Play</div>
+                <div class="progress-track" aria-hidden="true">
+                    <div class="progress-fill" style="width:${progressPercent}%"></div>
+                </div>
             </div>
-            ${inputMarkup}
-            ${actionMarkup}
+            ${dictationNotice}
+            ${hasSentence ? `<p style="font-size:1.2rem; color:var(--text-sub); margin-bottom:var(--space-2); text-align:center; padding:0 var(--space-3); line-height:1.5;">${sentenceDisplay}</p>` : ''}
+            
+            ${feedbackMarkup}
+            <div class="practice-control-group">
+                <div class="audio-stack">
+                    <div class="audio-trigger" onclick="playCurrent()" role="button" aria-label="Play audio">
+                        <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    </div>
+                    <div class="audio-label">Play</div>
+                </div>
+                ${inputMarkup}
+                ${actionMarkup}
+            </div>
+            ${hintMarkup}
+            ${nextWordMarkup}
         </div>
-        ${hintMarkup}
-        ${nextWordMarkup}
     `;
     
     document.getElementById('practice-container').innerHTML = html;
