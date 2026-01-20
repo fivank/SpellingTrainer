@@ -2259,8 +2259,6 @@ function renderPracticeHome() {
     const now = Date.now();
     const { totalCards } = getTodayCounts(now);
     const isStartDisabled = totalCards === 0;
-    const todayEntries = getTodayEntries(now);
-    const previewEntries = getTodayPreviewEntries(todayEntries);
     const todayDecks = filteredDecks.filter(deck => getDueCount(deck, now) > 0);
     const todayDeckItems = todayDecks.map(deck => {
         const dueCount = getDueCount(deck, now);
@@ -2276,28 +2274,9 @@ function renderPracticeHome() {
                     <small>${deck.lang} • ${deck.cards.length} cards • ${dueCount} due${dictationLabel}</small>
                     <small class="deck-progress">${progressLabel}</small>
                 </div>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn-primary" onclick="openDeckActions('${deck.id}')">Details</button>
-                </div>
             </div>
         `;
     }).join('');
-    const previewLimit = 6;
-    const previewItems = previewEntries.slice(0, previewLimit).map(entry => {
-        const preview = formatPracticePreviewEntry(entry);
-        return `
-            <li class="practice-preview-item">
-                <div class="practice-preview-item-title">
-                    <span class="practice-preview-tag">${preview.type}</span>
-                    <span>${preview.text}</span>
-                </div>
-                <div class="practice-preview-pack">Pack: ${preview.pack}</div>
-            </li>
-        `;
-    }).join('');
-    const previewNote = previewEntries.length > previewLimit
-        ? `Showing ${previewLimit} of ${previewEntries.length} items.`
-        : `Showing ${previewEntries.length || 0} item${previewEntries.length === 1 ? '' : 's'}.`;
 
     container.innerHTML = `
         <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s challenge</button>
@@ -2309,20 +2288,6 @@ function renderPracticeHome() {
             ${todayDecks.length === 0
                 ? '<div class="practice-preview-note">No packs due today.</div>'
                 : todayDeckItems}
-        </div>
-        <div class="practice-preview">
-            <div class="practice-preview-header">
-                <div class="practice-preview-title">Up next</div>
-                <div class="practice-preview-count">${previewEntries.length} total</div>
-            </div>
-            ${previewEntries.length === 0
-                ? '<div class="practice-preview-note">No practice items available yet.</div>'
-                : `
-                    <ul class="practice-preview-list">
-                        ${previewItems}
-                    </ul>
-                    <div class="practice-preview-note">${previewNote}</div>
-                `}
         </div>
         <div style="display:grid; gap:var(--space-1);">
             <button class="btn-secondary" onclick="navTo('words')">Go to Packs</button>
