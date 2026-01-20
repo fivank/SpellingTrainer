@@ -558,10 +558,61 @@
     }
     .word-input:focus { border-color: var(--primary); background: transparent; box-shadow: 0 12px 24px -20px rgba(99, 102, 241, 0.6); }
     
-    .feedback-area { text-align: center; margin-bottom: 1rem; min-height: 24px; }
-    .diff-display span { font-size: 1.2rem; font-weight: 600; }
+    .feedback-area {
+        text-align: left;
+        margin-bottom: var(--space-2);
+        min-height: 24px;
+        width: 100%;
+        max-width: 520px;
+    }
+    .feedback-block {
+        background: var(--bg-card-soft);
+        border: 1px solid rgba(99, 102, 241, 0.14);
+        border-radius: var(--radius-sm);
+        padding: var(--space-2);
+        display: grid;
+        gap: var(--space-1);
+        box-shadow: 0 10px 20px -18px rgba(15, 23, 42, 0.5);
+    }
+    .feedback-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 6px;
+        font-size: 1.05rem;
+    }
+    .feedback-label {
+        font-weight: 700;
+        color: var(--text-sub);
+        min-width: 130px;
+    }
+    .feedback-value {
+        font-weight: 600;
+        color: var(--text-main);
+        word-break: break-word;
+    }
+    .feedback-actions {
+        margin-top: var(--space-2);
+        display: flex;
+        justify-content: center;
+        gap: var(--space-1);
+        flex-wrap: wrap;
+    }
     .diff-correct { color: var(--text-main); }
-    .diff-wrong { color: var(--error); font-weight: 700; }
+    .diff-wrong {
+        color: var(--error);
+        font-weight: 700;
+        text-decoration: line-through;
+        text-decoration-color: var(--text-main);
+    }
+    .diff-missing {
+        color: #7dd3fc;
+        font-weight: 700;
+    }
+    .diff-missing-note {
+        margin-left: 6px;
+        font-weight: 700;
+    }
 
     .srs-controls { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-1); width: 100%; margin-top: var(--space-4); }
     .srs-btn { padding: var(--space-2); border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 700; color: #333; }
@@ -645,30 +696,6 @@
     .status-badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; margin-top: 5px; }
     .status-ok { background: #dcfce7; color: #166534; }
     .status-err { background: #fee2e2; color: #991b1b; }
-
-    /* Diff display styling for incorrect answers */
-    .diff-display {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-        justify-content: center;
-        margin-top: 8px;
-        margin-bottom: 8px;
-        font-size: 1.1rem;
-        line-height: 1.5;
-        text-align: center;
-    }
-    .diff-highlight {
-        color: var(--error);
-        font-weight: 700;
-    }
-    .diff-line {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 999px;
-        background: #ffffff;
-        border: 1px solid rgba(148, 163, 184, 0.3);
-    }
 
     .practice-selection {
         display: flex;
@@ -892,15 +919,13 @@
     .feedback-positive::before {
         content: "⭐ ";
     }
+    .feedback-negative {
+        color: var(--error);
+    }
     .feedback-sub {
         margin-top: var(--space-1);
         font-size: 0.95rem;
         color: var(--text-sub);
-    }
-    .try-again-wrap {
-        margin-top: 1rem;
-        display: flex;
-        justify-content: center;
     }
     .practice-control-group {
         display: flex;
@@ -2431,11 +2456,6 @@ function nextCard() {
     const actionMarkup = isDictationText
         ? `<button class="btn-primary practice-action" onclick="advanceDictationTextIntro()">Next</button>`
         : `<button id="btn-check" class="btn-primary practice-action" onclick="checkAnswer()">Check</button>`;
-    const nextWordMarkup = isDictationText || isDictationSentence ? '' : `
-        <div id="next-word-area" class="hidden">
-            <button class="btn-primary practice-action" onclick="advanceWordEntry()">Next word</button>
-        </div>
-    `;
     const audioButtonMarkup = `
         <div class="audio-trigger${hasSentence ? ' audio-trigger-inline' : ''}" onclick="playCurrent()" role="button" aria-label="Play audio">
             <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
@@ -2477,7 +2497,6 @@ function nextCard() {
                 ${actionMarkup}
             </div>
             ${hintMarkup}
-            ${nextWordMarkup}
         </div>
     `;
     
@@ -2736,34 +2755,29 @@ function checkAnswer() {
     }
     saveData();
     // Provide feedback
-    if (isCorrect) {
-        input.style.color = 'var(--success)';
-        feedback.innerHTML = `
-            <div class="feedback-positive">Correct!</div>
-            <div class="feedback-sub">${extraPraise}</div>
-        `;
-        const nextWordArea = document.getElementById('next-word-area');
-        if (nextWordArea) {
-            nextWordArea.classList.remove('hidden');
-        }
-    } else {
-        input.style.color = 'var(--error)';
-        const typedValue = input.value ? input.value : '';
-        const diffMarkup = getWordDiffMarkup(currentSession.currentCard.word, typedValue, app.settings.strictness);
-        feedback.innerHTML = `
-            <div class="diff-display">
-                <span class="diff-line">${diffMarkup}</span>
+    const typedValue = input.value ? input.value : '';
+    const diffLines = getWordDiffLines(currentSession.currentCard.word, typedValue, app.settings.strictness);
+    const feedbackHeader = isCorrect
+        ? `<div class="feedback-positive">Correct!</div><div class="feedback-sub">${extraPraise}</div>`
+        : `<div class="feedback-positive feedback-negative">Keep going!</div><div class="feedback-sub">Review the correct spelling below.</div>`;
+    input.style.color = isCorrect ? 'var(--success)' : 'var(--error)';
+    feedback.innerHTML = `
+        ${feedbackHeader}
+        <div class="feedback-block">
+            <div class="feedback-line">
+                <span class="feedback-label">Correct word:</span>
+                <span class="feedback-value">${diffLines.correctMarkup}</span>
             </div>
-            <div class="feedback-sub">Correct spelling with mistakes highlighted in red.</div>
-            <div class="try-again-wrap">
-                <button class="btn-secondary" onclick="retryCurrentCard()">Try again</button>
+            <div class="feedback-line">
+                <span class="feedback-label">Written word:</span>
+                <span class="feedback-value">${diffLines.writtenMarkup}</span>
             </div>
-        `;
-        const nextWordArea = document.getElementById('next-word-area');
-        if (nextWordArea) {
-            nextWordArea.classList.remove('hidden');
-        }
-    }
+        </div>
+        <div class="feedback-actions">
+            ${isCorrect ? '' : '<button class="btn-secondary" onclick="retryCurrentCard()">Try again</button>'}
+            <button class="btn-primary" onclick="advanceWordEntry()">Next word</button>
+        </div>
+    `;
 }
 
 function checkDictationAnswer(userRaw) {
@@ -2793,28 +2807,26 @@ function checkDictationAnswer(userRaw) {
         entry.deck.dictationStatsReady = true;
     }
     saveData();
-    if (isCorrect) {
-        input.style.color = 'var(--success)';
-        feedback.innerHTML = `
-            <div class="feedback-positive">Sentence correct!</div>
-            <div class="feedback-sub">Nice work finishing that dictation.</div>
-            <div class="dictation-score">Score: <strong>100%</strong></div>
-        `;
-    } else {
-        input.style.color = 'var(--error)';
-        const diffMarkup = getSentenceDiffMarkup(correctSentence, userRaw, 'strict');
-        const mistakeList = mistakeCards.map(card => card.word).join(', ');
-        feedback.innerHTML = `
-            <div class="diff-display">
-                <span class="diff-line">${diffMarkup}</span>
+    const diffLines = getSentenceDiffLines(correctSentence, userRaw, 'strict');
+    const mistakeList = mistakeCards.map(card => card.word).join(', ');
+    input.style.color = isCorrect ? 'var(--success)' : 'var(--error)';
+    feedback.innerHTML = `
+        <div class="feedback-positive${isCorrect ? '' : ' feedback-negative'}">${isCorrect ? 'Sentence correct!' : 'Sentence check'}</div>
+        <div class="feedback-sub">${isCorrect ? 'Nice work finishing that dictation.' : `Review these words: <strong>${mistakeList || 'Check the sentence again'}</strong>.`}</div>
+        <div class="feedback-block">
+            <div class="feedback-line">
+                <span class="feedback-label">Correct sentence:</span>
+                <span class="feedback-value">${diffLines.correctMarkup}</span>
             </div>
-            <div class="feedback-sub">Review these words: <strong>${mistakeList || 'Check the sentence again'}</strong>.</div>
-            <div class="dictation-score">Score: <strong>${analysis.score}%</strong></div>
-            <ul class="dictation-error-list">${buildDictationErrorListMarkup(analysis)}</ul>
-        `;
-    }
-    feedback.innerHTML += `
-        <div class="try-again-wrap">
+            <div class="feedback-line">
+                <span class="feedback-label">Written sentence:</span>
+                <span class="feedback-value">${diffLines.writtenMarkup}</span>
+            </div>
+        </div>
+        <div class="dictation-score">Score: <strong>${isCorrect ? '100' : analysis.score}%</strong></div>
+        ${isCorrect ? '' : `<ul class="dictation-error-list">${buildDictationErrorListMarkup(analysis)}</ul>`}
+        <div class="feedback-actions">
+            ${isCorrect ? '' : '<button class="btn-secondary" onclick="retryCurrentCard()">Try again</button>'}
             <button class="btn-primary" onclick="advanceCurrentEntry()">Next sentence</button>
         </div>
     `;
@@ -2846,27 +2858,25 @@ function checkDictationTextAnswer(userRaw) {
         const wrongCount = Math.min(mistakeCards.length, totalWords);
         currentSession.correctAttempts += Math.max(totalWords - wrongCount, 0);
     }
-    if (isCorrect) {
-        input.style.color = 'var(--success)';
-        feedback.innerHTML = `
-            <div class="feedback-positive">Text correct!</div>
-            <div class="feedback-sub">Great work completing the full dictation.</div>
-            <div class="dictation-score">Score: <strong>100%</strong></div>
-        `;
-    } else {
-        input.style.color = 'var(--error)';
-        const diffMarkup = getSentenceDiffMarkup(correctText, userRaw, 'strict');
-        feedback.innerHTML = `
-            <div class="diff-display">
-                <span class="diff-line">${diffMarkup}</span>
+    const diffLines = getSentenceDiffLines(correctText, userRaw, 'strict');
+    input.style.color = isCorrect ? 'var(--success)' : 'var(--error)';
+    feedback.innerHTML = `
+        <div class="feedback-positive${isCorrect ? '' : ' feedback-negative'}">${isCorrect ? 'Text correct!' : 'Text check'}</div>
+        <div class="feedback-sub">${isCorrect ? 'Great work completing the full dictation.' : 'Review the highlighted differences below.'}</div>
+        <div class="feedback-block">
+            <div class="feedback-line">
+                <span class="feedback-label">Correct text:</span>
+                <span class="feedback-value">${diffLines.correctMarkup}</span>
             </div>
-            <div class="feedback-sub">Mistakes are highlighted in red. Focus on those words next.</div>
-            <div class="dictation-score">Score: <strong>${analysis.score}%</strong></div>
-            <ul class="dictation-error-list">${buildDictationErrorListMarkup(analysis)}</ul>
-        `;
-    }
-    feedback.innerHTML += `
-        <div class="try-again-wrap">
+            <div class="feedback-line">
+                <span class="feedback-label">Written text:</span>
+                <span class="feedback-value">${diffLines.writtenMarkup}</span>
+            </div>
+        </div>
+        <div class="dictation-score">Score: <strong>${isCorrect ? '100' : analysis.score}%</strong></div>
+        ${isCorrect ? '' : `<ul class="dictation-error-list">${buildDictationErrorListMarkup(analysis)}</ul>`}
+        <div class="feedback-actions">
+            ${isCorrect ? '' : '<button class="btn-secondary" onclick="retryCurrentCard()">Try again</button>'}
             <button class="btn-primary" onclick="advanceCurrentEntry()">Finish</button>
         </div>
     `;
@@ -2905,10 +2915,6 @@ function retryCurrentCard() {
     input.style.color = 'var(--primary)';
     feedback.innerHTML = '';
     document.getElementById('btn-check').classList.remove('hidden');
-    const nextWordArea = document.getElementById('next-word-area');
-    if (nextWordArea) {
-        nextWordArea.classList.add('hidden');
-    }
     input.focus();
 }
 
@@ -4094,42 +4100,97 @@ function getLcsMatchIndices(correctTokens, userTokens) {
     return matchIndices;
 }
 
-function getWordDiffMarkup(correctWord, userWord, strictness) {
+function getLcsMatchPairs(correctTokens, userTokens) {
+    const m = correctTokens.length;
+    const n = userTokens.length;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i += 1) {
+        for (let j = 1; j <= n; j += 1) {
+            if (correctTokens[i - 1] === userTokens[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    const matches = [];
+    let i = m;
+    let j = n;
+    while (i > 0 && j > 0) {
+        if (correctTokens[i - 1] === userTokens[j - 1]) {
+            matches.push({ correctIndex: i - 1, userIndex: j - 1 });
+            i -= 1;
+            j -= 1;
+        } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+    return matches.reverse();
+}
+
+function getWordDiffLines(correctWord, userWord, strictness) {
     const correctChars = Array.from(correctWord || '');
     const userChars = Array.from(userWord || '');
     const normalizedCorrect = correctChars.map(char => normalizeToken(char, strictness));
     const normalizedUser = userChars.map(char => normalizeToken(char, strictness));
-    const matchIndices = getLcsMatchIndices(normalizedCorrect, normalizedUser);
-    return correctChars.map((char, index) => {
+    const matchPairs = getLcsMatchPairs(normalizedCorrect, normalizedUser);
+    const correctMatches = new Set(matchPairs.map(pair => pair.correctIndex));
+    const userMatches = new Set(matchPairs.map(pair => pair.userIndex));
+    const correctMarkup = correctChars.map((char, index) => {
         const safeChar = escapeHtml(char);
-        if (matchIndices.has(index)) {
-            return `<span>${safeChar}</span>`;
-        }
-        return `<span class="diff-highlight">${safeChar}</span>`;
+        const className = correctMatches.has(index) ? 'diff-correct' : 'diff-missing';
+        return `<span class="${className}">${safeChar}</span>`;
     }).join('');
+    const writtenMarkup = userChars.map((char, index) => {
+        const safeChar = escapeHtml(char);
+        const className = userMatches.has(index) ? 'diff-correct' : 'diff-wrong';
+        return `<span class="${className}">${safeChar}</span>`;
+    }).join('');
+    const missingChars = correctChars.filter((_, index) => !correctMatches.has(index));
+    const missingMarkup = missingChars.length
+        ? `<span class="diff-missing diff-missing-note">(${escapeHtml(missingChars.join(''))})</span>`
+        : '';
+    return {
+        correctMarkup,
+        writtenMarkup: `${writtenMarkup}${missingMarkup}`
+    };
 }
 
-function getSentenceDiffMarkup(correctSentence, userSentence, strictness) {
-    const tokens = String(correctSentence || '').match(/[\p{L}\p{N}']+|[^\p{L}\p{N}']+/gu) || [];
-    const correctWords = tokens.filter(token => /[\p{L}\p{N}']+/u.test(token)).map(token => normalizeToken(token, strictness));
-    const userWordTokens = tokenizeWords(userSentence || '');
-    const normalizedUser = userWordTokens.map(token => normalizeToken(token, strictness));
-    const matchIndices = getLcsMatchIndices(correctWords, normalizedUser);
-    let wordIndex = 0;
-    return tokens.map(token => {
-        if (/[\p{L}\p{N}']+/u.test(token)) {
-            const isMatch = matchIndices.has(wordIndex);
-            const safeToken = escapeHtml(token);
-            wordIndex += 1;
-            if (isMatch) return safeToken;
-            if (userWordTokens.length === correctWords.length) {
-                const userWord = userWordTokens[wordIndex - 1] || '';
-                return getWordDiffMarkup(token, userWord, strictness);
-            }
-            return `<span class="diff-highlight">${safeToken}</span>`;
-        }
-        return escapeHtml(token);
+function getSentenceDiffLines(correctSentence, userSentence, strictness) {
+    const correctTokens = String(correctSentence || '').match(/[\p{L}\p{N}']+|[^\p{L}\p{N}']+/gu) || [];
+    const userTokens = String(userSentence || '').match(/[\p{L}\p{N}']+|[^\p{L}\p{N}']+/gu) || [];
+    const normalizedCorrect = correctTokens.map(token => (
+        /[\p{L}\p{N}']+/u.test(token) ? normalizeToken(token, strictness) : token
+    ));
+    const normalizedUser = userTokens.map(token => (
+        /[\p{L}\p{N}']+/u.test(token) ? normalizeToken(token, strictness) : token
+    ));
+    const matchPairs = getLcsMatchPairs(normalizedCorrect, normalizedUser);
+    const correctMatches = new Set(matchPairs.map(pair => pair.correctIndex));
+    const userMatches = new Set(matchPairs.map(pair => pair.userIndex));
+    const correctMarkup = correctTokens.map((token, index) => {
+        const safeToken = escapeHtml(token);
+        if (!token.trim()) return safeToken;
+        const className = correctMatches.has(index) ? 'diff-correct' : 'diff-missing';
+        return `<span class="${className}">${safeToken}</span>`;
     }).join('');
+    const writtenMarkupBase = userTokens.map((token, index) => {
+        const safeToken = escapeHtml(token);
+        if (!token.trim()) return safeToken;
+        const className = userMatches.has(index) ? 'diff-correct' : 'diff-wrong';
+        return `<span class="${className}">${safeToken}</span>`;
+    }).join('');
+    const missingTokens = correctTokens.filter((token, index) => !correctMatches.has(index) && token.trim());
+    const missingText = missingTokens.map(token => token.replace(/\s+/g, ' ')).join('').trim();
+    const missingMarkup = missingText
+        ? `<span class="diff-missing diff-missing-note">(${escapeHtml(missingText)})</span>`
+        : '';
+    return {
+        correctMarkup,
+        writtenMarkup: `${writtenMarkupBase}${missingMarkup}`
+    };
 }
 
 function getDictationTokens(text) {
