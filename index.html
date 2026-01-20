@@ -2294,7 +2294,9 @@ function renderPracticeHome() {
         const progress = getDeckLearningProgress(deck);
         const progressLabel = progress.allLearned
             ? `100% known, mastering ${progress.masteryPercent}%`
-            : `Learned ${progress.learnedPercent}%`;
+            : (progress.learnedPercent === 0
+                ? `Learning ${progress.learningPercent}% • Learned ${progress.learnedPercent}%`
+                : `Learned ${progress.learnedPercent}%`);
         return `
             <div class="deck-item">
                 <div class="deck-info">
@@ -3670,21 +3672,26 @@ function getDeckLearningProgress(deck) {
     if (total === 0) {
         return {
             learnedPercent: 0,
+            learningPercent: 0,
             masteryPercent: 0,
             allLearned: false
         };
     }
     let learnedCount = 0;
+    let learningCount = 0;
     let masteredCount = 0;
     deck.cards.forEach(card => {
         const stage = getCardProgressStage(card);
+        if (stage === 'learning') learningCount++;
         if (stage === 'learned' || stage === 'mastered') learnedCount++;
         if (stage === 'mastered') masteredCount++;
     });
+    const learningPercent = Math.round((learningCount / total) * 100);
     const learnedPercent = Math.round((learnedCount / total) * 100);
     const masteryPercent = Math.round((masteredCount / total) * 100);
     return {
         learnedPercent,
+        learningPercent,
         masteryPercent,
         allLearned: learnedCount === total
     };
