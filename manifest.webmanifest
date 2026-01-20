@@ -1,0 +1,23 @@
+{
+  "name": "SpellCraft",
+  "short_name": "SpellCraft",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef2ff",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "./SpellCraftIcon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./SpellCraftIcon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

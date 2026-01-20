@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SpellMaster</title>
+<title>SpellCraft</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#6366f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SpellCraft">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="SpellCraftIcon.png">
+<link rel="apple-touch-startup-image" href="SpellCraftSplashImage.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -939,7 +946,7 @@
 
 <header>
     <div class="header-top">
-        <div class="app-title">SpellMaster</div>
+        <div class="app-title">SpellCraft</div>
         <div class="language-filter">
             <button class="language-filter-btn" id="language-filter-btn" type="button" onclick="toggleLanguageFilter()" aria-haspopup="listbox" aria-expanded="false">
                 <span class="flag" id="language-filter-flag">🌐</span>
@@ -1972,7 +1979,7 @@ function testAudio() {
 
 // --- PERSISTENCE ---
 function loadData() {
-    const raw = localStorage.getItem('spellmaster_data_v2');
+    const raw = localStorage.getItem('spellcraft_data_v2');
     if (raw) {
         try {
             const data = JSON.parse(raw);
@@ -2007,7 +2014,7 @@ function loadData() {
 }
 
 function saveData() {
-    localStorage.setItem('spellmaster_data_v2', JSON.stringify(app));
+    localStorage.setItem('spellcraft_data_v2', JSON.stringify(app));
 }
 
 // --- NAV ---
@@ -2209,7 +2216,7 @@ function renderPracticeHome() {
     if (app.decks.length === 0) {
         container.innerHTML = `
             <div class="card" style="text-align:center;">
-                <h2 style="margin-top:0;">Welcome to SpellMaster</h2>
+                <h2 style="margin-top:0;">Welcome to SpellCraft</h2>
                 <p style="color: var(--text-sub); margin-bottom:1.5rem;">
                     Choose a starting point to set up your first pack.
                 </p>
@@ -4516,7 +4523,7 @@ function exportData() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = "spellmaster_backup.json";
+    a.download = "spellcraft_backup.json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -4576,7 +4583,7 @@ document.getElementById('import-deck-file').addEventListener('change', function(
 
 function resetApp() {
     if(confirm("Delete all data? This cannot be undone.")) {
-        localStorage.removeItem('spellmaster_data_v2');
+        localStorage.removeItem('spellcraft_data_v2');
         location.reload();
     }
 }
@@ -4587,6 +4594,11 @@ loadData();
 initLanguageFilter();
 initCardInputListeners();
 document.addEventListener('keydown', handlePracticeKeydown);
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    });
+}
 
 </script>
 </body>
