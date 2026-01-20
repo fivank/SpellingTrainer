@@ -814,6 +814,13 @@
         color: var(--text-sub);
         margin-top: var(--space-1);
     }
+    .practice-home {
+        display: grid;
+        gap: var(--space-3);
+    }
+    #view-practice > h2 {
+        text-align: left;
+    }
     .progress-track {
         width: 100%;
         height: 12px;
@@ -2205,7 +2212,7 @@ function scheduleSpeechTimeout(handler, delay) {
 function renderPracticeHome() {
     const container = document.getElementById('practice-container');
     if (!container) return;
-    container.className = '';
+    container.className = 'practice-home';
 
     if (app.decks.length === 0) {
         container.innerHTML = `
@@ -2259,25 +2266,23 @@ function renderPracticeHome() {
         : `Showing ${previewEntries.length || 0} item${previewEntries.length === 1 ? '' : 's'}.`;
 
     container.innerHTML = `
-        <div class="card">
-            <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s challenge</button>
-            <div class="practice-preview">
-                <div class="practice-preview-header">
-                    <div class="practice-preview-title">Up next</div>
-                    <div class="practice-preview-count">${previewEntries.length} total</div>
-                </div>
-                ${previewEntries.length === 0
-                    ? '<div class="practice-preview-note">No practice items available yet.</div>'
-                    : `
-                        <ul class="practice-preview-list">
-                            ${previewItems}
-                        </ul>
-                        <div class="practice-preview-note">${previewNote}</div>
-                    `}
+        <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s challenge</button>
+        <div class="practice-preview">
+            <div class="practice-preview-header">
+                <div class="practice-preview-title">Up next</div>
+                <div class="practice-preview-count">${previewEntries.length} total</div>
             </div>
-            <div style="margin-top:var(--space-3); display:grid; gap:var(--space-1);">
-                <button class="btn-secondary" onclick="navTo('words')">Go to Packs</button>
-            </div>
+            ${previewEntries.length === 0
+                ? '<div class="practice-preview-note">No practice items available yet.</div>'
+                : `
+                    <ul class="practice-preview-list">
+                        ${previewItems}
+                    </ul>
+                    <div class="practice-preview-note">${previewNote}</div>
+                `}
+        </div>
+        <div style="display:grid; gap:var(--space-1);">
+            <button class="btn-secondary" onclick="navTo('words')">Go to Packs</button>
         </div>
     `;
 }
@@ -2300,6 +2305,8 @@ function getHintMarkup(word) {
 
 function nextCard() {
     stopPracticeAudio();
+    const practiceContainer = document.getElementById('practice-container');
+    if (practiceContainer) practiceContainer.className = '';
     if (currentSession.queue.length === 0) {
         const totalAttempts = currentSession.totalAttempts || 0;
         const correctAttempts = currentSession.correctAttempts || 0;
