@@ -2261,7 +2261,8 @@ function renderPracticeHome() {
     const isStartDisabled = totalCards === 0;
     const todayEntries = getTodayEntries(now);
     const previewEntries = getTodayPreviewEntries(todayEntries);
-    const todayDeckItems = filteredDecks.map(deck => {
+    const todayDecks = filteredDecks.filter(deck => getDueCount(deck, now) > 0);
+    const todayDeckItems = todayDecks.map(deck => {
         const dueCount = getDueCount(deck, now);
         const dictationLabel = isDictationDeck(deck) ? ' • Dictation text' : '';
         const progress = getDeckLearningProgress(deck);
@@ -2303,9 +2304,11 @@ function renderPracticeHome() {
         <div class="card">
             <div class="practice-pack-header">
                 <h3 style="margin:0;">Today’s packs</h3>
-                <div class="text-small" style="color:var(--text-sub);">${filteredDecks.length} pack${filteredDecks.length === 1 ? '' : 's'}</div>
+                <div class="text-small" style="color:var(--text-sub);">${todayDecks.length} pack${todayDecks.length === 1 ? '' : 's'}</div>
             </div>
-            ${todayDeckItems}
+            ${todayDecks.length === 0
+                ? '<div class="practice-preview-note">No packs due today.</div>'
+                : todayDeckItems}
         </div>
         <div class="practice-preview">
             <div class="practice-preview-header">
