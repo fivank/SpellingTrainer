@@ -479,12 +479,40 @@
         box-shadow: none;
         pointer-events: none;
     }
+    .audio-trigger.audio-trigger-inline {
+        width: 44px;
+        height: 44px;
+        box-shadow: 0 12px 22px rgba(99, 102, 241, 0.28);
+    }
+    .audio-trigger.audio-trigger-inline::after {
+        inset: 6px;
+    }
+    .audio-trigger.audio-trigger-inline svg {
+        width: 18px;
+        height: 18px;
+    }
     .audio-label {
         margin-top: 0;
         font-size: var(--font-small);
         font-weight: 700;
         color: var(--text-sub);
         letter-spacing: 0.02em;
+    }
+    .practice-sentence-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-2);
+        padding: 0 var(--space-3);
+        text-align: center;
+        width: 100%;
+    }
+    .practice-sentence {
+        font-size: 1.2rem;
+        color: var(--text-sub);
+        line-height: 1.5;
+        margin: 0;
     }
     .dictation-repeat-status {
         font-size: 0.85rem;
@@ -2406,6 +2434,23 @@ function nextCard() {
             <button class="btn-primary practice-action" onclick="advanceWordEntry()">Next word</button>
         </div>
     `;
+    const audioButtonMarkup = `
+        <div class="audio-trigger${hasSentence ? ' audio-trigger-inline' : ''}" onclick="playCurrent()" role="button" aria-label="Play audio">
+            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </div>
+    `;
+    const audioStackMarkup = `
+        <div class="audio-stack">
+            ${audioButtonMarkup}
+            <div class="audio-label">Play</div>
+        </div>
+    `;
+    const sentenceMarkup = hasSentence ? `
+        <div class="practice-sentence-row">
+            ${audioButtonMarkup}
+            <p class="practice-sentence">${sentenceDisplay}</p>
+        </div>
+    ` : '';
     const html = `
         <div class="card practice-wrapper">
             <div class="practice-header">
@@ -2421,16 +2466,11 @@ function nextCard() {
                 </div>
             </div>
             ${dictationNotice}
-            ${hasSentence ? `<p style="font-size:1.2rem; color:var(--text-sub); margin-bottom:var(--space-2); text-align:center; padding:0 var(--space-3); line-height:1.5;">${sentenceDisplay}</p>` : ''}
+            ${sentenceMarkup}
             
             ${feedbackMarkup}
             <div class="practice-control-group">
-                <div class="audio-stack">
-                    <div class="audio-trigger" onclick="playCurrent()" role="button" aria-label="Play audio">
-                        <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                    </div>
-                    <div class="audio-label">Play</div>
-                </div>
+                ${hasSentence ? '' : audioStackMarkup}
                 ${inputMarkup}
                 ${actionMarkup}
             </div>
