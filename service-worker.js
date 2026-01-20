@@ -1,14 +1,11 @@
-const CACHE_NAME = 'spellmaster-pwa-v1';
+const CACHE_NAME = 'spellcraft-pwa-v1';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './service-worker.js',
-  './assets/cover.png',
-  './assets/icons/icon-192.png',
-  './assets/icons/icon-512.png',
-  './assets/icons/maskable-512.png',
-  './assets/icons/apple-touch-icon-180.png'
+  './SpellCraftIcon.png',
+  './SpellCraftSplashImage.png'
 ];
 
 self.addEventListener('install', (event) => {
