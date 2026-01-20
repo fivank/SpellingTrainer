@@ -598,6 +598,15 @@
         gap: var(--space-1);
         flex-wrap: wrap;
     }
+    .feedback-actions .btn-primary,
+    .feedback-actions .btn-secondary {
+        flex: 1;
+        width: auto;
+        min-width: 140px;
+    }
+    .feedback-actions .btn-secondary {
+        padding: calc(var(--space-2) + 2px);
+    }
     .diff-correct { color: var(--text-main); }
     .diff-wrong {
         color: var(--error);
@@ -971,6 +980,18 @@
     .practice-option-desc {
         font-size: 0.85rem;
         color: var(--text-sub);
+    }
+    .practice-wrapper.feedback-mode .practice-control-group,
+    .practice-wrapper.feedback-mode .practice-hint {
+        display: none;
+    }
+    .practice-wrapper.feedback-mode .practice-sentence-row .audio-trigger {
+        display: none;
+    }
+    .practice-wrapper.feedback-mode .practice-sentence-row {
+        justify-content: center;
+        padding-left: var(--space-2);
+        padding-right: var(--space-2);
     }
 
     /* Toggle switch styling (borrowed from improved version) */
@@ -2693,6 +2714,12 @@ function playCurrent(options = {}) {
     }
 }
 
+function setPracticeFeedbackMode(isEnabled) {
+    const wrapper = document.querySelector('.practice-wrapper');
+    if (!wrapper) return;
+    wrapper.classList.toggle('feedback-mode', Boolean(isEnabled));
+}
+
 function checkAnswer() {
     const input = document.getElementById('p-input');
     const userRaw = input.value.trim();
@@ -2761,6 +2788,7 @@ function checkAnswer() {
         ? `<div class="feedback-positive">Correct!</div><div class="feedback-sub">${extraPraise}</div>`
         : `<div class="feedback-positive feedback-negative">Keep going!</div><div class="feedback-sub">Review the correct spelling below.</div>`;
     input.style.color = isCorrect ? 'var(--success)' : 'var(--error)';
+    setPracticeFeedbackMode(true);
     feedback.innerHTML = `
         ${feedbackHeader}
         <div class="feedback-block">
@@ -2810,6 +2838,7 @@ function checkDictationAnswer(userRaw) {
     const diffLines = getSentenceDiffLines(correctSentence, userRaw, 'strict');
     const mistakeList = mistakeCards.map(card => card.word).join(', ');
     input.style.color = isCorrect ? 'var(--success)' : 'var(--error)';
+    setPracticeFeedbackMode(true);
     feedback.innerHTML = `
         <div class="feedback-positive${isCorrect ? '' : ' feedback-negative'}">${isCorrect ? 'Sentence correct!' : 'Sentence check'}</div>
         <div class="feedback-sub">${isCorrect ? 'Nice work finishing that dictation.' : `Review these words: <strong>${mistakeList || 'Check the sentence again'}</strong>.`}</div>
@@ -2860,6 +2889,7 @@ function checkDictationTextAnswer(userRaw) {
     }
     const diffLines = getSentenceDiffLines(correctText, userRaw, 'strict');
     input.style.color = isCorrect ? 'var(--success)' : 'var(--error)';
+    setPracticeFeedbackMode(true);
     feedback.innerHTML = `
         <div class="feedback-positive${isCorrect ? '' : ' feedback-negative'}">${isCorrect ? 'Text correct!' : 'Text check'}</div>
         <div class="feedback-sub">${isCorrect ? 'Great work completing the full dictation.' : 'Review the highlighted differences below.'}</div>
@@ -2914,6 +2944,7 @@ function retryCurrentCard() {
     input.value = '';
     input.style.color = 'var(--primary)';
     feedback.innerHTML = '';
+    setPracticeFeedbackMode(false);
     document.getElementById('btn-check').classList.remove('hidden');
     input.focus();
 }
