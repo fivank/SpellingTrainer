@@ -1406,12 +1406,38 @@
         </div>
         <div class="deck-actions">
             <button class="btn-primary" onclick="openDeckPracticeFromActions()">Practice now</button>
-            <button class="btn-secondary" onclick="openDeckStats()">Stats</button>
-            <button class="btn-secondary" onclick="openDeckEditor()">Edit Words/Sentences</button>
-            <button class="btn-secondary" onclick="openDeckTextEditor()">Edit Whole Text</button>
+            <button class="btn-secondary" onclick="openDeckStats()">This pack progress statistics</button>
+            <button class="btn-secondary" onclick="openDeckEditOptions()">Edit Word pack</button>
+            <button class="btn-secondary" onclick="openDeckExportOptions()">Export</button>
+        </div>
+    </div>
+</div>
+
+<!-- DECK EDIT OPTIONS MODAL -->
+<div id="deck-edit-options-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Edit Word pack</h3>
+            <button class="btn-icon" onclick="closeDeckEditOptionsModal()">✕</button>
+        </div>
+        <div class="deck-actions">
             <button class="btn-secondary" onclick="openDeckMetaEditor()">Edit Name/Language</button>
-            <button class="btn-secondary" onclick="exportDeck()">Export Pack</button>
-            <button class="btn-secondary" style="color: var(--error); border-color: var(--error);" onclick="deleteDeck()">Delete Pack</button>
+            <button class="btn-secondary" id="deck-edit-dictation-btn" onclick="openDeckTextEditor()">Edit Dictation Text</button>
+            <button class="btn-secondary" onclick="openDeckEditor()">Edit Words / Sentences</button>
+        </div>
+    </div>
+</div>
+
+<!-- DECK EXPORT OPTIONS MODAL -->
+<div id="deck-export-options-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Export Word pack</h3>
+            <button class="btn-icon" onclick="closeDeckExportOptionsModal()">✕</button>
+        </div>
+        <div class="deck-actions">
+            <button class="btn-secondary" onclick="downloadDeckJson()">Download Word Pack (JSON)</button>
+            <button class="btn-secondary" onclick="shareDeckJson()">Share Word Pack (JSON)</button>
         </div>
     </div>
 </div>
@@ -1458,7 +1484,7 @@
 <div id="deck-text-modal" class="modal-overlay">
     <div class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3>Edit Full Text</h3>
+            <h3>Edit Dictation Text</h3>
             <button class="btn-icon" onclick="closeDeckTextModal()">✕</button>
         </div>
         <label for="edit-deck-text-full">Dictation Text</label>
@@ -3388,11 +3414,39 @@ function openDeckActions(deckId) {
     activeDeckIdForEdit = deckId;
     const deck = app.decks.find(d => d.id === deckId);
     document.getElementById('deck-actions-title').textContent = deck ? deck.name : 'Pack Actions';
+    closeDeckEditOptionsModal();
+    closeDeckExportOptionsModal();
     document.getElementById('deck-actions-modal').classList.add('open');
 }
 
 function closeDeckActionsModal() {
     document.getElementById('deck-actions-modal').classList.remove('open');
+}
+
+function openDeckEditOptions() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    const dictationButton = document.getElementById('deck-edit-dictation-btn');
+    if (dictationButton) {
+        const hasDictationText = Boolean(deck && deck.text && deck.text.trim());
+        dictationButton.disabled = !hasDictationText;
+    }
+    closeDeckActionsModal();
+    closeDeckExportOptionsModal();
+    document.getElementById('deck-edit-options-modal').classList.add('open');
+}
+
+function closeDeckEditOptionsModal() {
+    document.getElementById('deck-edit-options-modal').classList.remove('open');
+}
+
+function openDeckExportOptions() {
+    closeDeckActionsModal();
+    closeDeckEditOptionsModal();
+    document.getElementById('deck-export-options-modal').classList.add('open');
+}
+
+function closeDeckExportOptionsModal() {
+    document.getElementById('deck-export-options-modal').classList.remove('open');
 }
 
 function openDeckPracticeFromActions() {
@@ -3470,11 +3524,15 @@ function startPracticeFromOptions() {
 
 function openDeckEditor() {
     closeDeckActionsModal();
+    closeDeckEditOptionsModal();
+    closeDeckExportOptionsModal();
     if (activeDeckIdForEdit) manageCards(activeDeckIdForEdit);
 }
 
 function openDeckStats() {
     closeDeckActionsModal();
+    closeDeckEditOptionsModal();
+    closeDeckExportOptionsModal();
     if (activeDeckIdForEdit) renderDeckProgress(activeDeckIdForEdit);
 }
 
@@ -3484,6 +3542,8 @@ function openDeckMetaEditor() {
     document.getElementById('edit-deck-name').value = deck.name || '';
     document.getElementById('edit-deck-lang').value = deck.lang || 'en-US';
     closeDeckActionsModal();
+    closeDeckEditOptionsModal();
+    closeDeckExportOptionsModal();
     document.getElementById('deck-meta-modal').classList.add('open');
 }
 
@@ -3492,6 +3552,8 @@ function openDeckTextEditor() {
     if (!deck) return;
     document.getElementById('edit-deck-text-full').value = deck.text || '';
     closeDeckActionsModal();
+    closeDeckEditOptionsModal();
+    closeDeckExportOptionsModal();
     document.getElementById('deck-text-modal').classList.add('open');
 }
 
@@ -3593,6 +3655,37 @@ function exportDeck() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+function downloadDeckJson() {
+    closeDeckExportOptionsModal();
+    exportDeck();
+}
+
+async function shareDeckJson() {
+    const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
+    if (!deck) return;
+    const str = JSON.stringify(deck, null, 2);
+    try {
+        await navigator.clipboard.writeText(str);
+    } catch (error) {
+        console.warn('Unable to copy JSON to clipboard.', error);
+    }
+    closeDeckExportOptionsModal();
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: `${deck.name || 'Word Pack'} JSON`,
+                text: str
+            });
+        } catch (error) {
+            if (error && error.name !== 'AbortError') {
+                console.warn('Share failed.', error);
+            }
+        }
+    } else {
+        alert('Word pack JSON copied to clipboard.');
+    }
 }
 
 function deleteDeck() {
