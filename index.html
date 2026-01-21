@@ -141,12 +141,12 @@
         color: var(--primary);
         display: inline-flex;
         align-items: center;
-        gap: 10px;
+        gap: 5px;
     }
 
     .app-icon {
-        width: 28px;
-        height: 28px;
+        width: 42px;
+        height: 42px;
         border-radius: 8px;
         box-shadow: 0 6px 14px -10px rgba(15, 23, 42, 0.5);
     }
@@ -379,6 +379,11 @@
         box-shadow: 0 18px 30px -12px rgba(99, 102, 241, 0.8);
         position: relative;
         overflow: hidden;
+    }
+
+    .btn-details {
+        font-size: 0.525rem;
+        padding: calc((var(--space-2) + 2px) / 2);
     }
     .btn-primary::after {
         content: "";
@@ -3399,7 +3404,7 @@ function renderDeckList() {
                 <small>${deck.lang} • ${deck.cards.length} cards • ${dueCount} due${dictationLabel}</small>
             </div>
             <div style="display:flex; gap:8px;">
-                <button class="btn-primary" onclick="openDeckActions('${deck.id}')">Details</button>
+                <button class="btn-primary btn-details" onclick="openDeckActions('${deck.id}')">Details</button>
             </div>
         `;
         list.appendChild(div);
@@ -4720,9 +4725,16 @@ function getSentenceDiffLines(correctSentence, userSentence, strictness) {
         return `<span class="${className}">${safeToken}</span>`;
     }).join('');
     const missingTokens = correctTokens.filter((token, index) => !correctMatches.has(index) && token.trim());
-    const missingText = missingTokens.map(token => token.replace(/\s+/g, ' ')).join('').trim();
+    const missingText = missingTokens.reduce((acc, token) => {
+        const trimmed = token.trim();
+        if (!trimmed) return acc;
+        const isWord = /[\p{L}\p{N}']+/u.test(token);
+        if (!acc) return token;
+        const needsSpace = isWord && !/[([{"'‘“]$/.test(acc);
+        return `${acc}${needsSpace ? ' ' : ''}${token}`;
+    }, '').replace(/\s+/g, ' ').trim();
     const missingMarkup = missingText
-        ? `<span class="diff-missing diff-missing-note">(${escapeHtml(missingText)})</span>`
+        ? `<span class="diff-missing diff-missing-note"> - missing words (${escapeHtml(missingText)})</span>`
         : '';
     return {
         correctMarkup,
