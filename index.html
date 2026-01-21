@@ -517,7 +517,7 @@
         align-items: center;
         justify-content: center;
         gap: var(--space-1);
-        margin-bottom: var(--space-1);
+        margin-bottom: calc(var(--space-1) / 2);
         padding: 0 var(--space-3);
         text-align: center;
         width: 100%;
@@ -532,12 +532,12 @@
         font-size: 0.85rem;
         color: var(--text-sub);
         text-align: center;
-        margin-bottom: var(--space-3);
+        margin-bottom: calc(var(--space-3) / 2);
     }
     .dictation-notice {
         font-size: 1rem;
         color: var(--text-sub);
-        margin-bottom: var(--space-2);
+        margin-bottom: calc(var(--space-2) / 2);
         text-align: center;
     }
     .dictation-score {
@@ -564,7 +564,7 @@
     }
 
     .word-input {
-        font-size: 1.5rem;
+        font-size: 1.05rem;
         text-align: center;
         border: none;
         border-bottom: 3px solid #e5e7eb;
@@ -573,6 +573,7 @@
         color: var(--primary);
         letter-spacing: 1px;
         font-weight: bold;
+        padding: calc(var(--space-2) * 0.7);
         margin-bottom: 0;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
