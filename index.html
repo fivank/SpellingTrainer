@@ -506,8 +506,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: var(--space-2);
-        margin-bottom: var(--space-2);
+        gap: var(--space-1);
+        margin-bottom: var(--space-1);
         padding: 0 var(--space-3);
         text-align: center;
         width: 100%;
@@ -523,6 +523,12 @@
         color: var(--text-sub);
         text-align: center;
         margin-bottom: var(--space-3);
+    }
+    .dictation-notice {
+        font-size: 1rem;
+        color: var(--text-sub);
+        margin-bottom: var(--space-2);
+        text-align: center;
     }
     .dictation-score {
         font-size: 1.05rem;
@@ -947,6 +953,25 @@
         width: 100%;
         max-width: 420px;
         margin: 0 auto var(--space-2);
+    }
+    .practice-action-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        width: 100%;
+    }
+    .practice-action-audio {
+        flex: 0 0 20%;
+        min-width: 72px;
+        display: flex;
+        justify-content: center;
+    }
+    .practice-action-button {
+        flex: 1;
+        display: flex;
+    }
+    .practice-action-button .practice-action {
+        width: 100%;
     }
     .practice-action {
         padding: 12px;
@@ -2767,7 +2792,7 @@ function nextCard() {
     const progressPercent = totalCount ? Math.round((currentIndex / totalCount) * 100) : 0;
     const hintMarkup = !isDictation && c ? getHintMarkup(c.word) : '';
     const dictationNotice = isDictation ? `
-        <p style="font-size:1rem; color:var(--text-sub); margin-bottom:var(--space-3); text-align:center;">
+        <p class="dictation-notice">
             ${isDictationText
                 ? `Dictation text with ${entry.sentenceCount || 1} sentence${entry.sentenceCount === 1 ? '' : 's'}. Listen once, then continue to sentence practice.`
                 : `Dictation sentence ${entry.sentenceIndex} of ${entry.sentenceCount}. Listen and type the full sentence.`}
@@ -2786,15 +2811,18 @@ function nextCard() {
             <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
         </div>
     `;
-    const audioStackMarkup = `
-        <div class="audio-stack">
-            ${audioButtonMarkup}
-            <div class="audio-label">Play</div>
+    const actionRowMarkup = `
+        <div class="practice-action-row">
+            <div class="practice-action-audio">
+                ${audioButtonMarkup}
+            </div>
+            <div class="practice-action-button">
+                ${actionMarkup}
+            </div>
         </div>
     `;
     const sentenceMarkup = hasSentence ? `
         <div class="practice-sentence-row">
-            ${audioButtonMarkup}
             <p class="practice-sentence">${sentenceDisplay}</p>
         </div>
     ` : '';
@@ -2817,9 +2845,8 @@ function nextCard() {
             
             ${feedbackMarkup}
             <div class="practice-control-group">
-                ${hasSentence ? '' : audioStackMarkup}
                 ${inputMarkup}
-                ${actionMarkup}
+                ${actionRowMarkup}
             </div>
             ${hintMarkup}
         </div>
