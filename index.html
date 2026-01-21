@@ -1585,7 +1585,9 @@ let app = {
         sessionProgress: {
             date: null,
             completedSessions: 0
-        }
+        },
+        /* prioritize a newly added pack in today's queue */
+        todayPriority: null
     }
 };
 
@@ -2365,7 +2367,9 @@ function triggerBackupRestore() {
 }
 
 function addSampleDeck() {
-    app.decks.push(createSampleDeck());
+    const sampleDeck = createSampleDeck();
+    app.decks.push(sampleDeck);
+    setTodayPriority(sampleDeck.id, getDefaultTodayPriorityMode(sampleDeck));
     saveData();
     renderDeckList();
     renderPracticeHome();
@@ -2432,6 +2436,35 @@ function getLocalDateKey(date = new Date()) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+}
+
+function getDefaultTodayPriorityMode(deck) {
+    return isDictationDeck(deck) ? 'dictation-first' : 'word-first';
+}
+
+function setTodayPriority(deckId, mode) {
+    app.settings.todayPriority = {
+        deckId,
+        date: getLocalDateKey(),
+        mode
+    };
+}
+
+function updateTodayPriorityMode(deckId, mode) {
+    const priority = app.settings.todayPriority;
+    if (!priority || priority.deckId !== deckId || priority.date !== getLocalDateKey()) return;
+    priority.mode = mode;
+}
+
+function getTodayPriority() {
+    const priority = app.settings.todayPriority;
+    if (!priority || priority.date !== getLocalDateKey()) return null;
+    const deck = app.decks.find(candidate => candidate.id === priority.deckId);
+    if (!deck) return null;
+    return {
+        deck,
+        mode: priority.mode || getDefaultTodayPriorityMode(deck)
+    };
 }
 
 function getSessionProgressState() {
@@ -3552,6 +3585,10 @@ function importDeckFromPaste() {
             return;
         }
         app.decks.push(...decks);
+        const newestDeck = decks[decks.length - 1];
+        if (newestDeck) {
+            setTodayPriority(newestDeck.id, getDefaultTodayPriorityMode(newestDeck));
+        }
         saveData();
         renderDeckList();
         textArea.value = '';
@@ -3617,6 +3654,7 @@ function saveDeck() {
         syncCardsWithDictationText(newDeck, newDeck.text);
     }
     app.decks.push(newDeck);
+    setTodayPriority(newDeck.id, getDefaultTodayPriorityMode(newDeck));
     saveData();
     closeDeckModal();
     renderDeckList();
@@ -3814,6 +3852,10 @@ function startPracticeFromOptions() {
     if (!entries.length) {
         alert("No practice items available for this selection.");
         return;
+    }
+    if (isDictationDeck(deck)) {
+        const nextMode = selectedPracticeMode === 'word' ? 'word-first' : 'dictation-first';
+        updateTodayPriorityMode(deck.id, nextMode);
     }
     closePracticeOptionsModal();
     startPracticeEntries(entries, [deck]);
@@ -4287,25 +4329,44 @@ function getTodayCounts(now = Date.now()) {
     return { dueCount, newCount, troubleCount, totalCards };
 }
 
-function buildPracticeEntriesForDeck(deck, now = Date.now(), dueOnly = true) {
+function buildPracticeEntriesForDeck(deck, now = Date.now(), dueOnly = true, orderPreference = 'dictation-first') {
     const entries = [];
-    if (isDictationDeck(deck)) {
-        entries.push(...buildDictationPracticeEntries(deck));
-    }
     const wordEntries = buildWordEntries(deck, now, dueOnly).sort((a, b) => a.card.due - b.card.due);
-    entries.push(...wordEntries);
+    const dictationEntries = isDictationDeck(deck)
+        ? buildDictationPracticeEntries(deck)
+        : [];
+    if (orderPreference === 'word-first') {
+        entries.push(...wordEntries);
+        entries.push(...dictationEntries);
+    } else {
+        entries.push(...dictationEntries);
+        entries.push(...wordEntries);
+    }
     return entries;
 }
 
-function buildPracticeEntriesForDecks(decks, now = Date.now(), dueOnly = true) {
-    return decks.flatMap(deck => buildPracticeEntriesForDeck(deck, now, dueOnly));
+function buildPracticeEntriesForDecks(decks, now = Date.now(), dueOnly = true, orderPreference) {
+    const preferenceResolver = typeof orderPreference === 'function'
+        ? orderPreference
+        : () => orderPreference;
+    return decks.flatMap(deck => buildPracticeEntriesForDeck(deck, now, dueOnly, preferenceResolver(deck)));
 }
 
 function getTodayEntries(now = Date.now()) {
     const selectedDecks = getFilteredDecks();
-    let entries = buildPracticeEntriesForDecks(selectedDecks, now, true);
+    const priority = getTodayPriority();
+    const orderedDecks = priority
+        ? [priority.deck, ...selectedDecks.filter(deck => deck.id !== priority.deck.id)]
+        : selectedDecks;
+    const preferenceResolver = (deck) => {
+        if (priority && priority.deck.id === deck.id) {
+            return priority.mode;
+        }
+        return 'dictation-first';
+    };
+    let entries = buildPracticeEntriesForDecks(orderedDecks, now, true, preferenceResolver);
     if (entries.length === 0) {
-        entries = buildPracticeEntriesForDecks(selectedDecks, now, false);
+        entries = buildPracticeEntriesForDecks(orderedDecks, now, false, preferenceResolver);
     }
     return entries;
 }
@@ -5205,6 +5266,10 @@ document.getElementById('import-file').addEventListener('change', function(e) {
         } catch(err) { alert("Invalid file"); }
         if (!decks.length) return;
         app.decks.push(...decks);
+        const newestDeck = decks[decks.length - 1];
+        if (newestDeck) {
+            setTodayPriority(newestDeck.id, getDefaultTodayPriorityMode(newestDeck));
+        }
         saveData();
         renderDeckList();
     };
@@ -5224,6 +5289,10 @@ document.getElementById('import-deck-file').addEventListener('change', function(
                 return;
             }
             app.decks.push(...decks);
+            const newestDeck = decks[decks.length - 1];
+            if (newestDeck) {
+                setTodayPriority(newestDeck.id, getDefaultTodayPriorityMode(newestDeck));
+            }
             saveData();
             renderDeckList();
             closeDeckModal();
