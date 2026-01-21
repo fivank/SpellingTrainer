@@ -139,6 +139,16 @@
         font-size: var(--font-h2);
         font-weight: 800;
         color: var(--primary);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .app-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        box-shadow: 0 6px 14px -10px rgba(15, 23, 42, 0.5);
     }
 
     .app-tagline {
@@ -1069,7 +1079,10 @@
 
 <header>
     <div class="header-top">
-        <div class="app-title">SpellCraft</div>
+        <div class="app-title">
+            <img class="app-icon" src="SpellCraftIcon.png" alt="SpellCraft app icon">
+            <span>SpellCraft</span>
+        </div>
         <div class="language-filter">
             <button class="language-filter-btn" id="language-filter-btn" type="button" onclick="toggleLanguageFilter()" aria-haspopup="listbox" aria-expanded="false">
                 <span class="flag" id="language-filter-flag">🌐</span>
