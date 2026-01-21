@@ -1128,6 +1128,20 @@
                 <p class="text-small" style="color: var(--text-sub); margin-top:6px;">
                     When enabled, dictation will say “comma,” “period,” and other punctuation aloud.
                 </p>
+                <label style="display:block; margin-top:12px;">
+                    Session target (minimum)
+                    <div style="display:grid; gap:6px; margin-top:4px;">
+                        <select id="setting-session-target-type" style="width:100%;">
+                            <option value="minutes">Minutes</option>
+                            <option value="words">Words</option>
+                            <option value="packs">Word packs</option>
+                        </select>
+                        <input type="number" id="setting-session-target-value" min="1" step="1" style="width:100%;">
+                    </div>
+                </label>
+                <p class="text-small" id="setting-session-target-hint" style="color: var(--text-sub); margin-top:6px;">
+                    Set the minimum size for a Today session.
+                </p>
             </div>
         </div>
 
@@ -1525,7 +1539,15 @@ let app = {
         /* whether whole-text dictation should pronounce punctuation */
         pronounceTextPunctuation: false,
         /* global language filter */
-        languageFilter: 'all'
+        languageFilter: 'all',
+        /* minimum session target settings */
+        sessionTargetType: 'minutes',
+        sessionTargetValue: 15,
+        /* session progress for the day */
+        sessionProgress: {
+            date: null,
+            completedSessions: 0
+        }
     }
 };
 
@@ -1546,7 +1568,10 @@ let currentSession = {
     completedCount: 0,
     correctAttempts: 0,
     totalAttempts: 0,
-    troubleEntries: []
+    troubleEntries: [],
+    isTodaySession: false,
+    sessionPlanIndex: null,
+    sessionPlanDate: null
 };
 
 let lastSessionSummary = null;
@@ -2201,6 +2226,9 @@ function startPracticeEntries(entries, selectedDecks = []) {
     currentSession.correctAttempts = 0;
     currentSession.totalAttempts = 0;
     currentSession.troubleEntries = [];
+    currentSession.isTodaySession = false;
+    currentSession.sessionPlanIndex = null;
+    currentSession.sessionPlanDate = null;
     lastSessionSummary = null;
     navTo('practice');
     nextCard();
@@ -2216,13 +2244,27 @@ function startPracticeFromSelection() {
 }
 
 function startTodayPractice() {
-    const decks = getFilteredDecks();
-    if (!decks.length) {
-        alert("No packs match this language filter yet.");
+    startTodaySession();
+}
+
+function startTodaySession() {
+    const sessionPlan = getTodaySessionPlan();
+    if (sessionPlan.isComplete || sessionPlan.currentEntries.length === 0) {
+        alert("No session items available right now.");
         return;
     }
-    const deckIds = decks.map(deck => deck.id);
-    startPractice(deckIds);
+    const selectedDecks = [];
+    const seen = new Set();
+    sessionPlan.currentEntries.forEach(entry => {
+        if (entry.deck?.id && !seen.has(entry.deck.id)) {
+            seen.add(entry.deck.id);
+            selectedDecks.push(entry.deck);
+        }
+    });
+    startPracticeEntries(sessionPlan.currentEntries, selectedDecks);
+    currentSession.isTodaySession = true;
+    currentSession.sessionPlanIndex = sessionPlan.sessionIndex;
+    currentSession.sessionPlanDate = getSessionProgressState().date;
 }
 
 function startTroublePractice() {
@@ -2314,6 +2356,9 @@ function endPracticeSession() {
     currentSession.correctAttempts = 0;
     currentSession.totalAttempts = 0;
     currentSession.troubleEntries = [];
+    currentSession.isTodaySession = false;
+    currentSession.sessionPlanIndex = null;
+    currentSession.sessionPlanDate = null;
     stopPracticeAudio();
     renderPracticeHome();
 }
@@ -2338,6 +2383,202 @@ function scheduleSpeechTimeout(handler, delay) {
     const timeoutId = setTimeout(handler, delay);
     speechPlayback.timeouts.push(timeoutId);
     return timeoutId;
+}
+
+const DEFAULT_WORD_SECONDS = 4;
+const DEFAULT_DICTATION_WORD_SECONDS = 3.5;
+const ENTRY_OVERHEAD_SECONDS = 2;
+
+function getLocalDateKey(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getSessionProgressState() {
+    const todayKey = getLocalDateKey();
+    if (!app.settings.sessionProgress || app.settings.sessionProgress.date !== todayKey) {
+        app.settings.sessionProgress = { date: todayKey, completedSessions: 0 };
+    }
+    if (!Number.isFinite(app.settings.sessionProgress.completedSessions)) {
+        app.settings.sessionProgress.completedSessions = 0;
+    }
+    return app.settings.sessionProgress;
+}
+
+function getSessionTargetConfig() {
+    const allowedTypes = ['minutes', 'words', 'packs'];
+    const type = allowedTypes.includes(app.settings.sessionTargetType)
+        ? app.settings.sessionTargetType
+        : 'minutes';
+    const rawValue = Number(app.settings.sessionTargetValue);
+    const fallbackValue = type === 'packs' ? 1 : 15;
+    const value = Number.isFinite(rawValue) && rawValue > 0 ? rawValue : fallbackValue;
+    return { type, value };
+}
+
+function getEntryWordCount(entry) {
+    if (!entry) return 0;
+    if (entry.mode === 'word') return 1;
+    if (entry.mode === 'dictation-text') return tokenizeWords(entry.text || '').length;
+    if (entry.mode === 'dictation') return tokenizeWords(entry.sentence || '').length;
+    return 0;
+}
+
+function getDeckAverageWordSeconds(deck, fallback) {
+    if (!deck || !Array.isArray(deck.cards)) return fallback;
+    const values = deck.cards.map(card => card.avgTime).filter(time => Number.isFinite(time) && time > 0);
+    if (!values.length) return fallback;
+    const sum = values.reduce((acc, val) => acc + val, 0);
+    return sum / values.length;
+}
+
+function estimateEntrySeconds(entry) {
+    if (!entry) return 0;
+    if (entry.mode === 'word') {
+        const base = Number.isFinite(entry.card?.avgTime) && entry.card.avgTime > 0
+            ? entry.card.avgTime
+            : DEFAULT_WORD_SECONDS;
+        return base + ENTRY_OVERHEAD_SECONDS;
+    }
+    const wordCount = getEntryWordCount(entry);
+    const deckAverage = getDeckAverageWordSeconds(entry.deck, DEFAULT_DICTATION_WORD_SECONDS);
+    const overhead = entry.mode === 'dictation-text' ? ENTRY_OVERHEAD_SECONDS * 2 : ENTRY_OVERHEAD_SECONDS;
+    return wordCount * deckAverage + overhead;
+}
+
+function summarizeSessionEntries(entries) {
+    const deckIds = new Set();
+    let totalWords = 0;
+    let totalSeconds = 0;
+    entries.forEach(entry => {
+        totalWords += getEntryWordCount(entry);
+        totalSeconds += estimateEntrySeconds(entry);
+        if (entry.deck?.id) deckIds.add(entry.deck.id);
+    });
+    return {
+        totalWords,
+        totalSeconds,
+        totalMinutes: totalSeconds / 60,
+        deckCount: deckIds.size
+    };
+}
+
+function splitEntriesIntoSessions(entries, targetType, targetValue) {
+    if (!entries.length) return [];
+    if (targetType === 'packs') {
+        const deckOrder = [];
+        const deckEntries = new Map();
+        entries.forEach(entry => {
+            const deckId = entry.deck?.id || 'unknown';
+            if (!deckEntries.has(deckId)) {
+                deckEntries.set(deckId, []);
+                deckOrder.push(deckId);
+            }
+            deckEntries.get(deckId).push(entry);
+        });
+        const sessions = [];
+        let current = [];
+        let packCount = 0;
+        deckOrder.forEach((deckId) => {
+            if (packCount >= targetValue && current.length) {
+                sessions.push(current);
+                current = [];
+                packCount = 0;
+            }
+            current.push(...(deckEntries.get(deckId) || []));
+            packCount += 1;
+        });
+        if (current.length) sessions.push(current);
+        return sessions;
+    }
+    const sessions = [];
+    let current = [];
+    let tally = 0;
+    entries.forEach(entry => {
+        if (current.length && tally >= targetValue) {
+            sessions.push(current);
+            current = [];
+            tally = 0;
+        }
+        current.push(entry);
+        const increment = targetType === 'minutes'
+            ? estimateEntrySeconds(entry) / 60
+            : getEntryWordCount(entry);
+        tally += increment;
+    });
+    if (current.length) sessions.push(current);
+    return sessions;
+}
+
+function getSessionDeckSummaries(entries) {
+    const map = new Map();
+    entries.forEach(entry => {
+        const deck = entry.deck;
+        if (!deck) return;
+        if (!map.has(deck.id)) {
+            map.set(deck.id, {
+                deck,
+                wordCount: 0,
+                dictationText: false,
+                dictationSentences: 0
+            });
+        }
+        const summary = map.get(deck.id);
+        if (entry.mode === 'word') summary.wordCount += 1;
+        if (entry.mode === 'dictation-text') summary.dictationText = true;
+        if (entry.mode === 'dictation') summary.dictationSentences += 1;
+    });
+    return Array.from(map.values());
+}
+
+function formatSessionDeckSummary(summary) {
+    const parts = [];
+    if (summary.wordCount) {
+        parts.push(`${summary.wordCount} word${summary.wordCount === 1 ? '' : 's'}`);
+    }
+    if (summary.dictationText) {
+        parts.push('dictation text');
+    }
+    if (summary.dictationSentences) {
+        parts.push(`${summary.dictationSentences} dictation sentence${summary.dictationSentences === 1 ? '' : 's'}`);
+    }
+    return parts.length ? parts.join(' • ') : 'No items';
+}
+
+function getTodaySessionPlan(now = Date.now()) {
+    const allEntries = getTodayEntries(now);
+    const { type, value } = getSessionTargetConfig();
+    const sessions = splitEntriesIntoSessions(allEntries, type, value);
+    const progress = getSessionProgressState();
+    if (sessions.length && progress.completedSessions > sessions.length) {
+        progress.completedSessions = sessions.length;
+        saveData();
+    }
+    const isComplete = sessions.length > 0 && progress.completedSessions >= sessions.length;
+    const sessionIndex = isComplete ? sessions.length : Math.min(progress.completedSessions, Math.max(sessions.length - 1, 0));
+    const currentEntries = isComplete ? [] : (sessions[sessionIndex] || []);
+    return {
+        allEntries,
+        sessions,
+        sessionIndex,
+        totalSessions: sessions.length,
+        currentEntries,
+        metrics: summarizeSessionEntries(currentEntries),
+        isComplete,
+        targetType: type,
+        targetValue: value
+    };
+}
+
+function markTodaySessionComplete() {
+    if (!currentSession.isTodaySession) return;
+    const progress = getSessionProgressState();
+    if (currentSession.sessionPlanDate !== progress.date) return;
+    if (!Number.isFinite(currentSession.sessionPlanIndex)) return;
+    progress.completedSessions = Math.max(progress.completedSessions, currentSession.sessionPlanIndex + 1);
+    saveData();
 }
 
 function renderPracticeHome() {
@@ -2375,12 +2616,11 @@ function renderPracticeHome() {
         return;
     }
     const now = Date.now();
-    const { totalCards } = getTodayCounts(now);
-    const isStartDisabled = totalCards === 0;
-    const todayDecks = filteredDecks.filter(deck => getDueCount(deck, now) > 0);
-    const todayDeckItems = todayDecks.map(deck => {
-        const dueCount = getDueCount(deck, now);
-        const dictationLabel = isDictationDeck(deck) ? ' • Dictation text' : '';
+    const sessionPlan = getTodaySessionPlan(now);
+    const isStartDisabled = sessionPlan.currentEntries.length === 0;
+    const sessionDecks = getSessionDeckSummaries(sessionPlan.currentEntries);
+    const sessionDeckItems = sessionDecks.map(summary => {
+        const deck = summary.deck;
         const progress = getDeckLearningProgress(deck);
         const progressLabel = progress.allLearned
             ? `100% known, mastering ${progress.masteryPercent}%`
@@ -2391,23 +2631,39 @@ function renderPracticeHome() {
             <div class="deck-item">
                 <div class="deck-info">
                     <h3>${deck.name}</h3>
-                    <small>${deck.lang} • ${deck.cards.length} cards • ${dueCount} due${dictationLabel}</small>
+                    <small>${deck.lang} • ${deck.cards.length} cards • ${formatSessionDeckSummary(summary)}</small>
                     <small class="deck-progress">${progressLabel}</small>
                 </div>
             </div>
         `;
     }).join('');
+    const sessionLabel = sessionPlan.totalSessions > 1 && !sessionPlan.isComplete
+        ? `Session ${sessionPlan.sessionIndex + 1} of ${sessionPlan.totalSessions}`
+        : 'Today’s session';
+    const sessionMetrics = sessionPlan.currentEntries.length
+        ? `~${Math.max(1, Math.round(sessionPlan.metrics.totalMinutes))} min • ${sessionPlan.metrics.totalWords} words • ${sessionPlan.metrics.deckCount} pack${sessionPlan.metrics.deckCount === 1 ? '' : 's'}`
+        : '';
+    const sessionTargetLabel = sessionPlan.targetType === 'minutes'
+        ? `${sessionPlan.targetValue} minute${sessionPlan.targetValue === 1 ? '' : 's'}`
+        : sessionPlan.targetType === 'words'
+            ? `${sessionPlan.targetValue} word${sessionPlan.targetValue === 1 ? '' : 's'}`
+            : `${sessionPlan.targetValue} pack${sessionPlan.targetValue === 1 ? '' : 's'}`;
 
     container.innerHTML = `
-        <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodayPractice()">Start today’s challenge</button>
+        <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodaySession()">
+            ${sessionPlan.isComplete ? 'All sessions completed' : `Start ${sessionPlan.totalSessions > 1 ? 'session ' + (sessionPlan.sessionIndex + 1) : 'today’s session'}`}
+        </button>
         <div class="card">
             <div class="practice-pack-header">
-                <h3 style="margin:0;">Today’s packs</h3>
-                <div class="text-small" style="color:var(--text-sub);">${todayDecks.length} pack${todayDecks.length === 1 ? '' : 's'}</div>
+                <h3 style="margin:0;">${sessionLabel}</h3>
+                <div class="text-small" style="color:var(--text-sub);">${sessionTargetLabel} minimum</div>
             </div>
-            ${todayDecks.length === 0
-                ? '<div class="practice-preview-note">No packs due today.</div>'
-                : todayDeckItems}
+            ${sessionPlan.isComplete
+                ? '<div class="practice-preview-note">You completed all planned sessions for today.</div>'
+                : sessionPlan.currentEntries.length === 0
+                    ? '<div class="practice-preview-note">No packs due today.</div>'
+                    : sessionDeckItems}
+            ${sessionMetrics ? `<div class="practice-preview-note">Estimated: ${sessionMetrics}</div>` : ''}
         </div>
         <div style="display:grid; gap:var(--space-1);">
             <button class="btn-secondary" onclick="navTo('words')">Go to Packs</button>
@@ -2436,6 +2692,7 @@ function nextCard() {
     const practiceContainer = document.getElementById('practice-container');
     if (practiceContainer) practiceContainer.className = '';
     if (currentSession.queue.length === 0) {
+        markTodaySessionComplete();
         const totalAttempts = currentSession.totalAttempts || 0;
         const correctAttempts = currentSession.correctAttempts || 0;
         const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
@@ -2476,6 +2733,9 @@ function nextCard() {
         currentSession.correctAttempts = 0;
         currentSession.totalAttempts = 0;
         currentSession.troubleEntries = [];
+        currentSession.isTodaySession = false;
+        currentSession.sessionPlanIndex = null;
+        currentSession.sessionPlanDate = null;
         return;
     }
 
@@ -4728,6 +4988,19 @@ function initSettingsListeners() {
         });
     };
 
+    const updateSessionTargetUI = (type) => {
+        const hintEl = document.getElementById('setting-session-target-hint');
+        const valueEl = document.getElementById('setting-session-target-value');
+        if (!hintEl || !valueEl) return;
+        const labels = {
+            minutes: 'Target minutes for one Today session.',
+            words: 'Target number of words per session (including dictation).',
+            packs: 'Target number of packs per session.'
+        };
+        hintEl.textContent = labels[type] || labels.minutes;
+        valueEl.setAttribute('aria-label', `Session target ${type}`);
+    };
+
     initAudioProfileSlider('dictationText', 'setting-speed-text', 'speed-text-val', 'speed', AUDIO_PROFILE_DEFAULTS.speed);
     initAudioProfileSlider('dictationText', 'setting-pause-start-text', 'pause-start-text-val', 'pauseStartMs', AUDIO_PROFILE_DEFAULTS.pauseStartMs);
     initAudioProfileSlider('dictationText', 'setting-pause-between-sentences-text', 'pause-between-sentences-text-val', 'pauseBetweenSentencesMs', AUDIO_PROFILE_DEFAULTS.pauseBetweenSentencesMs);
@@ -4833,6 +5106,27 @@ function initSettingsListeners() {
         pronounceSentencePunctuationEl.addEventListener('change', (e) => {
             app.settings.pronounceSentencePunctuation = e.target.checked;
             saveData();
+        });
+    }
+    const sessionTargetTypeEl = document.getElementById('setting-session-target-type');
+    const sessionTargetValueEl = document.getElementById('setting-session-target-value');
+    if (sessionTargetTypeEl && sessionTargetValueEl) {
+        const { type, value } = getSessionTargetConfig();
+        sessionTargetTypeEl.value = type;
+        sessionTargetValueEl.value = String(value);
+        updateSessionTargetUI(type);
+        sessionTargetTypeEl.addEventListener('change', (e) => {
+            app.settings.sessionTargetType = e.target.value;
+            updateSessionTargetUI(e.target.value);
+            saveData();
+            renderPracticeHome();
+        });
+        sessionTargetValueEl.addEventListener('change', (e) => {
+            const nextValue = Math.max(1, Math.round(Number(e.target.value) || 1));
+            e.target.value = String(nextValue);
+            app.settings.sessionTargetValue = nextValue;
+            saveData();
+            renderPracticeHome();
         });
     }
 }
