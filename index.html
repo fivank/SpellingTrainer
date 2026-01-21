@@ -292,16 +292,12 @@
         background: linear-gradient(180deg, #ffffff 0%, var(--bg-card-soft) 100%);
         border-radius: var(--radius);
         padding: var(--space-3);
-        box-shadow: 0 12px 26px -20px rgba(15, 23, 42, 0.4);
         border: 1px solid rgba(99, 102, 241, 0.15);
         margin-bottom: var(--space-2);
-        transition: transform 0.18s ease, box-shadow 0.18s ease;
+        transition: border-color 0.18s ease;
     }
 
-    .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 24px -16px rgba(15, 23, 42, 0.25);
-    }
+    .card:hover { border-color: rgba(99, 102, 241, 0.3); }
 
     .progress-metrics {
         display: grid;
@@ -369,7 +365,8 @@
         align-items: center;
         justify-content: center;
         gap: var(--space-1);
-        box-shadow: 0 16px 26px -14px rgba(99, 102, 241, 0.7);
+        border: 2px solid rgba(67, 56, 202, 0.55);
+        box-shadow: 0 18px 30px -12px rgba(99, 102, 241, 0.8);
         position: relative;
         overflow: hidden;
     }
@@ -382,7 +379,7 @@
         pointer-events: none;
     }
     .btn-primary:hover {
-        box-shadow: 0 16px 24px -14px rgba(99, 102, 241, 0.7);
+        box-shadow: 0 20px 32px -12px rgba(99, 102, 241, 0.85);
         transform: translateY(-1px);
     }
     .btn-primary:disabled {
@@ -395,16 +392,16 @@
     .btn-secondary {
         background: #ffffff;
         color: var(--primary-dark);
-        border: 1px solid rgba(99, 102, 241, 0.35);
+        border: 2px solid rgba(99, 102, 241, 0.45);
         padding: calc(var(--space-2) - 4px) var(--space-2);
         border-radius: var(--radius-sm);
         font-weight: 600;
-        box-shadow: 0 8px 18px -14px rgba(15, 23, 42, 0.25);
+        box-shadow: 0 12px 20px -12px rgba(15, 23, 42, 0.35);
     }
     .btn-secondary:hover {
         border-color: var(--primary);
         background: var(--accent-soft);
-        box-shadow: 0 12px 18px -14px rgba(15, 23, 42, 0.3);
+        box-shadow: 0 14px 22px -12px rgba(15, 23, 42, 0.4);
     }
     .btn-secondary:disabled {
         background: #f3f4f6;
