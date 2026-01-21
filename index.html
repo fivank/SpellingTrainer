@@ -406,6 +406,13 @@
         background: var(--accent-soft);
         box-shadow: 0 12px 18px -14px rgba(15, 23, 42, 0.3);
     }
+    .btn-secondary:disabled {
+        background: #f3f4f6;
+        color: #9ca3af;
+        border-color: #e5e7eb;
+        box-shadow: none;
+        cursor: not-allowed;
+    }
     
     .btn-icon {
         background: #ffffff;
@@ -1064,7 +1071,7 @@
     <div id="view-words" class="view">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h2>My Word Packs</h2>
-            <button class="btn-secondary" onclick="openDeckModal()">+ New Pack</button>
+            <button class="btn-secondary" onclick="openNewPackModal()">+ New Pack</button>
         </div>
         <div class="card" id="deck-list-container">
             <div id="deck-list"></div>
@@ -1278,6 +1285,21 @@
     </button>
 </nav>
 
+<!-- NEW PACK MODAL -->
+<div id="new-pack-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>New Pack</h3>
+            <button class="btn-icon" onclick="closeNewPackModal()">✕</button>
+        </div>
+        <div class="deck-actions">
+            <button class="btn-secondary" disabled>Choose from library</button>
+            <button class="btn-primary" onclick="openDeckModal('create')">Create Word Pack (manual)</button>
+            <button class="btn-secondary" onclick="openDeckModal('import')">Import Word Pack (json)</button>
+        </div>
+    </div>
+</div>
+
 <!-- ADD DECK MODAL -->
 <div id="deck-modal" class="modal-overlay">
     <div class="modal">
@@ -1313,7 +1335,7 @@
                 Import a compatible word pack JSON file to add it to your collection.
             </p>
             <button class="btn-secondary" onclick="triggerDeckImport()" style="width:100%; margin-bottom:var(--space-1);">Choose Pack File</button>
-            <button class="btn-secondary" onclick="focusDeckPaste()" style="width:100%; margin-bottom:var(--space-1);">Paste Pack as JSON</button>
+            <button class="btn-secondary" onclick="pasteDeckJsonFromClipboard()" style="width:100%; margin-bottom:var(--space-1);">Paste JSON from clipboard</button>
             <input type="file" id="import-deck-file" class="hidden" accept=".json,application/json">
             <div style="margin-bottom:var(--space-1);">
                 <label for="import-deck-json" style="display:block; font-size:0.85rem; color:var(--text-sub); margin-bottom:6px;">
@@ -2228,8 +2250,7 @@ function startDeckTroublePractice() {
 }
 
 function openPasteList() {
-    openDeckModal();
-    showDeckPanel('import');
+    openDeckModal('import');
     setTimeout(() => focusDeckPaste(), 0);
 }
 
@@ -3124,11 +3145,18 @@ function renderProgress() {
 // Modal Logic
 let activeDeckIdForEdit = null;
 let activeCardIndexForEdit = null;
-function openDeckModal() {
+function openNewPackModal() {
+    document.getElementById('new-pack-modal').classList.add('open');
+}
+function closeNewPackModal() {
+    document.getElementById('new-pack-modal').classList.remove('open');
+}
+function openDeckModal(panel = 'create') {
+    closeNewPackModal();
     document.getElementById('deck-modal').classList.add('open');
     document.getElementById('new-deck-name').value = '';
     document.getElementById('new-deck-text').value = '';
-    showDeckPanel('create');
+    showDeckPanel(panel);
 }
 function closeDeckModal() {
     document.getElementById('deck-modal').classList.remove('open');
@@ -3158,6 +3186,32 @@ function focusDeckPaste() {
     if (!textArea) return;
     textArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
     textArea.focus();
+}
+async function pasteDeckJsonFromClipboard() {
+    const textArea = document.getElementById('import-deck-json');
+    if (!textArea) return;
+    if (!navigator.clipboard?.readText) {
+        alert("Clipboard access is not available.");
+        return;
+    }
+    try {
+        const raw = await navigator.clipboard.readText();
+        const trimmed = raw.trim();
+        if (!trimmed) {
+            alert("Clipboard is empty.");
+            return;
+        }
+        const data = JSON.parse(trimmed);
+        const decks = normalizeImportedDecks(data);
+        if (!decks.length) {
+            alert("Clipboard does not contain valid pack JSON.");
+            return;
+        }
+        textArea.value = trimmed;
+        focusDeckPaste();
+    } catch (err) {
+        alert("Clipboard does not contain valid pack JSON.");
+    }
 }
 function importDeckFromPaste() {
     const textArea = document.getElementById('import-deck-json');
