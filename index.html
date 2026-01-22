@@ -1359,8 +1359,8 @@
 <!-- ADD DECK MODAL -->
 <div id="deck-modal" class="modal-overlay">
     <div class="modal">
-        <h3>Create a Word Pack</h3>
-        <div class="modal-toggle">
+        <h3 id="deck-modal-title">Create a Word Pack</h3>
+        <div class="modal-toggle" id="deck-modal-toggle">
             <button type="button" id="deck-toggle-create" class="active" onclick="showDeckPanel('create')">Create</button>
             <button type="button" id="deck-toggle-import" onclick="showDeckPanel('import')">Import Pack</button>
         </div>
@@ -3530,9 +3530,19 @@ function closeNewPackModal() {
 }
 function openDeckModal(panel = 'create') {
     closeNewPackModal();
-    document.getElementById('deck-modal').classList.add('open');
+    const modal = document.getElementById('deck-modal');
+    const title = document.getElementById('deck-modal-title');
+    const toggle = document.getElementById('deck-modal-toggle');
+    modal.classList.add('open');
     document.getElementById('new-deck-name').value = '';
     document.getElementById('new-deck-text').value = '';
+    const isImport = panel === 'import';
+    if (title) {
+        title.textContent = isImport ? 'Import a Word Pack' : 'Create a Word Pack';
+    }
+    if (toggle) {
+        toggle.classList.add('hidden');
+    }
     showDeckPanel(panel);
 }
 function closeDeckModal() {
@@ -5288,6 +5298,7 @@ function downloadBackupJson() {
 
 async function shareBackupJson() {
     const str = JSON.stringify(app, null, 2);
+    const backupFile = new File([str], 'spellcraft_backup.json', { type: 'application/json' });
     try {
         await navigator.clipboard.writeText(str);
     } catch (error) {
@@ -5296,18 +5307,19 @@ async function shareBackupJson() {
     closeBackupExportOptionsModal();
     if (navigator.share) {
         try {
-            await navigator.share({
-                title: 'SpellCraft Backup JSON',
-                text: str
-            });
+            const canShareFile = navigator.canShare && navigator.canShare({ files: [backupFile] });
+            const shareData = canShareFile
+                ? { title: 'SpellCraft Backup JSON', files: [backupFile] }
+                : { title: 'SpellCraft Backup JSON', text: str };
+            await navigator.share(shareData);
+            return;
         } catch (error) {
             if (error && error.name !== 'AbortError') {
                 console.warn('Share failed.', error);
             }
         }
-    } else {
-        alert('Backup JSON copied to clipboard.');
     }
+    alert('Backup JSON copied to clipboard.');
 }
 
 document.getElementById('import-file').addEventListener('change', function(e) {
