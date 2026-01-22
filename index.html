@@ -1293,7 +1293,7 @@
         
         <div class="card">
             <h3>Data Management</h3>
-            <button class="btn-secondary" onclick="exportData()" style="width:100%; margin-bottom:var(--space-1);">Export Backup</button>
+            <button class="btn-secondary" onclick="openBackupExportOptions()" style="width:100%; margin-bottom:var(--space-1);">Export Backup</button>
             <button class="btn-secondary" onclick="document.getElementById('import-file').click()" style="width:100%; margin-bottom:var(--space-1);">Import Backup</button>
             <input type="file" id="import-file" class="hidden" accept=".json">
             <button class="btn-secondary" style="color: var(--error); border-color: var(--error); width:100%;" onclick="resetApp()">Reset All Data</button>
@@ -1493,6 +1493,20 @@
         <div class="deck-actions">
             <button class="btn-secondary" onclick="downloadDeckJson()">Download Word Pack (JSON)</button>
             <button class="btn-secondary" onclick="shareDeckJson()">Share Word Pack (JSON)</button>
+        </div>
+    </div>
+</div>
+
+<!-- BACKUP EXPORT OPTIONS MODAL -->
+<div id="backup-export-options-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Export Backup</h3>
+            <button class="btn-icon" onclick="closeBackupExportOptionsModal()">✕</button>
+        </div>
+        <div class="deck-actions">
+            <button class="btn-secondary" onclick="downloadBackupJson()">Download Backup (JSON)</button>
+            <button class="btn-secondary" onclick="shareBackupJson()">Share Backup (JSON)</button>
         </div>
     </div>
 </div>
@@ -3790,6 +3804,14 @@ function closeDeckExportOptionsModal() {
     document.getElementById('deck-export-options-modal').classList.remove('open');
 }
 
+function openBackupExportOptions() {
+    document.getElementById('backup-export-options-modal').classList.add('open');
+}
+
+function closeBackupExportOptionsModal() {
+    document.getElementById('backup-export-options-modal').classList.remove('open');
+}
+
 function openDeckPracticeFromActions() {
     if (!activeDeckIdForEdit) return;
     closeDeckActionsModal();
@@ -5246,7 +5268,7 @@ function initSettingsListeners() {
 }
 
 function exportData() {
-    const str = JSON.stringify(app);
+    const str = JSON.stringify(app, null, 2);
     const blob = new Blob([str], {type: "application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -5255,6 +5277,36 @@ function exportData() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function downloadBackupJson() {
+    closeBackupExportOptionsModal();
+    exportData();
+}
+
+async function shareBackupJson() {
+    const str = JSON.stringify(app, null, 2);
+    try {
+        await navigator.clipboard.writeText(str);
+    } catch (error) {
+        console.warn('Unable to copy backup JSON to clipboard.', error);
+    }
+    closeBackupExportOptionsModal();
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: 'SpellCraft Backup JSON',
+                text: str
+            });
+        } catch (error) {
+            if (error && error.name !== 'AbortError') {
+                console.warn('Share failed.', error);
+            }
+        }
+    } else {
+        alert('Backup JSON copied to clipboard.');
+    }
 }
 
 document.getElementById('import-file').addEventListener('change', function(e) {
