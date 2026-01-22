@@ -245,7 +245,7 @@
     }
 
     .view { display: none; min-height: 100%; }
-    .view.active { display: block; animation: fadeIn 0.3s ease; }
+    .view.active { display: block; }
 
     /* --- NAVIGATION --- */
     nav {
@@ -276,9 +276,10 @@
         justify-content: center;
         cursor: pointer;
         gap: 2px;
+        overflow: visible;
     }
 
-    nav button svg { width: 24px; height: 24px; margin-bottom: 4px; fill: currentColor; overflow: visible; }
+    nav button svg { width: 24px; height: 24px; margin-bottom: 4px; fill: currentColor; overflow: visible; display: block; }
     nav button.active {
         color: var(--primary);
         background: #eef2ff;
@@ -1414,7 +1415,7 @@
             <button class="btn-icon" onclick="closeCardsModal()">✕</button>
         </div>
         <div style="margin-bottom:1rem;">
-            <button class="btn-primary" id="open-new-card" onclick="openNewCardForm()" style="width:100%;">Add a new worf</button>
+            <button class="btn-primary" id="open-new-card" onclick="openNewCardForm()" style="width:100%;">Add a new word</button>
             <div id="new-card-form" class="hidden" style="margin-top:var(--space-2);">
                 <input type="text" id="new-card-word" placeholder="Word to spell" style="margin-bottom:8px;">
                 <input type="text" id="new-card-sentence" placeholder="Sentence (optional)" style="margin-bottom:8px;">
