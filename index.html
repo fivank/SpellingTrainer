@@ -1493,6 +1493,7 @@
             <button class="btn-secondary" onclick="openDeckMetaEditor()" data-i18n="deckEditOptionsMeta">Edit Name/Language</button>
             <button class="btn-secondary" id="deck-edit-dictation-btn" onclick="openDeckTextEditor()" data-i18n="deckEditOptionsDictation">Edit Dictation Text</button>
             <button class="btn-secondary" onclick="openDeckEditor()" data-i18n="deckEditOptionsCards">Edit Words / Sentences</button>
+            <button class="btn-secondary" onclick="deleteDeck()" data-i18n="deckEditOptionsDelete">Delete Word pack</button>
         </div>
     </div>
 </div>
@@ -1842,6 +1843,7 @@ const TRANSLATIONS = {
         deckEditOptionsMeta: 'Edit Name/Language',
         deckEditOptionsDictation: 'Edit Dictation Text',
         deckEditOptionsCards: 'Edit Words / Sentences',
+        deckEditOptionsDelete: 'Delete Word pack',
         deckExportTitle: 'Export Word pack',
         deckExportDownload: 'Download Word Pack (JSON)',
         deckExportShare: 'Share Word Pack (JSON)',
@@ -2126,6 +2128,7 @@ const TRANSLATIONS = {
         deckEditOptionsMeta: 'Editar nombre/idioma',
         deckEditOptionsDictation: 'Editar texto de dictado',
         deckEditOptionsCards: 'Editar palabras / oraciones',
+        deckEditOptionsDelete: 'Eliminar paquete',
         deckExportTitle: 'Exportar paquete',
         deckExportDownload: 'Descargar paquete (JSON)',
         deckExportShare: 'Compartir paquete (JSON)',
@@ -2406,6 +2409,7 @@ const TRANSLATIONS = {
         deckEditOptionsMeta: 'Name/Sprache bearbeiten',
         deckEditOptionsDictation: 'Diktattext bearbeiten',
         deckEditOptionsCards: 'Wörter/Sätze bearbeiten',
+        deckEditOptionsDelete: 'Wortpaket löschen',
         deckExportTitle: 'Wortpaket exportieren',
         deckExportDownload: 'Wortpaket herunterladen (JSON)',
         deckExportShare: 'Wortpaket teilen (JSON)',
@@ -5048,6 +5052,7 @@ function deleteDeck() {
     currentSession.selectedDeckIds = currentSession.selectedDeckIds.filter(id => id !== activeDeckIdForEdit);
     saveData();
     closeDeckActionsModal();
+    closeDeckEditOptionsModal();
     renderDeckList();
     if (currentSession.deck && currentSession.deck.id === activeDeckIdForEdit) {
         currentSession.deck = null;
@@ -6288,7 +6293,6 @@ function downloadBackupJson() {
 
 async function shareBackupJson() {
     const str = JSON.stringify(app, null, 2);
-    const backupFile = new File([str], 'spellcraft_backup.json', { type: 'application/json' });
     try {
         await navigator.clipboard.writeText(str);
     } catch (error) {
@@ -6297,11 +6301,10 @@ async function shareBackupJson() {
     closeBackupExportOptionsModal();
     if (navigator.share) {
         try {
-            const canShareFile = navigator.canShare && navigator.canShare({ files: [backupFile] });
-            const shareData = canShareFile
-                ? { title: t('backupShareTitle'), files: [backupFile] }
-                : { title: t('backupShareTitle'), text: str };
-            await navigator.share(shareData);
+            await navigator.share({
+                title: t('backupShareTitle'),
+                text: str
+            });
             return;
         } catch (error) {
             if (error && error.name !== 'AbortError') {
