@@ -6293,6 +6293,7 @@ function downloadBackupJson() {
 
 async function shareBackupJson() {
     const str = JSON.stringify(app, null, 2);
+    const file = new File([str], 'spellcraft_backup.json', { type: 'application/json' });
     try {
         await navigator.clipboard.writeText(str);
     } catch (error) {
@@ -6301,10 +6302,17 @@ async function shareBackupJson() {
     closeBackupExportOptionsModal();
     if (navigator.share) {
         try {
-            await navigator.share({
-                title: t('backupShareTitle'),
-                text: str
-            });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: t('backupShareTitle'),
+                    files: [file]
+                });
+            } else {
+                await navigator.share({
+                    title: t('backupShareTitle'),
+                    text: str
+                });
+            }
             return;
         } catch (error) {
             if (error && error.name !== 'AbortError') {
