@@ -1087,33 +1087,33 @@
 <header>
     <div class="header-top">
         <div class="app-title">
-            <img class="app-icon" src="SpellCraftIcon.png" alt="SpellCraft app icon">
+            <img class="app-icon" src="SpellCraftIcon.png" alt="SpellCraft app icon" data-i18n-alt="appIconAlt">
             <span>SpellCraft</span>
         </div>
         <div class="language-filter">
             <button class="language-filter-btn" id="language-filter-btn" type="button" onclick="toggleLanguageFilter()" aria-haspopup="listbox" aria-expanded="false">
                 <span class="flag" id="language-filter-flag">🌐</span>
-                <span id="language-filter-label">All languages</span>
+                <span id="language-filter-label" data-i18n="languageFilterAll">All languages</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5H7z"/></svg>
             </button>
-            <div class="language-filter-menu" id="language-filter-menu" role="listbox" aria-label="Language filter"></div>
+            <div class="language-filter-menu" id="language-filter-menu" role="listbox" aria-label="Language filter" data-i18n-aria-label="languageFilterLabel"></div>
         </div>
     </div>
-    <span class="app-tagline">Make spelling feel like a game</span>
+    <span class="app-tagline" data-i18n="appTagline">Make spelling feel like a game</span>
 </header>
 
 <main>
     <!-- PRACTICE SCREEN -->
     <div id="view-practice" class="view active">
-        <h2>Today</h2>
+        <h2 data-i18n="navToday">Today</h2>
         <div id="practice-container"></div>
     </div>
 
     <!-- WORDS / DECKS SCREEN -->
     <div id="view-words" class="view">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h2>My Word Packs</h2>
-            <button class="btn-secondary" onclick="openNewPackModal()">+ New Pack</button>
+            <h2 data-i18n="packsTitle">My Word Packs</h2>
+            <button class="btn-secondary" onclick="openNewPackModal()" data-i18n="packsNew">+ New Pack</button>
         </div>
         <div class="card" id="deck-list-container">
             <div id="deck-list"></div>
@@ -1122,189 +1122,202 @@
 
     <!-- SETTINGS SCREEN -->
     <div id="view-settings" class="view">
-        <h2>Settings</h2>
+        <h2 data-i18n="navSettings">Settings</h2>
+
+        <div class="card">
+            <h3 data-i18n="settingsLanguageTitle">Language</h3>
+            <label style="display:block;">
+                <span data-i18n="settingsAppLanguageLabel">App language</span>
+                <select id="setting-app-language" style="width:100%; margin-top:4px;">
+                    <option value="filter" data-i18n="appLanguageUseFilter">Use language filter</option>
+                    <option value="en" data-i18n="appLanguageEnglish">English</option>
+                    <option value="es" data-i18n="appLanguageSpanish">Spanish</option>
+                    <option value="de" data-i18n="appLanguageGerman">German</option>
+                </select>
+            </label>
+        </div>
         
         <!-- Learning Settings -->
         <div class="card">
-            <h3>Learning</h3>
+            <h3 data-i18n="settingsLearningTitle">Learning</h3>
             <div>
                 <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span>Autoplay audio</span>
+                    <span data-i18n="settingsAutoplayAudio">Autoplay audio</span>
                     <label class="toggle"><input type="checkbox" id="setting-autoplay"><span class="slider"></span></label>
                 </label>
                 <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span>Block keyboard suggestions</span>
+                    <span data-i18n="settingsBlockSuggestions">Block keyboard suggestions</span>
                     <label class="toggle"><input type="checkbox" id="setting-block-suggestions"><span class="slider"></span></label>
                 </label>
                 <label style="display:block; margin-bottom:8px;">
-                    Answer strictness
+                    <span data-i18n="settingsAnswerStrictness">Answer strictness</span>
                     <select id="setting-strictness" style="width:100%; margin-top:4px;">
-                        <option value="strict">Strict</option>
-                        <option value="lenient">Lenient</option>
+                        <option value="strict" data-i18n="settingsStrict">Strict</option>
+                        <option value="lenient" data-i18n="settingsLenient">Lenient</option>
                     </select>
                 </label>
                 <label style="display:block;">
-                    Timer start
+                    <span data-i18n="settingsTimerStart">Timer start</span>
                     <select id="setting-timerStart" style="width:100%; margin-top:4px;">
-                        <option value="show">On show</option>
-                        <option value="audio">On audio</option>
+                        <option value="show" data-i18n="settingsTimerShow">On show</option>
+                        <option value="audio" data-i18n="settingsTimerAudio">On audio</option>
                     </select>
                 </label>
                 <label style="display:block; margin-top:8px;">
-                    Dictation repeats
+                    <span data-i18n="settingsDictationRepeats">Dictation repeats</span>
                     <select id="setting-dictation-repeats" style="width:100%; margin-top:4px;">
-                        <option value="0">No repeats</option>
-                        <option value="1">1 repeat</option>
-                        <option value="2">2 repeats</option>
-                        <option value="3">3 repeats</option>
+                        <option value="0" data-i18n="settingsRepeatsNone">No repeats</option>
+                        <option value="1" data-i18n="settingsRepeats1">1 repeat</option>
+                        <option value="2" data-i18n="settingsRepeats2">2 repeats</option>
+                        <option value="3" data-i18n="settingsRepeats3">3 repeats</option>
                     </select>
                 </label>
-                <p class="text-small" style="color: var(--text-sub);">
+                <p class="text-small" style="color: var(--text-sub);" data-i18n="settingsRepeatsHint">
                     Dictation sentences play once automatically. Repeats are extra plays after the first.
                 </p>
                 <label style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
-                    <span>Pronounce punctuation in whole-text practice</span>
+                    <span data-i18n="settingsPronounceTextPunctuation">Pronounce punctuation in whole-text practice</span>
                     <label class="toggle"><input type="checkbox" id="setting-pronounce-punctuation-text"><span class="slider"></span></label>
                 </label>
                 <label style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-                    <span>Pronounce punctuation in sentence practice</span>
+                    <span data-i18n="settingsPronounceSentencePunctuation">Pronounce punctuation in sentence practice</span>
                     <label class="toggle"><input type="checkbox" id="setting-pronounce-punctuation-sentence"><span class="slider"></span></label>
                 </label>
-                <p class="text-small" style="color: var(--text-sub); margin-top:6px;">
+                <p class="text-small" style="color: var(--text-sub); margin-top:6px;" data-i18n="settingsPronounceHint">
                     When enabled, dictation will say “comma,” “period,” and other punctuation aloud.
                 </p>
                 <label style="display:block; margin-top:12px;">
-                    Session target (minimum)
+                    <span data-i18n="settingsSessionTarget">Session target (minimum)</span>
                     <div style="display:grid; gap:6px; margin-top:4px;">
                         <select id="setting-session-target-type" style="width:100%;">
-                            <option value="minutes">Minutes</option>
-                            <option value="words">Words</option>
-                            <option value="packs">Word packs</option>
+                            <option value="minutes" data-i18n="sessionTargetMinutes">Minutes</option>
+                            <option value="words" data-i18n="sessionTargetWords">Words</option>
+                            <option value="packs" data-i18n="sessionTargetPacks">Word packs</option>
                         </select>
                         <input type="number" id="setting-session-target-value" min="1" step="1" style="width:100%;">
                     </div>
                 </label>
-                <p class="text-small" id="setting-session-target-hint" style="color: var(--text-sub); margin-top:6px;">
+                <p class="text-small" id="setting-session-target-hint" style="color: var(--text-sub); margin-top:6px;" data-i18n="sessionTargetHint">
                     Set the minimum size for a Today session.
                 </p>
             </div>
         </div>
 
         <div class="card">
-            <h3>Audio Diagnostics</h3>
-            <p style="font-size:0.9rem; color: var(--text-sub);">If audio isn't working, check here.</p>
-            <div id="audio-status" class="status-badge status-err">Checking...</div>
+            <h3 data-i18n="settingsAudioDiagnosticsTitle">Audio Diagnostics</h3>
+            <p style="font-size:0.9rem; color: var(--text-sub);" data-i18n="settingsAudioDiagnosticsHint">If audio isn't working, check here.</p>
+            <div id="audio-status" class="status-badge status-err" data-status-key="audioStatusChecking">Checking...</div>
             <div style="margin-top:var(--space-1);">
-                <label>Voice mode</label>
+                <label data-i18n="settingsVoiceMode">Voice mode</label>
                 <select id="setting-voice-mode">
-                    <option value="auto">Auto (match pack language)</option>
-                    <option value="fixed">Fixed (use selected voice)</option>
+                    <option value="auto" data-i18n="settingsVoiceModeAuto">Auto (match pack language)</option>
+                    <option value="fixed" data-i18n="settingsVoiceModeFixed">Fixed (use selected voice)</option>
                 </select>
-                <p style="font-size:0.8rem; color: var(--text-sub); margin: var(--space-1) 0 var(--space-2);">
+                <p style="font-size:0.8rem; color: var(--text-sub); margin: var(--space-1) 0 var(--space-2);" data-i18n="settingsVoiceModeHint">
                     Auto mode chooses a voice that matches the pack language (e.g., Spanish packs use Spanish voices).
                 </p>
             </div>
             <div>
-                <label>System Voice</label>
-                <select id="setting-voice"><option>Loading voices...</option></select>
+                <label data-i18n="settingsSystemVoice">System Voice</label>
+                <select id="setting-voice"><option data-i18n="settingsLoadingVoices">Loading voices...</option></select>
             </div>
-            <button class="btn-secondary" onclick="testAudio()">Test Audio</button>
+            <button class="btn-secondary" onclick="testAudio()" data-i18n="settingsTestAudio">Test Audio</button>
         </div>
 
         <div class="card">
-            <h3>Audio Speed Settings</h3>
-            <p class="text-small" style="color: var(--text-sub);">
+            <h3 data-i18n="settingsAudioSpeedTitle">Audio Speed Settings</h3>
+            <p class="text-small" style="color: var(--text-sub);" data-i18n="settingsAudioSpeedHint">
                 These controls apply to specific exercises only.
             </p>
 
-            <button class="settings-toggle" type="button" data-panel="audio-speed-text">
+            <button class="settings-toggle" type="button" data-panel="audio-speed-text" data-i18n="audioSpeedTextToggle">
                 Audio speed settings — whole text
             </button>
             <div class="settings-panel" id="audio-speed-text">
                 <div>
-                    <label>Speed: <span id="speed-text-val">1.0</span>x</label>
+                    <label><span data-i18n="audioSpeedLabel">Speed</span>: <span id="speed-text-val">1.0</span>x</label>
                     <input type="range" id="setting-speed-text" min="0.5" max="1.5" step="0.1" value="1">
                 </div>
                 <div style="margin-top:var(--space-2);">
-                    <label>Silence at start: <span id="pause-start-text-val">0</span> ms</label>
+                    <label><span data-i18n="audioSilenceStartLabel">Silence at start</span>: <span id="pause-start-text-val">0</span> ms</label>
                     <input type="range" id="setting-pause-start-text" min="0" max="2000" step="5" value="0">
                 </div>
                 <div>
-                    <label>Pause between sentences: <span id="pause-between-sentences-text-val">800</span> ms</label>
+                    <label><span data-i18n="audioPauseBetweenSentencesLabel">Pause between sentences</span>: <span id="pause-between-sentences-text-val">800</span> ms</label>
                     <input type="range" id="setting-pause-between-sentences-text" min="0" max="3000" step="5" value="800">
                 </div>
                 <div>
-                    <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-text-val">350</span> ms</label>
+                    <label><span data-i18n="audioMidSentencePauseLabel">Mid-sentence pause (commas/clauses)</span>: <span id="pause-mid-sentence-text-val">350</span> ms</label>
                     <input type="range" id="setting-pause-mid-sentence-text" min="0" max="1500" step="5" value="350">
                 </div>
                 <div>
-                    <label>Pause after every word: <span id="pause-two-words-text-val">0</span> ms</label>
+                    <label><span data-i18n="audioPauseAfterWordLabel">Pause after every word</span>: <span id="pause-two-words-text-val">0</span> ms</label>
                     <input type="range" id="setting-pause-two-words-text" min="0" max="1500" step="5" value="0">
                 </div>
             </div>
 
-            <button class="settings-toggle" type="button" data-panel="audio-speed-sentence">
+            <button class="settings-toggle" type="button" data-panel="audio-speed-sentence" data-i18n="audioSpeedSentenceToggle">
                 Audio speed settings — sentences
             </button>
             <div class="settings-panel" id="audio-speed-sentence">
                 <div>
-                    <label>Speed: <span id="speed-sentence-val">1.0</span>x</label>
+                    <label><span data-i18n="audioSpeedLabel">Speed</span>: <span id="speed-sentence-val">1.0</span>x</label>
                     <input type="range" id="setting-speed-sentence" min="0.5" max="1.5" step="0.1" value="1">
                 </div>
                 <div style="margin-top:var(--space-2);">
-                    <label>Silence at start: <span id="pause-start-sentence-val">0</span> ms</label>
+                    <label><span data-i18n="audioSilenceStartLabel">Silence at start</span>: <span id="pause-start-sentence-val">0</span> ms</label>
                     <input type="range" id="setting-pause-start-sentence" min="0" max="2000" step="5" value="0">
                 </div>
                 <div>
-                    <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-sentence-val">350</span> ms</label>
+                    <label><span data-i18n="audioMidSentencePauseLabel">Mid-sentence pause (commas/clauses)</span>: <span id="pause-mid-sentence-sentence-val">350</span> ms</label>
                     <input type="range" id="setting-pause-mid-sentence-sentence" min="0" max="1500" step="5" value="350">
                 </div>
                 <div>
-                    <label>Pause after every word: <span id="pause-two-words-sentence-val">0</span> ms</label>
+                    <label><span data-i18n="audioPauseAfterWordLabel">Pause after every word</span>: <span id="pause-two-words-sentence-val">0</span> ms</label>
                     <input type="range" id="setting-pause-two-words-sentence" min="0" max="1500" step="5" value="0">
                 </div>
             </div>
 
-            <button class="settings-toggle" type="button" data-panel="audio-speed-word">
+            <button class="settings-toggle" type="button" data-panel="audio-speed-word" data-i18n="audioSpeedWordToggle">
                 Audio speed settings — words
             </button>
             <div class="settings-panel" id="audio-speed-word">
                 <div>
-                    <label>Speed: <span id="speed-word-val">1.0</span>x</label>
+                    <label><span data-i18n="audioSpeedLabel">Speed</span>: <span id="speed-word-val">1.0</span>x</label>
                     <input type="range" id="setting-speed-word" min="0.5" max="1.5" step="0.1" value="1">
                 </div>
                 <div style="margin-top:var(--space-2);">
-                    <label>Silence at start: <span id="pause-start-word-val">0</span> ms</label>
+                    <label><span data-i18n="audioSilenceStartLabel">Silence at start</span>: <span id="pause-start-word-val">0</span> ms</label>
                     <input type="range" id="setting-pause-start-word" min="0" max="2000" step="5" value="0">
                 </div>
                 <div>
-                    <label>Pause between word &amp; sentence: <span id="pause-word-sentence-word-val">600</span> ms</label>
+                    <label><span data-i18n="audioPauseWordSentenceLabel">Pause between word &amp; sentence</span>: <span id="pause-word-sentence-word-val">600</span> ms</label>
                     <input type="range" id="setting-pause-word-sentence-word" min="0" max="2000" step="5" value="600">
                 </div>
                 <div>
-                    <label>Mid-sentence pause (commas/clauses): <span id="pause-mid-sentence-word-val">350</span> ms</label>
+                    <label><span data-i18n="audioMidSentencePauseLabel">Mid-sentence pause (commas/clauses)</span>: <span id="pause-mid-sentence-word-val">350</span> ms</label>
                     <input type="range" id="setting-pause-mid-sentence-word" min="0" max="1500" step="5" value="350">
                 </div>
                 <div>
-                    <label>Pause after every word: <span id="pause-two-words-word-val">0</span> ms</label>
+                    <label><span data-i18n="audioPauseAfterWordLabel">Pause after every word</span>: <span id="pause-two-words-word-val">0</span> ms</label>
                     <input type="range" id="setting-pause-two-words-word" min="0" max="1500" step="5" value="0">
                 </div>
             </div>
         </div>
         
         <div class="card">
-            <h3>Data Management</h3>
-            <button class="btn-secondary" onclick="openBackupExportOptions()" style="width:100%; margin-bottom:var(--space-1);">Export Backup</button>
-            <button class="btn-secondary" onclick="document.getElementById('import-file').click()" style="width:100%; margin-bottom:var(--space-1);">Import Backup</button>
+            <h3 data-i18n="settingsDataManagementTitle">Data Management</h3>
+            <button class="btn-secondary" onclick="openBackupExportOptions()" style="width:100%; margin-bottom:var(--space-1);" data-i18n="settingsExportBackup">Export Backup</button>
+            <button class="btn-secondary" onclick="document.getElementById('import-file').click()" style="width:100%; margin-bottom:var(--space-1);" data-i18n="settingsImportBackup">Import Backup</button>
             <input type="file" id="import-file" class="hidden" accept=".json">
-            <button class="btn-secondary" style="color: var(--error); border-color: var(--error); width:100%;" onclick="resetApp()">Reset All Data</button>
+            <button class="btn-secondary" style="color: var(--error); border-color: var(--error); width:100%;" onclick="resetApp()" data-i18n="settingsResetData">Reset All Data</button>
         </div>
     </div>
 
     <!-- PROGRESS SCREEN -->
     <div id="view-progress" class="view">
-        <h2>Next Up!</h2>
-        <p class="text-small" style="color:var(--text-sub);">Focus on the next step that grows your mastery.</p>
+        <h2 data-i18n="progressTitle">Next Up!</h2>
+        <p class="text-small" style="color:var(--text-sub);" data-i18n="progressSubtitle">Focus on the next step that grows your mastery.</p>
         <div class="card" id="progress-overview" style="margin-bottom:1rem;"></div>
         <div class="card" id="progress-details"></div>
     </div>
@@ -1312,9 +1325,9 @@
     <!-- DECK PROGRESS SCREEN -->
     <div id="view-deck-progress" class="view">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
-            <button class="btn-secondary" onclick="navTo('words')">← Back</button>
-            <h2 style="margin:0;" id="deck-progress-title">Pack Progress</h2>
-            <button class="btn-secondary" id="deck-reset-stats" onclick="resetDeckStats()">Reset Stats</button>
+            <button class="btn-secondary" onclick="navTo('words')" data-i18n="navBack">← Back</button>
+            <h2 style="margin:0;" id="deck-progress-title" data-i18n="deckProgressTitle">Pack Progress</h2>
+            <button class="btn-secondary" id="deck-reset-stats" onclick="resetDeckStats()" data-i18n="deckResetStats">Reset Stats</button>
         </div>
         <div class="card" id="deck-progress-overview" style="margin-bottom:1rem;"></div>
         <div class="card" id="deck-progress-details"></div>
@@ -1324,20 +1337,20 @@
 <nav>
     <button onclick="navTo('practice')" id="nav-practice" class="active">
         <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-        Today
+        <span data-i18n="navToday">Today</span>
     </button>
     <button onclick="navTo('words')" id="nav-words">
         <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
-        Packs
+        <span data-i18n="navPacks">Packs</span>
     </button>
     <button onclick="navTo('progress')" id="nav-progress">
         <svg viewBox="0 0 24 24"><path d="M3 17h4V9H3v8zm6 0h4V5H9v12zm6 0h4V13h-4v4z"/></svg>
-        Progress
+        <span data-i18n="navProgress">Progress</span>
     </button>
 
     <button onclick="navTo('settings')" id="nav-settings">
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L5.09 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.58 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-        Settings
+        <span data-i18n="navSettings">Settings</span>
     </button>
 </nav>
 
@@ -1345,13 +1358,13 @@
 <div id="new-pack-modal" class="modal-overlay">
     <div class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3>New Pack</h3>
+            <h3 data-i18n="newPackTitle">New Pack</h3>
             <button class="btn-icon" onclick="closeNewPackModal()">✕</button>
         </div>
         <div class="deck-actions">
-            <button class="btn-secondary" disabled>Choose from library</button>
-            <button class="btn-primary" onclick="openDeckModal('create')">Create Word Pack (manual)</button>
-            <button class="btn-secondary" onclick="openDeckModal('import')">Import Word Pack (json)</button>
+            <button class="btn-secondary" disabled data-i18n="newPackChooseLibrary">Choose from library</button>
+            <button class="btn-primary" onclick="openDeckModal('create')" data-i18n="newPackCreateManual">Create Word Pack (manual)</button>
+            <button class="btn-secondary" onclick="openDeckModal('import')" data-i18n="newPackImportJson">Import Word Pack (json)</button>
         </div>
     </div>
 </div>
@@ -1359,49 +1372,49 @@
 <!-- ADD DECK MODAL -->
 <div id="deck-modal" class="modal-overlay">
     <div class="modal">
-        <h3 id="deck-modal-title">Create a Word Pack</h3>
+        <h3 id="deck-modal-title" data-i18n="deckModalCreateTitle">Create a Word Pack</h3>
         <div class="modal-toggle" id="deck-modal-toggle">
-            <button type="button" id="deck-toggle-create" class="active" onclick="showDeckPanel('create')">Create</button>
-            <button type="button" id="deck-toggle-import" onclick="showDeckPanel('import')">Import Pack</button>
+            <button type="button" id="deck-toggle-create" class="active" onclick="showDeckPanel('create')" data-i18n="deckModalCreateTab">Create</button>
+            <button type="button" id="deck-toggle-import" onclick="showDeckPanel('import')" data-i18n="deckModalImportTab">Import Pack</button>
         </div>
         <div id="deck-panel-create" class="modal-panel">
-            <label>Word Pack Name</label>
-            <input type="text" id="new-deck-name" placeholder="e.g. Spanish Basics">
-            <label>Language</label>
+            <label data-i18n="deckNameLabel">Word Pack Name</label>
+            <input type="text" id="new-deck-name" placeholder="e.g. Spanish Basics" data-i18n-placeholder="deckNamePlaceholder">
+            <label data-i18n="deckLanguageLabel">Language</label>
             <select id="new-deck-lang">
-                <option value="en-US">English (US)</option>
-                <option value="en-GB">English (UK)</option>
-                <option value="es-ES">Spanish</option>
-                <option value="fr-FR">French</option>
-                <option value="de-DE">German</option>
-                <option value="it-IT">Italian</option>
+                <option value="en-US" data-i18n="languageEnglishUS">English (US)</option>
+                <option value="en-GB" data-i18n="languageEnglishUK">English (UK)</option>
+                <option value="es-ES" data-i18n="languageSpanish">Spanish</option>
+                <option value="fr-FR" data-i18n="languageFrench">French</option>
+                <option value="de-DE" data-i18n="languageGerman">German</option>
+                <option value="it-IT" data-i18n="languageItalian">Italian</option>
             </select>
-            <label for="new-deck-text">Dictation Text or Word List (optional)</label>
-            <textarea id="new-deck-text" rows="5" placeholder="Paste full dictation text, or wrap a list in { } like: {apple, banana; ocean: The ocean is calm}." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
-            <p class="text-small" style="color:var(--text-sub); margin-top:6px;">
+            <label for="new-deck-text" data-i18n="deckDictationLabel">Dictation Text or Word List (optional)</label>
+            <textarea id="new-deck-text" rows="5" placeholder="Paste full dictation text, or wrap a list in { } like: {apple, banana; ocean: The ocean is calm}." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;" data-i18n-placeholder="deckDictationPlaceholder"></textarea>
+            <p class="text-small" style="color:var(--text-sub); margin-top:6px;" data-i18n="deckDictationTip">
                 Tip: Use { } to paste a list. Inside the braces, separate words with commas/semicolons, or use word-sentence pairs like "ocean: The ocean is calm; breeze / A light breeze blew."
             </p>
             <div style="display:flex; gap:var(--space-1); margin-top:var(--space-2);">
-                <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
-                <button class="btn-primary" onclick="saveDeck()" style="flex:1">Create Pack</button>
+                <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1" data-i18n="actionCancel">Cancel</button>
+                <button class="btn-primary" onclick="saveDeck()" style="flex:1" data-i18n="deckCreateAction">Create Pack</button>
             </div>
         </div>
         <div id="deck-panel-import" class="modal-panel hidden">
-            <p style="font-size:0.95rem; color:var(--text-sub); margin-top:0;">
+            <p style="font-size:0.95rem; color:var(--text-sub); margin-top:0;" data-i18n="deckImportHint">
                 Import a compatible word pack JSON file to add it to your collection.
             </p>
-            <button class="btn-secondary" onclick="triggerDeckImport()" style="width:100%; margin-bottom:var(--space-1);">Choose Pack File</button>
-            <button class="btn-secondary" onclick="pasteDeckJsonFromClipboard()" style="width:100%; margin-bottom:var(--space-1);">Paste JSON from clipboard</button>
+            <button class="btn-secondary" onclick="triggerDeckImport()" style="width:100%; margin-bottom:var(--space-1);" data-i18n="deckImportChooseFile">Choose Pack File</button>
+            <button class="btn-secondary" onclick="pasteDeckJsonFromClipboard()" style="width:100%; margin-bottom:var(--space-1);" data-i18n="deckImportPasteClipboard">Paste JSON from clipboard</button>
             <input type="file" id="import-deck-file" class="hidden" accept=".json,application/json">
             <div style="margin-bottom:var(--space-1);">
-                <label for="import-deck-json" style="display:block; font-size:0.85rem; color:var(--text-sub); margin-bottom:6px;">
+                <label for="import-deck-json" style="display:block; font-size:0.85rem; color:var(--text-sub); margin-bottom:6px;" data-i18n="deckImportPasteLabel">
                     Paste pack as JSON
                 </label>
-                <textarea id="import-deck-json" rows="6" placeholder='{"name":"My Pack","lang":"en-US","text":"First sentence. Second sentence.","cards":[{"word":"example","sentence":"First sentence."}]}' style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;"></textarea>
+                <textarea id="import-deck-json" rows="6" placeholder='{"name":"My Pack","lang":"en-US","text":"First sentence. Second sentence.","cards":[{"word":"example","sentence":"First sentence."}]}' style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical;" data-i18n-placeholder="deckImportPastePlaceholder"></textarea>
             </div>
-            <button class="btn-secondary" onclick="importDeckFromPaste()" style="width:100%; margin-bottom:var(--space-1);">Import Pasted Pack</button>
+            <button class="btn-secondary" onclick="importDeckFromPaste()" style="width:100%; margin-bottom:var(--space-1);" data-i18n="deckImportPastedAction">Import Pasted Pack</button>
             <div style="display:flex; gap:var(--space-1);">
-                <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1">Cancel</button>
+                <button class="btn-secondary" onclick="closeDeckModal()" style="flex:1" data-i18n="actionCancel">Cancel</button>
             </div>
         </div>
     </div>
@@ -1411,19 +1424,19 @@
 <div id="cards-modal" class="modal-overlay">
     <div class="modal" style="max-height: 85vh; display:flex; flex-direction:column;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3>Manage Cards</h3>
+            <h3 data-i18n="cardsManageTitle">Manage Cards</h3>
             <button class="btn-icon" onclick="closeCardsModal()">✕</button>
         </div>
         <div style="margin-bottom:1rem;">
-            <button class="btn-primary" id="open-new-card" onclick="openNewCardForm()" style="width:100%;">Add a new word</button>
+            <button class="btn-primary" id="open-new-card" onclick="openNewCardForm()" style="width:100%;" data-i18n="cardsAddNew">Add a new word</button>
             <div id="new-card-form" class="hidden" style="margin-top:var(--space-2);">
-                <input type="text" id="new-card-word" placeholder="Word to spell" style="margin-bottom:8px;">
-                <input type="text" id="new-card-sentence" placeholder="Sentence (optional)" style="margin-bottom:8px;">
+                <input type="text" id="new-card-word" placeholder="Word to spell" style="margin-bottom:8px;" data-i18n-placeholder="cardWordPlaceholder">
+                <input type="text" id="new-card-sentence" placeholder="Sentence (optional)" style="margin-bottom:8px;" data-i18n-placeholder="cardSentencePlaceholder">
                 <!-- Optional audio URL input to support custom pronunciation files -->
-                <input type="text" id="new-card-audio" placeholder="Audio URL (optional)" style="margin-bottom:8px;">
+                <input type="text" id="new-card-audio" placeholder="Audio URL (optional)" style="margin-bottom:8px;" data-i18n-placeholder="cardAudioPlaceholder">
                 <div style="display:flex; gap:var(--space-1);">
-                    <button class="btn-secondary" onclick="closeNewCardForm()" style="flex:1;">Cancel</button>
-                    <button class="btn-primary" onclick="addCardToDeck()" style="flex:1;">Add Card</button>
+                    <button class="btn-secondary" onclick="closeNewCardForm()" style="flex:1;" data-i18n="actionCancel">Cancel</button>
+                    <button class="btn-primary" onclick="addCardToDeck()" style="flex:1;" data-i18n="cardsAddAction">Add Card</button>
                 </div>
             </div>
         </div>
@@ -1437,18 +1450,18 @@
 <div id="card-edit-modal" class="modal-overlay">
     <div class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3>Edit Card</h3>
+            <h3 data-i18n="cardEditTitle">Edit Card</h3>
             <button class="btn-icon" onclick="closeCardEditModal()">✕</button>
         </div>
-        <label for="edit-card-word">Word</label>
-        <input type="text" id="edit-card-word" placeholder="Word">
-        <label for="edit-card-sentence">Sentence</label>
-        <input type="text" id="edit-card-sentence" placeholder="Sentence (optional)">
-        <label for="edit-card-audio">Audio URL</label>
-        <input type="text" id="edit-card-audio" placeholder="Audio URL (optional)">
+        <label for="edit-card-word" data-i18n="cardWordLabel">Word</label>
+        <input type="text" id="edit-card-word" placeholder="Word" data-i18n-placeholder="cardWordPlaceholder">
+        <label for="edit-card-sentence" data-i18n="cardSentenceLabel">Sentence</label>
+        <input type="text" id="edit-card-sentence" placeholder="Sentence (optional)" data-i18n-placeholder="cardSentencePlaceholder">
+        <label for="edit-card-audio" data-i18n="cardAudioLabel">Audio URL</label>
+        <input type="text" id="edit-card-audio" placeholder="Audio URL (optional)" data-i18n-placeholder="cardAudioPlaceholder">
         <div style="display:flex; gap:var(--space-1);">
-            <button class="btn-secondary" onclick="closeCardEditModal()" style="flex:1">Cancel</button>
-            <button class="btn-primary" onclick="saveCardEdits()" style="flex:1">Save</button>
+            <button class="btn-secondary" onclick="closeCardEditModal()" style="flex:1" data-i18n="actionCancel">Cancel</button>
+            <button class="btn-primary" onclick="saveCardEdits()" style="flex:1" data-i18n="actionSave">Save</button>
         </div>
     </div>
 </div>
@@ -1457,14 +1470,14 @@
 <div id="deck-actions-modal" class="modal-overlay">
     <div class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3 id="deck-actions-title">Pack Actions</h3>
+            <h3 id="deck-actions-title" data-i18n="deckActionsTitle">Pack Actions</h3>
             <button class="btn-icon" onclick="closeDeckActionsModal()">✕</button>
         </div>
         <div class="deck-actions">
-            <button class="btn-primary" onclick="openDeckPracticeFromActions()">Practice now</button>
-            <button class="btn-secondary" onclick="openDeckStats()">This pack progress statistics</button>
-            <button class="btn-secondary" onclick="openDeckEditOptions()">Edit Word pack</button>
-            <button class="btn-secondary" onclick="openDeckExportOptions()">Export</button>
+            <button class="btn-primary" onclick="openDeckPracticeFromActions()" data-i18n="deckActionsPractice">Practice now</button>
+            <button class="btn-secondary" onclick="openDeckStats()" data-i18n="deckActionsProgress">This pack progress statistics</button>
+            <button class="btn-secondary" onclick="openDeckEditOptions()" data-i18n="deckActionsEdit">Edit Word pack</button>
+            <button class="btn-secondary" onclick="openDeckExportOptions()" data-i18n="deckActionsExport">Export</button>
         </div>
     </div>
 </div>
@@ -1473,13 +1486,13 @@
 <div id="deck-edit-options-modal" class="modal-overlay">
     <div class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3>Edit Word pack</h3>
+            <h3 data-i18n="deckEditOptionsTitle">Edit Word pack</h3>
             <button class="btn-icon" onclick="closeDeckEditOptionsModal()">✕</button>
         </div>
         <div class="deck-actions">
-            <button class="btn-secondary" onclick="openDeckMetaEditor()">Edit Name/Language</button>
-            <button class="btn-secondary" id="deck-edit-dictation-btn" onclick="openDeckTextEditor()">Edit Dictation Text</button>
-            <button class="btn-secondary" onclick="openDeckEditor()">Edit Words / Sentences</button>
+            <button class="btn-secondary" onclick="openDeckMetaEditor()" data-i18n="deckEditOptionsMeta">Edit Name/Language</button>
+            <button class="btn-secondary" id="deck-edit-dictation-btn" onclick="openDeckTextEditor()" data-i18n="deckEditOptionsDictation">Edit Dictation Text</button>
+            <button class="btn-secondary" onclick="openDeckEditor()" data-i18n="deckEditOptionsCards">Edit Words / Sentences</button>
         </div>
     </div>
 </div>
@@ -1488,12 +1501,12 @@
 <div id="deck-export-options-modal" class="modal-overlay">
     <div class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3>Export Word pack</h3>
+            <h3 data-i18n="deckExportTitle">Export Word pack</h3>
             <button class="btn-icon" onclick="closeDeckExportOptionsModal()">✕</button>
         </div>
         <div class="deck-actions">
-            <button class="btn-secondary" onclick="downloadDeckJson()">Download Word Pack (JSON)</button>
-            <button class="btn-secondary" onclick="shareDeckJson()">Share Word Pack (JSON)</button>
+            <button class="btn-secondary" onclick="downloadDeckJson()" data-i18n="deckExportDownload">Download Word Pack (JSON)</button>
+            <button class="btn-secondary" onclick="shareDeckJson()" data-i18n="deckExportShare">Share Word Pack (JSON)</button>
         </div>
     </div>
 </div>
@@ -1502,12 +1515,12 @@
 <div id="backup-export-options-modal" class="modal-overlay">
     <div class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3>Export Backup</h3>
+            <h3 data-i18n="backupExportTitle">Export Backup</h3>
             <button class="btn-icon" onclick="closeBackupExportOptionsModal()">✕</button>
         </div>
         <div class="deck-actions">
-            <button class="btn-secondary" onclick="downloadBackupJson()">Download Backup (JSON)</button>
-            <button class="btn-secondary" onclick="shareBackupJson()">Share Backup (JSON)</button>
+            <button class="btn-secondary" onclick="downloadBackupJson()" data-i18n="backupExportDownload">Download Backup (JSON)</button>
+            <button class="btn-secondary" onclick="shareBackupJson()" data-i18n="backupExportShare">Share Backup (JSON)</button>
         </div>
     </div>
 </div>
@@ -1516,12 +1529,12 @@
 <div id="practice-options-modal" class="modal-overlay">
     <div class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3 id="practice-options-title">Practice Options</h3>
+            <h3 id="practice-options-title" data-i18n="practiceOptionsTitle">Practice Options</h3>
             <button class="btn-icon" onclick="closePracticeOptionsModal()">✕</button>
         </div>
         <div id="practice-options-list" class="practice-options"></div>
         <p id="practice-options-note" class="text-small" style="color: var(--text-sub); margin-top:0;"></p>
-        <button class="btn-primary" id="practice-options-start" onclick="startPracticeFromOptions()" disabled>Start challenge</button>
+        <button class="btn-primary" id="practice-options-start" onclick="startPracticeFromOptions()" disabled data-i18n="practiceOptionsStart">Start challenge</button>
     </div>
 </div>
 
@@ -1529,23 +1542,23 @@
 <div id="deck-meta-modal" class="modal-overlay">
     <div class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3>Edit Name/Language</h3>
+            <h3 data-i18n="deckMetaTitle">Edit Name/Language</h3>
             <button class="btn-icon" onclick="closeDeckMetaModal()">✕</button>
         </div>
-        <label for="edit-deck-name">Pack Name</label>
-        <input type="text" id="edit-deck-name" placeholder="Pack name">
-        <label for="edit-deck-lang">Language</label>
+        <label for="edit-deck-name" data-i18n="deckNameLabel">Pack Name</label>
+        <input type="text" id="edit-deck-name" placeholder="Pack name" data-i18n-placeholder="deckNameEditPlaceholder">
+        <label for="edit-deck-lang" data-i18n="deckLanguageLabel">Language</label>
         <select id="edit-deck-lang">
-            <option value="en-US">English (US)</option>
-            <option value="en-GB">English (UK)</option>
-            <option value="es-ES">Spanish</option>
-            <option value="fr-FR">French</option>
-            <option value="de-DE">German</option>
-            <option value="it-IT">Italian</option>
+            <option value="en-US" data-i18n="languageEnglishUS">English (US)</option>
+            <option value="en-GB" data-i18n="languageEnglishUK">English (UK)</option>
+            <option value="es-ES" data-i18n="languageSpanish">Spanish</option>
+            <option value="fr-FR" data-i18n="languageFrench">French</option>
+            <option value="de-DE" data-i18n="languageGerman">German</option>
+            <option value="it-IT" data-i18n="languageItalian">Italian</option>
         </select>
         <div style="display:flex; gap:var(--space-1);">
-            <button class="btn-secondary" onclick="closeDeckMetaModal()" style="flex:1">Cancel</button>
-            <button class="btn-primary" onclick="saveDeckMeta()" style="flex:1">Save</button>
+            <button class="btn-secondary" onclick="closeDeckMetaModal()" style="flex:1" data-i18n="actionCancel">Cancel</button>
+            <button class="btn-primary" onclick="saveDeckMeta()" style="flex:1" data-i18n="actionSave">Save</button>
         </div>
     </div>
 </div>
@@ -1554,15 +1567,15 @@
 <div id="deck-text-modal" class="modal-overlay">
     <div class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3>Edit Dictation Text</h3>
+            <h3 data-i18n="deckTextTitle">Edit Dictation Text</h3>
             <button class="btn-icon" onclick="closeDeckTextModal()">✕</button>
         </div>
-        <label for="edit-deck-text-full">Dictation Text</label>
-        <textarea id="edit-deck-text-full" rows="6" placeholder="Enter the full dictation passage." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical; margin-bottom:8px;"></textarea>
-        <small class="text-small" style="color: var(--text-sub);">Saving updates words and sentences to match the text.</small>
+        <label for="edit-deck-text-full" data-i18n="deckDictationLabel">Dictation Text</label>
+        <textarea id="edit-deck-text-full" rows="6" placeholder="Enter the full dictation passage." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical; margin-bottom:8px;" data-i18n-placeholder="deckDictationEditPlaceholder"></textarea>
+        <small class="text-small" style="color: var(--text-sub);" data-i18n="deckDictationSaveHint">Saving updates words and sentences to match the text.</small>
         <div style="display:flex; gap:var(--space-1); margin-top:var(--space-2);">
-            <button class="btn-secondary" onclick="closeDeckTextModal()" style="flex:1">Cancel</button>
-            <button class="btn-primary" onclick="saveDeckText()" style="flex:1">Save</button>
+            <button class="btn-secondary" onclick="closeDeckTextModal()" style="flex:1" data-i18n="actionCancel">Cancel</button>
+            <button class="btn-primary" onclick="saveDeckText()" style="flex:1" data-i18n="actionSave">Save</button>
         </div>
     </div>
 </div>
@@ -1599,6 +1612,8 @@ let app = {
         pronounceTextPunctuation: false,
         /* global language filter */
         languageFilter: 'all',
+        /* app UI language (filter = follow language filter) */
+        appLanguage: 'filter',
         /* minimum session target settings */
         sessionTargetType: 'minutes',
         sessionTargetValue: 15,
@@ -1652,11 +1667,16 @@ let availableVoices = [];
 function initAudio() {
     const statusEl = document.getElementById('audio-status');
     const select = document.getElementById('setting-voice');
+    if (statusEl) {
+        statusEl.dataset.statusKey = 'audioStatusChecking';
+        statusEl.textContent = t('audioStatusChecking');
+    }
 
     if (!('speechSynthesis' in window)) {
         statusEl.className = 'status-badge status-err';
-        statusEl.textContent = 'Not Supported in this Browser';
-        select.innerHTML = '<option>Not available</option>';
+        statusEl.dataset.statusKey = 'audioStatusNotSupported';
+        statusEl.textContent = t('audioStatusNotSupported');
+        select.innerHTML = `<option>${t('audioStatusNotAvailable')}</option>`;
         return;
     }
 
@@ -1666,13 +1686,15 @@ function initAudio() {
         if (freshVoices.length > 0) {
             availableVoices = freshVoices;
             statusEl.className = 'status-badge status-ok';
-            statusEl.textContent = 'Engine Ready';
+            statusEl.dataset.statusKey = 'audioStatusReady';
+            statusEl.textContent = t('audioStatusReady');
             populateVoiceSelect();
             return true;
         }
         // Keep waiting or show warning
         statusEl.className = 'status-badge status-err';
-        statusEl.textContent = 'Voices Empty (Try Chrome/Safari)';
+        statusEl.dataset.statusKey = 'audioStatusVoicesEmpty';
+        statusEl.textContent = t('audioStatusVoicesEmpty');
         return false;
     };
 
@@ -1700,6 +1722,954 @@ function normalizeLangCode(lang) {
     return lang ? String(lang).replace('_', '-').toLowerCase() : '';
 }
 
+const TRANSLATIONS = {
+    en: {
+        appTagline: 'Make spelling feel like a game',
+        appIconAlt: 'SpellCraft app icon',
+        navToday: 'Today',
+        navPacks: 'Packs',
+        navProgress: 'Progress',
+        navSettings: 'Settings',
+        navBack: '← Back',
+        packsTitle: 'My Word Packs',
+        packsNew: '+ New Pack',
+        settingsLanguageTitle: 'Language',
+        settingsAppLanguageLabel: 'App language',
+        appLanguageUseFilter: 'Use language from filter',
+        appLanguageEnglish: 'English',
+        appLanguageSpanish: 'Spanish',
+        appLanguageGerman: 'German',
+        settingsLearningTitle: 'Learning',
+        settingsAutoplayAudio: 'Autoplay audio',
+        settingsBlockSuggestions: 'Block keyboard suggestions',
+        settingsAnswerStrictness: 'Answer strictness',
+        settingsStrict: 'Strict',
+        settingsLenient: 'Lenient',
+        settingsTimerStart: 'Timer start',
+        settingsTimerShow: 'On show',
+        settingsTimerAudio: 'On audio',
+        settingsDictationRepeats: 'Dictation repeats',
+        settingsRepeatsNone: 'No repeats',
+        settingsRepeats1: '1 repeat',
+        settingsRepeats2: '2 repeats',
+        settingsRepeats3: '3 repeats',
+        settingsRepeatsHint: 'Dictation sentences play once automatically. Repeats are extra plays after the first.',
+        settingsPronounceTextPunctuation: 'Pronounce punctuation in whole-text practice',
+        settingsPronounceSentencePunctuation: 'Pronounce punctuation in sentence practice',
+        settingsPronounceHint: 'When enabled, dictation will say “comma,” “period,” and other punctuation aloud.',
+        settingsSessionTarget: 'Session target (minimum)',
+        sessionTargetMinutes: 'Minutes',
+        sessionTargetWords: 'Words',
+        sessionTargetPacks: 'Word packs',
+        sessionTargetHint: 'Set the minimum size for a Today session.',
+        settingsAudioDiagnosticsTitle: 'Audio Diagnostics',
+        settingsAudioDiagnosticsHint: "If audio isn't working, check here.",
+        audioStatusChecking: 'Checking...',
+        settingsVoiceMode: 'Voice mode',
+        settingsVoiceModeAuto: 'Auto (match pack language)',
+        settingsVoiceModeFixed: 'Fixed (use selected voice)',
+        settingsVoiceModeHint: 'Auto mode chooses a voice that matches the pack language (e.g., Spanish packs use Spanish voices).',
+        settingsSystemVoice: 'System Voice',
+        settingsLoadingVoices: 'Loading voices...',
+        settingsTestAudio: 'Test Audio',
+        settingsAudioSpeedTitle: 'Audio Speed Settings',
+        settingsAudioSpeedHint: 'These controls apply to specific exercises only.',
+        audioSpeedTextToggle: 'Audio speed settings — whole text',
+        audioSpeedSentenceToggle: 'Audio speed settings — sentences',
+        audioSpeedWordToggle: 'Audio speed settings — words',
+        audioSpeedLabel: 'Speed',
+        audioSilenceStartLabel: 'Silence at start',
+        audioPauseBetweenSentencesLabel: 'Pause between sentences',
+        audioMidSentencePauseLabel: 'Mid-sentence pause (commas/clauses)',
+        audioPauseAfterWordLabel: 'Pause after every word',
+        audioPauseWordSentenceLabel: 'Pause between word & sentence',
+        settingsDataManagementTitle: 'Data Management',
+        settingsExportBackup: 'Export Backup',
+        settingsImportBackup: 'Import Backup',
+        settingsResetData: 'Reset All Data',
+        progressTitle: 'Next Up!',
+        progressSubtitle: 'Focus on the next step that grows your mastery.',
+        deckProgressTitle: 'Pack Progress',
+        deckResetStats: 'Reset Stats',
+        newPackTitle: 'New Pack',
+        newPackChooseLibrary: 'Choose from library',
+        newPackCreateManual: 'Create Word Pack (manual)',
+        newPackImportJson: 'Import Word Pack (json)',
+        deckModalCreateTitle: 'Create a Word Pack',
+        deckModalImportTitle: 'Import a Word Pack',
+        deckModalCreateTab: 'Create',
+        deckModalImportTab: 'Import Pack',
+        deckNameLabel: 'Word Pack Name',
+        deckNamePlaceholder: 'e.g. Spanish Basics',
+        deckNameEditPlaceholder: 'Pack name',
+        deckLanguageLabel: 'Language',
+        languageEnglishUS: 'English (US)',
+        languageEnglishUK: 'English (UK)',
+        languageSpanish: 'Spanish',
+        languageFrench: 'French',
+        languageGerman: 'German',
+        languageItalian: 'Italian',
+        deckDictationLabel: 'Dictation Text or Word List (optional)',
+        deckDictationPlaceholder: 'Paste full dictation text, or wrap a list in { } like: {apple, banana; ocean: The ocean is calm}.',
+        deckDictationEditPlaceholder: 'Enter the full dictation passage.',
+        deckDictationTip: 'Tip: Use { } to paste a list. Inside the braces, separate words with commas/semicolons, or use word-sentence pairs like "ocean: The ocean is calm; breeze / A light breeze blew."',
+        deckDictationSaveHint: 'Saving updates words and sentences to match the text.',
+        actionCancel: 'Cancel',
+        actionSave: 'Save',
+        deckCreateAction: 'Create Pack',
+        deckImportHint: 'Import a compatible word pack JSON file to add it to your collection.',
+        deckImportChooseFile: 'Choose Pack File',
+        deckImportPasteClipboard: 'Paste JSON from clipboard',
+        deckImportPasteLabel: 'Paste pack as JSON',
+        deckImportPastePlaceholder: '{"name":"My Pack","lang":"en-US","text":"First sentence. Second sentence.","cards":[{"word":"example","sentence":"First sentence."}]}',
+        deckImportPastedAction: 'Import Pasted Pack',
+        cardsManageTitle: 'Manage Cards',
+        cardsAddNew: 'Add a new word',
+        cardWordLabel: 'Word',
+        cardSentenceLabel: 'Sentence',
+        cardAudioLabel: 'Audio URL',
+        cardWordPlaceholder: 'Word to spell',
+        cardSentencePlaceholder: 'Sentence (optional)',
+        cardAudioPlaceholder: 'Audio URL (optional)',
+        cardsAddAction: 'Add Card',
+        cardEditTitle: 'Edit Card',
+        deckActionsTitle: 'Pack Actions',
+        deckActionsPractice: 'Practice now',
+        deckActionsProgress: 'This pack progress statistics',
+        deckActionsEdit: 'Edit Word pack',
+        deckActionsExport: 'Export',
+        deckEditOptionsTitle: 'Edit Word pack',
+        deckEditOptionsMeta: 'Edit Name/Language',
+        deckEditOptionsDictation: 'Edit Dictation Text',
+        deckEditOptionsCards: 'Edit Words / Sentences',
+        deckExportTitle: 'Export Word pack',
+        deckExportDownload: 'Download Word Pack (JSON)',
+        deckExportShare: 'Share Word Pack (JSON)',
+        backupExportTitle: 'Export Backup',
+        backupExportDownload: 'Download Backup (JSON)',
+        backupExportShare: 'Share Backup (JSON)',
+        practiceOptionsTitle: 'Practice Options',
+        practiceOptionsStart: 'Start challenge',
+        deckMetaTitle: 'Edit Name/Language',
+        deckTextTitle: 'Edit Dictation Text',
+        languageFilterAll: 'All languages',
+        languageFilterLabel: 'Language filter',
+        audioStatusNotSupported: 'Not Supported in this Browser',
+        audioStatusNotAvailable: 'Not available',
+        audioStatusReady: 'Engine Ready',
+        audioStatusVoicesEmpty: 'Voices Empty (Try Chrome/Safari)',
+        audioNotSupportedAlert: 'Your browser does not support Audio. Please try Chrome or Safari.',
+        audioTestSentence: 'This is a test of the audio system.',
+        alertNoCardsSelected: 'No cards available in the selected packs.',
+        alertSelectPack: 'Select at least one pack to practice.',
+        alertNoSessionItems: 'No session items available right now.',
+        confirmEndSession: 'End this practice session early?',
+        practiceWelcomeTitle: 'Welcome to SpellCraft',
+        practiceWelcomeSubtitle: 'Choose a starting point to set up your first pack.',
+        practiceWelcomeSample: 'Try a sample pack',
+        practiceWelcomePaste: 'Paste list',
+        practiceWelcomeRestore: 'Restore backup',
+        practiceNoPacksTitle: 'No packs in this language',
+        practiceNoPacksSubtitle: 'Try a different language filter to see your packs.',
+        practiceChangeLanguageFilter: 'Change language filter',
+        practiceAllSessionsCompleted: 'All sessions completed',
+        practiceStartSession: 'Start session {index}',
+        practiceStartTodaySession: "Start today’s session",
+        practiceSessionLabel: 'Session {current} of {total}',
+        practiceSessionTodayLabel: 'Today’s session',
+        practiceMinimumLabel: '{label} minimum',
+        practiceAllSessionsDone: 'You completed all planned sessions for today.',
+        practiceNoPacksDue: 'No packs due today.',
+        practiceEstimatedLabel: 'Estimated: {metrics}',
+        practiceGoToPacks: 'Go to Packs',
+        practiceProgressLabel: 'Progress',
+        practiceEndSession: 'End Session',
+        practiceHint: 'Hint: starts with',
+        practiceProgressAllLearned: '100% known, mastering {percent}%',
+        practiceProgressLearning: 'Learning {learning}% • Learned {learned}%',
+        practiceProgressLearnedOnly: 'Learned {learned}%',
+        practiceCompletedTitle: 'Completed',
+        practiceCompletedSubtitle: 'You finished this session.',
+        practiceAccuracy: 'Accuracy',
+        practiceTime: 'Time',
+        practiceMore: 'Practice More',
+        practiceTroubleWords: 'Practice trouble words',
+        dictationTextNotice: 'Dictation text with {count} {sentenceLabel}. Listen once, then continue to sentence practice.',
+        dictationSentenceNotice: 'Dictation sentence {current} of {total}. Listen and type the full sentence.',
+        dictationNoticeSentenceLabel: { one: 'sentence', other: 'sentences' },
+        inputTypeSentence: 'Type sentence here',
+        inputTypeWord: 'Type word here',
+        practiceNext: 'Next',
+        practiceCheck: 'Check',
+        ariaPlayAudio: 'Play audio',
+        dictationAudioOnce: 'Audio plays once. Tap Next to continue.',
+        dictationFirstListen: 'First listen is playing.',
+        dictationRepeatsLeft: 'Repeats left: {count}',
+        dictationNoRepeats: 'No repeats left.',
+        feedbackPositive: 'Correct!',
+        feedbackKeepGoing: 'Keep going!',
+        feedbackReviewSpelling: 'Review the correct spelling below.',
+        feedbackCorrectWord: 'Correct word:',
+        feedbackWrittenWord: 'Written word:',
+        feedbackTryAgain: 'Try again',
+        feedbackNextWord: 'Next word',
+        dictationSentenceCorrect: 'Sentence correct!',
+        dictationSentenceCheck: 'Sentence check',
+        dictationSentencePraise: 'Nice work finishing that dictation.',
+        dictationSentenceReview: 'Review these words: <strong>{words}</strong>.',
+        dictationSentenceReviewFallback: 'Check the sentence again',
+        feedbackCorrectSentence: 'Correct sentence:',
+        feedbackWrittenSentence: 'Written sentence:',
+        dictationScoreLabel: 'Score',
+        feedbackNextSentence: 'Next sentence',
+        dictationTextCorrect: 'Text correct!',
+        dictationTextCheck: 'Text check',
+        dictationTextPraise: 'Great work completing the full dictation.',
+        dictationTextReview: 'Review the highlighted differences below.',
+        feedbackCorrectText: 'Correct text:',
+        feedbackWrittenText: 'Written text:',
+        feedbackFinish: 'Finish',
+        deckListEmpty: 'No packs yet.<br>Click "+ New Pack" to create one.',
+        deckListNoMatch: 'No packs match this language filter.',
+        deckListDictationLabel: ' • Dictation text',
+        deckListDueLabel: { one: 'due', other: 'due' },
+        deckListDetails: 'Details',
+        progressNoData: 'No data yet.',
+        progressNoDataFiltered: 'No data for this language filter.',
+        progressMasteryTitle: 'Mastery',
+        progressMastered: 'Mastered',
+        progressDueToday: 'Due today',
+        progressTroubleCount: 'Trouble count',
+        progressTroubleTitle: 'Trouble words',
+        progressTroubleHint: 'Tackle these to level up your mastery.',
+        progressAverageLabel: 'Avg {value}',
+        progressErrorsLabel: { one: '{count} error', other: '{count} errors' },
+        progressNoTrouble: 'No trouble words yet. Keep practicing!',
+        progressPracticeTrouble: 'Practice trouble words',
+        deckModalNoCards: 'No cards yet',
+        deckMetaEmptyName: "Pack name can't be empty.",
+        deckResetConfirm: 'Reset stats for "{name}"? This will mark all words as new.',
+        deckShareCopied: 'Word pack JSON copied to clipboard.',
+        deckShareTitleFallback: 'Word Pack',
+        backupShareTitle: 'SpellCraft Backup JSON',
+        deckDeleteConfirm: 'Delete "{name}"? This cannot be undone.',
+        cardEmptyWord: "Word can't be empty.",
+        deckProgressTitleLabel: '{name} Progress',
+        deckProgressNoCards: 'No cards yet.',
+        deckProgressTotalWords: 'Total words',
+        deckProgressNew: 'New',
+        deckProgressTrouble: 'Trouble',
+        deckProgressLearning: 'Learning',
+        deckProgressLearned: 'Learned',
+        deckProgressMastered: 'Mastered',
+        deckProgressAvgTime: 'Average response time (s)',
+        deckProgressErrorsLabel: 'Errors',
+        deckProgressTroubleTitle: 'Trouble Words',
+        deckProgressPracticeTrouble: '🪄 Practice trouble words',
+        deckProgressPracticeTroubleDisabled: '🪄 Practice trouble words',
+        formatNever: 'Never',
+        formatNotAvailable: 'N/A',
+        practiceOptionWordLabel: 'Practice word spelling',
+        practiceOptionWordDesc: 'Spell individual words as you hear them.',
+        practiceOptionDictationLabel: 'Practice dictation text',
+        practiceOptionDictationDesc: 'Listen to the full text, then spell each sentence.',
+        practiceOptionsEmpty: 'No practice options available yet.',
+        practiceOptionsEmptySelection: 'No practice items available for this selection.',
+        practiceOptionsTitleSuffix: '{name} practice',
+        importedPackName: 'Imported Pack',
+        importClipboardUnavailable: 'Clipboard access is not available.',
+        importClipboardEmpty: 'Clipboard is empty.',
+        importClipboardInvalid: 'Clipboard does not contain valid pack JSON.',
+        importPastePrompt: 'Paste pack JSON first.',
+        importInvalidPack: 'Invalid pack JSON',
+        importInvalidFile: 'Invalid file',
+        importInvalidPackFile: 'Invalid pack file',
+        backupShareCopied: 'Backup JSON copied to clipboard.',
+        deckShareTitleFallback: 'Paquete de palabras',
+        backupShareTitle: 'Respaldo JSON de SpellCraft',
+        resetAppConfirm: 'Delete all data? This cannot be undone.',
+        sessionTargetMinutesHint: 'Target minutes for one Today session.',
+        sessionTargetWordsHint: 'Target number of words per session (including dictation).',
+        sessionTargetPacksHint: 'Target number of packs per session.',
+        sessionTargetAria: 'Session target {type}',
+        formatSessionWord: { one: '{count} word', other: '{count} words' },
+        formatSessionMinute: { one: '{count} minute', other: '{count} minutes' },
+        formatSessionPack: { one: '{count} pack', other: '{count} packs' },
+        formatSessionCard: { one: '{count} card', other: '{count} cards' },
+        formatSessionSentence: { one: '{count} dictation sentence', other: '{count} dictation sentences' },
+        formatSessionDictationText: 'dictation text',
+        formatSessionNoItems: 'No items',
+        practicePreviewDictationText: 'Dictation text',
+        practicePreviewDictationSentence: 'Dictation sentence',
+        practicePreviewTypeDictation: 'Dictation',
+        practicePreviewTypeWord: 'Word',
+        practicePreviewWord: 'Word',
+        practicePreviewUnknownPack: 'Unknown pack',
+        positiveFeedback: ['Nice work!', 'Great job!', 'You got it!', 'Nailed it!', 'Smooth!']
+    },
+    es: {
+        appTagline: 'Haz que la ortografía se sienta como un juego',
+        appIconAlt: 'Icono de la app SpellCraft',
+        navToday: 'Hoy',
+        navPacks: 'Paquetes',
+        navProgress: 'Progreso',
+        navSettings: 'Ajustes',
+        navBack: '← Volver',
+        packsTitle: 'Mis paquetes de palabras',
+        packsNew: '+ Nuevo paquete',
+        settingsLanguageTitle: 'Idioma',
+        settingsAppLanguageLabel: 'Idioma de la app',
+        appLanguageUseFilter: 'Usar idioma del filtro',
+        appLanguageEnglish: 'Inglés',
+        appLanguageSpanish: 'Español',
+        appLanguageGerman: 'Alemán',
+        settingsLearningTitle: 'Aprendizaje',
+        settingsAutoplayAudio: 'Reproducir audio automáticamente',
+        settingsBlockSuggestions: 'Bloquear sugerencias del teclado',
+        settingsAnswerStrictness: 'Estrictez de respuesta',
+        settingsStrict: 'Estricto',
+        settingsLenient: 'Flexible',
+        settingsTimerStart: 'Inicio del temporizador',
+        settingsTimerShow: 'Al mostrar',
+        settingsTimerAudio: 'Al audio',
+        settingsDictationRepeats: 'Repeticiones de dictado',
+        settingsRepeatsNone: 'Sin repeticiones',
+        settingsRepeats1: '1 repetición',
+        settingsRepeats2: '2 repeticiones',
+        settingsRepeats3: '3 repeticiones',
+        settingsRepeatsHint: 'Las oraciones de dictado se reproducen una vez automáticamente. Las repeticiones son reproducciones extra después de la primera.',
+        settingsPronounceTextPunctuation: 'Pronunciar puntuación en práctica de texto completo',
+        settingsPronounceSentencePunctuation: 'Pronunciar puntuación en práctica de oraciones',
+        settingsPronounceHint: 'Al activarlo, el dictado dirá “coma”, “punto” y otra puntuación en voz alta.',
+        settingsSessionTarget: 'Objetivo de sesión (mínimo)',
+        sessionTargetMinutes: 'Minutos',
+        sessionTargetWords: 'Palabras',
+        sessionTargetPacks: 'Paquetes de palabras',
+        sessionTargetHint: 'Establece el tamaño mínimo para una sesión de Hoy.',
+        settingsAudioDiagnosticsTitle: 'Diagnóstico de audio',
+        settingsAudioDiagnosticsHint: 'Si el audio no funciona, revisa aquí.',
+        audioStatusChecking: 'Comprobando...',
+        settingsVoiceMode: 'Modo de voz',
+        settingsVoiceModeAuto: 'Automático (coincidir idioma del paquete)',
+        settingsVoiceModeFixed: 'Fijo (usar la voz seleccionada)',
+        settingsVoiceModeHint: 'El modo automático elige una voz que coincida con el idioma del paquete (p. ej., paquetes en español usan voces en español).',
+        settingsSystemVoice: 'Voz del sistema',
+        settingsLoadingVoices: 'Cargando voces...',
+        settingsTestAudio: 'Probar audio',
+        settingsAudioSpeedTitle: 'Ajustes de velocidad de audio',
+        settingsAudioSpeedHint: 'Estos controles solo aplican a ejercicios específicos.',
+        audioSpeedTextToggle: 'Ajustes de velocidad — texto completo',
+        audioSpeedSentenceToggle: 'Ajustes de velocidad — oraciones',
+        audioSpeedWordToggle: 'Ajustes de velocidad — palabras',
+        audioSpeedLabel: 'Velocidad',
+        audioSilenceStartLabel: 'Silencio al inicio',
+        audioPauseBetweenSentencesLabel: 'Pausa entre oraciones',
+        audioMidSentencePauseLabel: 'Pausa en medio de la oración (comas/cláusulas)',
+        audioPauseAfterWordLabel: 'Pausa después de cada palabra',
+        audioPauseWordSentenceLabel: 'Pausa entre palabra y oración',
+        settingsDataManagementTitle: 'Gestión de datos',
+        settingsExportBackup: 'Exportar respaldo',
+        settingsImportBackup: 'Importar respaldo',
+        settingsResetData: 'Restablecer todos los datos',
+        progressTitle: '¡Siguiente!',
+        progressSubtitle: 'Concéntrate en el siguiente paso que mejora tu dominio.',
+        deckProgressTitle: 'Progreso del paquete',
+        deckResetStats: 'Restablecer estadísticas',
+        newPackTitle: 'Nuevo paquete',
+        newPackChooseLibrary: 'Elegir de la biblioteca',
+        newPackCreateManual: 'Crear paquete (manual)',
+        newPackImportJson: 'Importar paquete (json)',
+        deckModalCreateTitle: 'Crear un paquete de palabras',
+        deckModalImportTitle: 'Importar un paquete de palabras',
+        deckModalCreateTab: 'Crear',
+        deckModalImportTab: 'Importar paquete',
+        deckNameLabel: 'Nombre del paquete',
+        deckNamePlaceholder: 'p. ej., Básicos de español',
+        deckNameEditPlaceholder: 'Nombre del paquete',
+        deckLanguageLabel: 'Idioma',
+        languageEnglishUS: 'Inglés (EE. UU.)',
+        languageEnglishUK: 'Inglés (RU)',
+        languageSpanish: 'Español',
+        languageFrench: 'Francés',
+        languageGerman: 'Alemán',
+        languageItalian: 'Italiano',
+        deckDictationLabel: 'Texto de dictado o lista de palabras (opcional)',
+        deckDictationPlaceholder: 'Pega el texto completo o envuelve una lista con { } como: {manzana, banana; océano: El océano está en calma}.',
+        deckDictationEditPlaceholder: 'Ingresa el pasaje completo de dictado.',
+        deckDictationTip: 'Consejo: usa { } para pegar una lista. Dentro de las llaves, separa palabras con comas/puntos y coma o usa pares palabra-oración como "océano: El océano está en calma; brisa / Sopla una brisa ligera".',
+        deckDictationSaveHint: 'Guardar actualiza palabras y oraciones para que coincidan con el texto.',
+        actionCancel: 'Cancelar',
+        actionSave: 'Guardar',
+        deckCreateAction: 'Crear paquete',
+        deckImportHint: 'Importa un archivo JSON compatible para añadirlo a tu colección.',
+        deckImportChooseFile: 'Elegir archivo de paquete',
+        deckImportPasteClipboard: 'Pegar JSON del portapapeles',
+        deckImportPasteLabel: 'Pegar paquete como JSON',
+        deckImportPastePlaceholder: '{"name":"Mi paquete","lang":"es-ES","text":"Primera oración. Segunda oración.","cards":[{"word":"ejemplo","sentence":"Primera oración."}]}',
+        deckImportPastedAction: 'Importar paquete pegado',
+        cardsManageTitle: 'Administrar tarjetas',
+        cardsAddNew: 'Añadir una nueva palabra',
+        cardWordLabel: 'Palabra',
+        cardSentenceLabel: 'Oración',
+        cardAudioLabel: 'URL de audio',
+        cardWordPlaceholder: 'Palabra a deletrear',
+        cardSentencePlaceholder: 'Oración (opcional)',
+        cardAudioPlaceholder: 'URL de audio (opcional)',
+        cardsAddAction: 'Añadir tarjeta',
+        cardEditTitle: 'Editar tarjeta',
+        deckActionsTitle: 'Acciones del paquete',
+        deckActionsPractice: 'Practicar ahora',
+        deckActionsProgress: 'Estadísticas de progreso del paquete',
+        deckActionsEdit: 'Editar paquete',
+        deckActionsExport: 'Exportar',
+        deckEditOptionsTitle: 'Editar paquete',
+        deckEditOptionsMeta: 'Editar nombre/idioma',
+        deckEditOptionsDictation: 'Editar texto de dictado',
+        deckEditOptionsCards: 'Editar palabras / oraciones',
+        deckExportTitle: 'Exportar paquete',
+        deckExportDownload: 'Descargar paquete (JSON)',
+        deckExportShare: 'Compartir paquete (JSON)',
+        backupExportTitle: 'Exportar respaldo',
+        backupExportDownload: 'Descargar respaldo (JSON)',
+        backupExportShare: 'Compartir respaldo (JSON)',
+        practiceOptionsTitle: 'Opciones de práctica',
+        practiceOptionsStart: 'Iniciar desafío',
+        deckMetaTitle: 'Editar nombre/idioma',
+        deckTextTitle: 'Editar texto de dictado',
+        languageFilterAll: 'Todos los idiomas',
+        languageFilterLabel: 'Filtro de idioma',
+        audioStatusNotSupported: 'No compatible con este navegador',
+        audioStatusNotAvailable: 'No disponible',
+        audioStatusReady: 'Motor listo',
+        audioStatusVoicesEmpty: 'Voces vacías (prueba Chrome/Safari)',
+        audioNotSupportedAlert: 'Tu navegador no admite audio. Prueba Chrome o Safari.',
+        audioTestSentence: 'Esta es una prueba del sistema de audio.',
+        alertNoCardsSelected: 'No hay tarjetas disponibles en los paquetes seleccionados.',
+        alertSelectPack: 'Selecciona al menos un paquete para practicar.',
+        alertNoSessionItems: 'No hay elementos de sesión disponibles ahora.',
+        confirmEndSession: '¿Terminar esta sesión de práctica antes de tiempo?',
+        practiceWelcomeTitle: 'Bienvenido a SpellCraft',
+        practiceWelcomeSubtitle: 'Elige un punto de inicio para configurar tu primer paquete.',
+        practiceWelcomeSample: 'Probar un paquete de muestra',
+        practiceWelcomePaste: 'Pegar lista',
+        practiceWelcomeRestore: 'Restaurar respaldo',
+        practiceNoPacksTitle: 'No hay paquetes en este idioma',
+        practiceNoPacksSubtitle: 'Prueba otro filtro de idioma para ver tus paquetes.',
+        practiceChangeLanguageFilter: 'Cambiar filtro de idioma',
+        practiceAllSessionsCompleted: 'Todas las sesiones completadas',
+        practiceStartSession: 'Iniciar sesión {index}',
+        practiceStartTodaySession: 'Iniciar sesión de hoy',
+        practiceSessionLabel: 'Sesión {current} de {total}',
+        practiceSessionTodayLabel: 'Sesión de hoy',
+        practiceMinimumLabel: 'Mínimo {label}',
+        practiceAllSessionsDone: 'Completaste todas las sesiones planificadas para hoy.',
+        practiceNoPacksDue: 'No hay paquetes pendientes hoy.',
+        practiceEstimatedLabel: 'Estimado: {metrics}',
+        practiceGoToPacks: 'Ir a paquetes',
+        practiceProgressLabel: 'Progreso',
+        practiceEndSession: 'Terminar sesión',
+        practiceHint: 'Pista: empieza con',
+        practiceProgressAllLearned: '100% conocido, dominando {percent}%',
+        practiceProgressLearning: 'Aprendiendo {learning}% • Aprendidas {learned}%',
+        practiceProgressLearnedOnly: 'Aprendidas {learned}%',
+        practiceCompletedTitle: 'Completado',
+        practiceCompletedSubtitle: 'Terminaste esta sesión.',
+        practiceAccuracy: 'Precisión',
+        practiceTime: 'Tiempo',
+        practiceMore: 'Practicar más',
+        practiceTroubleWords: 'Practicar palabras difíciles',
+        dictationTextNotice: 'Texto de dictado con {count} {sentenceLabel}. Escucha una vez y luego continúa con la práctica de oraciones.',
+        dictationSentenceNotice: 'Oración de dictado {current} de {total}. Escucha y escribe la oración completa.',
+        dictationNoticeSentenceLabel: { one: 'oración', other: 'oraciones' },
+        inputTypeSentence: 'Escribe la oración aquí',
+        inputTypeWord: 'Escribe la palabra aquí',
+        practiceNext: 'Siguiente',
+        practiceCheck: 'Comprobar',
+        ariaPlayAudio: 'Reproducir audio',
+        dictationAudioOnce: 'El audio se reproduce una vez. Toca Siguiente para continuar.',
+        dictationFirstListen: 'La primera escucha está en reproducción.',
+        dictationRepeatsLeft: 'Repeticiones restantes: {count}',
+        dictationNoRepeats: 'No quedan repeticiones.',
+        feedbackPositive: '¡Correcto!',
+        feedbackKeepGoing: '¡Sigue así!',
+        feedbackReviewSpelling: 'Revisa la ortografía correcta debajo.',
+        feedbackCorrectWord: 'Palabra correcta:',
+        feedbackWrittenWord: 'Palabra escrita:',
+        feedbackTryAgain: 'Intentar de nuevo',
+        feedbackNextWord: 'Siguiente palabra',
+        dictationSentenceCorrect: '¡Oración correcta!',
+        dictationSentenceCheck: 'Revisión de oración',
+        dictationSentencePraise: 'Buen trabajo al completar el dictado.',
+        dictationSentenceReview: 'Revisa estas palabras: <strong>{words}</strong>.',
+        dictationSentenceReviewFallback: 'Revisa la oración nuevamente',
+        feedbackCorrectSentence: 'Oración correcta:',
+        feedbackWrittenSentence: 'Oración escrita:',
+        dictationScoreLabel: 'Puntuación',
+        feedbackNextSentence: 'Siguiente oración',
+        dictationTextCorrect: '¡Texto correcto!',
+        dictationTextCheck: 'Revisión de texto',
+        dictationTextPraise: 'Excelente trabajo completando el dictado completo.',
+        dictationTextReview: 'Revisa las diferencias resaltadas abajo.',
+        feedbackCorrectText: 'Texto correcto:',
+        feedbackWrittenText: 'Texto escrito:',
+        feedbackFinish: 'Finalizar',
+        deckListEmpty: 'Aún no hay paquetes.<br>Haz clic en "+ Nuevo paquete" para crear uno.',
+        deckListNoMatch: 'No hay paquetes que coincidan con este filtro de idioma.',
+        deckListDictationLabel: ' • Texto de dictado',
+        deckListDueLabel: { one: 'pendiente', other: 'pendientes' },
+        deckListDetails: 'Detalles',
+        progressNoData: 'Aún no hay datos.',
+        progressNoDataFiltered: 'No hay datos para este filtro de idioma.',
+        progressMasteryTitle: 'Dominio',
+        progressMastered: 'Dominado',
+        progressDueToday: 'Vencen hoy',
+        progressTroubleCount: 'Cantidad de dificultades',
+        progressTroubleTitle: 'Palabras difíciles',
+        progressTroubleHint: 'Aborda estas para subir tu dominio.',
+        progressAverageLabel: 'Prom {value}',
+        progressErrorsLabel: { one: '{count} error', other: '{count} errores' },
+        progressNoTrouble: 'Aún no hay palabras difíciles. ¡Sigue practicando!',
+        progressPracticeTrouble: 'Practicar palabras difíciles',
+        deckModalNoCards: 'Aún no hay tarjetas',
+        deckMetaEmptyName: 'El nombre del paquete no puede estar vacío.',
+        deckResetConfirm: '¿Restablecer estadísticas de "{name}"? Esto marcará todas las palabras como nuevas.',
+        deckShareCopied: 'JSON del paquete copiado al portapapeles.',
+        deckDeleteConfirm: '¿Eliminar "{name}"? Esto no se puede deshacer.',
+        cardEmptyWord: 'La palabra no puede estar vacía.',
+        deckProgressTitleLabel: 'Progreso de {name}',
+        deckProgressNoCards: 'Aún no hay tarjetas.',
+        deckProgressTotalWords: 'Total de palabras',
+        deckProgressNew: 'Nuevas',
+        deckProgressTrouble: 'Dificultad',
+        deckProgressLearning: 'Aprendiendo',
+        deckProgressLearned: 'Aprendidas',
+        deckProgressMastered: 'Dominadas',
+        deckProgressAvgTime: 'Tiempo promedio de respuesta (s)',
+        deckProgressErrorsLabel: 'Errores',
+        deckProgressTroubleTitle: 'Palabras difíciles',
+        deckProgressPracticeTrouble: '🪄 Practicar palabras difíciles',
+        deckProgressPracticeTroubleDisabled: '🪄 Practicar palabras difíciles',
+        formatNever: 'Nunca',
+        formatNotAvailable: 'N/D',
+        practiceOptionWordLabel: 'Practicar ortografía de palabras',
+        practiceOptionWordDesc: 'Deletrea palabras individuales mientras las escuchas.',
+        practiceOptionDictationLabel: 'Practicar texto de dictado',
+        practiceOptionDictationDesc: 'Escucha el texto completo y luego escribe cada oración.',
+        practiceOptionsEmpty: 'Aún no hay opciones de práctica disponibles.',
+        practiceOptionsEmptySelection: 'No hay elementos de práctica disponibles para esta selección.',
+        practiceOptionsTitleSuffix: 'Práctica de {name}',
+        importedPackName: 'Paquete importado',
+        importClipboardUnavailable: 'El acceso al portapapeles no está disponible.',
+        importClipboardEmpty: 'El portapapeles está vacío.',
+        importClipboardInvalid: 'El portapapeles no contiene JSON de paquete válido.',
+        importPastePrompt: 'Pega primero el JSON del paquete.',
+        importInvalidPack: 'JSON de paquete no válido',
+        importInvalidFile: 'Archivo no válido',
+        importInvalidPackFile: 'Archivo de paquete no válido',
+        backupShareCopied: 'JSON de respaldo copiado al portapapeles.',
+        resetAppConfirm: '¿Eliminar todos los datos? Esto no se puede deshacer.',
+        sessionTargetMinutesHint: 'Minutos objetivo para una sesión de Hoy.',
+        sessionTargetWordsHint: 'Número objetivo de palabras por sesión (incluye dictado).',
+        sessionTargetPacksHint: 'Número objetivo de paquetes por sesión.',
+        sessionTargetAria: 'Objetivo de sesión {type}',
+        formatSessionWord: { one: '{count} palabra', other: '{count} palabras' },
+        formatSessionMinute: { one: '{count} minuto', other: '{count} minutos' },
+        formatSessionPack: { one: '{count} paquete', other: '{count} paquetes' },
+        formatSessionCard: { one: '{count} tarjeta', other: '{count} tarjetas' },
+        formatSessionSentence: { one: '{count} oración de dictado', other: '{count} oraciones de dictado' },
+        formatSessionDictationText: 'texto de dictado',
+        formatSessionNoItems: 'Sin elementos',
+        practicePreviewDictationText: 'Texto de dictado',
+        practicePreviewDictationSentence: 'Oración de dictado',
+        practicePreviewTypeDictation: 'Dictado',
+        practicePreviewTypeWord: 'Palabra',
+        practicePreviewWord: 'Palabra',
+        practicePreviewUnknownPack: 'Paquete desconocido',
+        positiveFeedback: ['¡Buen trabajo!', '¡Gran trabajo!', '¡Lo lograste!', '¡Impecable!', '¡Genial!']
+    },
+    de: {
+        appTagline: 'Mach das Buchstabieren zum Spiel',
+        appIconAlt: 'SpellCraft-App-Symbol',
+        navToday: 'Heute',
+        navPacks: 'Pakete',
+        navProgress: 'Fortschritt',
+        navSettings: 'Einstellungen',
+        navBack: '← Zurück',
+        packsTitle: 'Meine Wortpakete',
+        packsNew: '+ Neues Paket',
+        settingsLanguageTitle: 'Sprache',
+        settingsAppLanguageLabel: 'App-Sprache',
+        appLanguageUseFilter: 'Sprache aus dem Filter verwenden',
+        appLanguageEnglish: 'Englisch',
+        appLanguageSpanish: 'Spanisch',
+        appLanguageGerman: 'Deutsch',
+        settingsLearningTitle: 'Lernen',
+        settingsAutoplayAudio: 'Audio automatisch abspielen',
+        settingsBlockSuggestions: 'Tastaturvorschläge blockieren',
+        settingsAnswerStrictness: 'Antwortstrenge',
+        settingsStrict: 'Streng',
+        settingsLenient: 'Nachsichtig',
+        settingsTimerStart: 'Timerstart',
+        settingsTimerShow: 'Beim Anzeigen',
+        settingsTimerAudio: 'Beim Audio',
+        settingsDictationRepeats: 'Diktat-Wiederholungen',
+        settingsRepeatsNone: 'Keine Wiederholungen',
+        settingsRepeats1: '1 Wiederholung',
+        settingsRepeats2: '2 Wiederholungen',
+        settingsRepeats3: '3 Wiederholungen',
+        settingsRepeatsHint: 'Diktatsätze werden automatisch einmal abgespielt. Wiederholungen sind zusätzliche Abspiele nach dem ersten.',
+        settingsPronounceTextPunctuation: 'Interpunktion im Volltext-Training sprechen',
+        settingsPronounceSentencePunctuation: 'Interpunktion im Satz-Training sprechen',
+        settingsPronounceHint: 'Wenn aktiviert, sagt das Diktat „Komma“, „Punkt“ und andere Satzzeichen laut.',
+        settingsSessionTarget: 'Sitzungsziel (Minimum)',
+        sessionTargetMinutes: 'Minuten',
+        sessionTargetWords: 'Wörter',
+        sessionTargetPacks: 'Wortpakete',
+        sessionTargetHint: 'Lege die Mindestgröße für eine Heute-Sitzung fest.',
+        settingsAudioDiagnosticsTitle: 'Audio-Diagnose',
+        settingsAudioDiagnosticsHint: 'Wenn Audio nicht funktioniert, prüfe hier.',
+        audioStatusChecking: 'Prüfen...',
+        settingsVoiceMode: 'Stimmenmodus',
+        settingsVoiceModeAuto: 'Auto (Pack-Sprache matchen)',
+        settingsVoiceModeFixed: 'Fixiert (gewählte Stimme verwenden)',
+        settingsVoiceModeHint: 'Der Auto-Modus wählt eine Stimme passend zur Packsprache (z. B. Spanisch-Pakete nutzen spanische Stimmen).',
+        settingsSystemVoice: 'Systemstimme',
+        settingsLoadingVoices: 'Stimmen werden geladen...',
+        settingsTestAudio: 'Audio testen',
+        settingsAudioSpeedTitle: 'Audio-Geschwindigkeit',
+        settingsAudioSpeedHint: 'Diese Regler gelten nur für bestimmte Übungen.',
+        audioSpeedTextToggle: 'Audio-Geschwindigkeit — Volltext',
+        audioSpeedSentenceToggle: 'Audio-Geschwindigkeit — Sätze',
+        audioSpeedWordToggle: 'Audio-Geschwindigkeit — Wörter',
+        audioSpeedLabel: 'Geschwindigkeit',
+        audioSilenceStartLabel: 'Stille zu Beginn',
+        audioPauseBetweenSentencesLabel: 'Pause zwischen Sätzen',
+        audioMidSentencePauseLabel: 'Pause in der Satzmitte (Kommas/Klauseln)',
+        audioPauseAfterWordLabel: 'Pause nach jedem Wort',
+        audioPauseWordSentenceLabel: 'Pause zwischen Wort und Satz',
+        settingsDataManagementTitle: 'Datenverwaltung',
+        settingsExportBackup: 'Backup exportieren',
+        settingsImportBackup: 'Backup importieren',
+        settingsResetData: 'Alle Daten zurücksetzen',
+        progressTitle: 'Als Nächstes!',
+        progressSubtitle: 'Konzentriere dich auf den nächsten Schritt, der deine Meisterschaft steigert.',
+        deckProgressTitle: 'Paketfortschritt',
+        deckResetStats: 'Statistiken zurücksetzen',
+        newPackTitle: 'Neues Paket',
+        newPackChooseLibrary: 'Aus Bibliothek wählen',
+        newPackCreateManual: 'Wortpaket erstellen (manuell)',
+        newPackImportJson: 'Wortpaket importieren (json)',
+        deckModalCreateTitle: 'Wortpaket erstellen',
+        deckModalImportTitle: 'Wortpaket importieren',
+        deckModalCreateTab: 'Erstellen',
+        deckModalImportTab: 'Paket importieren',
+        deckNameLabel: 'Name des Wortpakets',
+        deckNamePlaceholder: 'z. B. Spanische Grundlagen',
+        deckNameEditPlaceholder: 'Paketname',
+        deckLanguageLabel: 'Sprache',
+        languageEnglishUS: 'Englisch (US)',
+        languageEnglishUK: 'Englisch (UK)',
+        languageSpanish: 'Spanisch',
+        languageFrench: 'Französisch',
+        languageGerman: 'Deutsch',
+        languageItalian: 'Italienisch',
+        deckDictationLabel: 'Diktattext oder Wortliste (optional)',
+        deckDictationPlaceholder: 'Füge den vollen Diktattext ein oder nutze { } für eine Liste, z. B.: {Apfel, Banane; Ozean: Der Ozean ist ruhig}.',
+        deckDictationEditPlaceholder: 'Gib den vollständigen Diktattext ein.',
+        deckDictationTip: 'Tipp: Nutze { } für eine Liste. Trenne Wörter mit Kommas/Semikolons oder verwende Wort-Satz-Paare wie „Ozean: Der Ozean ist ruhig; Brise / Eine leichte Brise wehte.“',
+        deckDictationSaveHint: 'Speichern aktualisiert Wörter und Sätze passend zum Text.',
+        actionCancel: 'Abbrechen',
+        actionSave: 'Speichern',
+        deckCreateAction: 'Paket erstellen',
+        deckImportHint: 'Importiere eine kompatible Wortpaket-JSON-Datei, um sie deiner Sammlung hinzuzufügen.',
+        deckImportChooseFile: 'Paketdatei wählen',
+        deckImportPasteClipboard: 'JSON aus der Zwischenablage einfügen',
+        deckImportPasteLabel: 'Paket als JSON einfügen',
+        deckImportPastePlaceholder: '{"name":"Mein Paket","lang":"de-DE","text":"Erster Satz. Zweiter Satz.","cards":[{"word":"beispiel","sentence":"Erster Satz."}]}',
+        deckImportPastedAction: 'Eingefügtes Paket importieren',
+        cardsManageTitle: 'Karten verwalten',
+        cardsAddNew: 'Neues Wort hinzufügen',
+        cardWordLabel: 'Wort',
+        cardSentenceLabel: 'Satz',
+        cardAudioLabel: 'Audio-URL',
+        cardWordPlaceholder: 'Wort zum Buchstabieren',
+        cardSentencePlaceholder: 'Satz (optional)',
+        cardAudioPlaceholder: 'Audio-URL (optional)',
+        cardsAddAction: 'Karte hinzufügen',
+        cardEditTitle: 'Karte bearbeiten',
+        deckActionsTitle: 'Paketaktionen',
+        deckActionsPractice: 'Jetzt üben',
+        deckActionsProgress: 'Fortschrittsstatistik des Pakets',
+        deckActionsEdit: 'Wortpaket bearbeiten',
+        deckActionsExport: 'Exportieren',
+        deckEditOptionsTitle: 'Wortpaket bearbeiten',
+        deckEditOptionsMeta: 'Name/Sprache bearbeiten',
+        deckEditOptionsDictation: 'Diktattext bearbeiten',
+        deckEditOptionsCards: 'Wörter/Sätze bearbeiten',
+        deckExportTitle: 'Wortpaket exportieren',
+        deckExportDownload: 'Wortpaket herunterladen (JSON)',
+        deckExportShare: 'Wortpaket teilen (JSON)',
+        backupExportTitle: 'Backup exportieren',
+        backupExportDownload: 'Backup herunterladen (JSON)',
+        backupExportShare: 'Backup teilen (JSON)',
+        practiceOptionsTitle: 'Übungsoptionen',
+        practiceOptionsStart: 'Herausforderung starten',
+        deckMetaTitle: 'Name/Sprache bearbeiten',
+        deckTextTitle: 'Diktattext bearbeiten',
+        languageFilterAll: 'Alle Sprachen',
+        languageFilterLabel: 'Sprachfilter',
+        audioStatusNotSupported: 'In diesem Browser nicht unterstützt',
+        audioStatusNotAvailable: 'Nicht verfügbar',
+        audioStatusReady: 'Engine bereit',
+        audioStatusVoicesEmpty: 'Keine Stimmen (Chrome/Safari versuchen)',
+        audioNotSupportedAlert: 'Dein Browser unterstützt Audio nicht. Bitte Chrome oder Safari verwenden.',
+        audioTestSentence: 'Dies ist ein Test des Audiosystems.',
+        alertNoCardsSelected: 'Keine Karten in den ausgewählten Paketen verfügbar.',
+        alertSelectPack: 'Wähle mindestens ein Paket zum Üben aus.',
+        alertNoSessionItems: 'Momentan sind keine Sitzungsinhalte verfügbar.',
+        confirmEndSession: 'Diese Übungssitzung vorzeitig beenden?',
+        practiceWelcomeTitle: 'Willkommen bei SpellCraft',
+        practiceWelcomeSubtitle: 'Wähle einen Startpunkt, um dein erstes Paket einzurichten.',
+        practiceWelcomeSample: 'Beispielpaket testen',
+        practiceWelcomePaste: 'Liste einfügen',
+        practiceWelcomeRestore: 'Backup wiederherstellen',
+        practiceNoPacksTitle: 'Keine Pakete in dieser Sprache',
+        practiceNoPacksSubtitle: 'Probiere einen anderen Sprachfilter, um deine Pakete zu sehen.',
+        practiceChangeLanguageFilter: 'Sprachfilter ändern',
+        practiceAllSessionsCompleted: 'Alle Sitzungen abgeschlossen',
+        practiceStartSession: 'Sitzung {index} starten',
+        practiceStartTodaySession: 'Heutige Sitzung starten',
+        practiceSessionLabel: 'Sitzung {current} von {total}',
+        practiceSessionTodayLabel: 'Heutige Sitzung',
+        practiceMinimumLabel: 'Minimum {label}',
+        practiceAllSessionsDone: 'Du hast alle geplanten Sitzungen für heute abgeschlossen.',
+        practiceNoPacksDue: 'Heute sind keine Pakete fällig.',
+        practiceEstimatedLabel: 'Geschätzt: {metrics}',
+        practiceGoToPacks: 'Zu Paketen',
+        practiceProgressLabel: 'Fortschritt',
+        practiceEndSession: 'Sitzung beenden',
+        practiceHint: 'Tipp: beginnt mit',
+        practiceProgressAllLearned: '100% bekannt, Meisterschaft {percent}%',
+        practiceProgressLearning: 'Lernend {learning}% • Gelernt {learned}%',
+        practiceProgressLearnedOnly: 'Gelernt {learned}%',
+        practiceCompletedTitle: 'Abgeschlossen',
+        practiceCompletedSubtitle: 'Du hast diese Sitzung beendet.',
+        practiceAccuracy: 'Genauigkeit',
+        practiceTime: 'Zeit',
+        practiceMore: 'Mehr üben',
+        practiceTroubleWords: 'Schwierige Wörter üben',
+        dictationTextNotice: 'Diktattext mit {count} {sentenceLabel}. Einmal anhören, dann mit Satzübung fortfahren.',
+        dictationSentenceNotice: 'Diktatsatz {current} von {total}. Anhören und den ganzen Satz tippen.',
+        dictationNoticeSentenceLabel: { one: 'Satz', other: 'Sätze' },
+        inputTypeSentence: 'Satz hier eingeben',
+        inputTypeWord: 'Wort hier eingeben',
+        practiceNext: 'Weiter',
+        practiceCheck: 'Prüfen',
+        ariaPlayAudio: 'Audio abspielen',
+        dictationAudioOnce: 'Audio wird einmal abgespielt. Tippe auf Weiter, um fortzufahren.',
+        dictationFirstListen: 'Erstes Anhören läuft.',
+        dictationRepeatsLeft: 'Verbleibende Wiederholungen: {count}',
+        dictationNoRepeats: 'Keine Wiederholungen übrig.',
+        feedbackPositive: 'Richtig!',
+        feedbackKeepGoing: 'Weiter so!',
+        feedbackReviewSpelling: 'Überprüfe unten die korrekte Schreibweise.',
+        feedbackCorrectWord: 'Richtiges Wort:',
+        feedbackWrittenWord: 'Geschriebenes Wort:',
+        feedbackTryAgain: 'Noch einmal',
+        feedbackNextWord: 'Nächstes Wort',
+        dictationSentenceCorrect: 'Satz korrekt!',
+        dictationSentenceCheck: 'Satzprüfung',
+        dictationSentencePraise: 'Gut gemacht beim Diktat.',
+        dictationSentenceReview: 'Überprüfe diese Wörter: <strong>{words}</strong>.',
+        dictationSentenceReviewFallback: 'Überprüfe den Satz erneut',
+        feedbackCorrectSentence: 'Richtiger Satz:',
+        feedbackWrittenSentence: 'Geschriebener Satz:',
+        dictationScoreLabel: 'Punktzahl',
+        feedbackNextSentence: 'Nächster Satz',
+        dictationTextCorrect: 'Text korrekt!',
+        dictationTextCheck: 'Textprüfung',
+        dictationTextPraise: 'Super Arbeit beim vollständigen Diktat.',
+        dictationTextReview: 'Überprüfe die markierten Unterschiede unten.',
+        feedbackCorrectText: 'Richtiger Text:',
+        feedbackWrittenText: 'Geschriebener Text:',
+        feedbackFinish: 'Fertig',
+        deckListEmpty: 'Noch keine Pakete.<br>Klicke auf "+ Neues Paket", um eins zu erstellen.',
+        deckListNoMatch: 'Keine Pakete entsprechen diesem Sprachfilter.',
+        deckListDictationLabel: ' • Diktattext',
+        deckListDueLabel: { one: 'fällig', other: 'fällig' },
+        deckListDetails: 'Details',
+        progressNoData: 'Noch keine Daten.',
+        progressNoDataFiltered: 'Keine Daten für diesen Sprachfilter.',
+        progressMasteryTitle: 'Meisterschaft',
+        progressMastered: 'Gemeistert',
+        progressDueToday: 'Heute fällig',
+        progressTroubleCount: 'Schwierigkeiten',
+        progressTroubleTitle: 'Schwierige Wörter',
+        progressTroubleHint: 'Bearbeite diese, um deine Meisterschaft zu steigern.',
+        progressAverageLabel: 'Ø {value}',
+        progressErrorsLabel: { one: '{count} Fehler', other: '{count} Fehler' },
+        progressNoTrouble: 'Noch keine schwierigen Wörter. Weiter üben!',
+        progressPracticeTrouble: 'Schwierige Wörter üben',
+        deckModalNoCards: 'Noch keine Karten',
+        deckMetaEmptyName: 'Der Paketname darf nicht leer sein.',
+        deckResetConfirm: 'Statistiken für "{name}" zurücksetzen? Dadurch werden alle Wörter als neu markiert.',
+        deckShareCopied: 'Wortpaket-JSON in die Zwischenablage kopiert.',
+        deckShareTitleFallback: 'Wortpaket',
+        backupShareTitle: 'SpellCraft-Backup JSON',
+        deckDeleteConfirm: '„{name}“ löschen? Das kann nicht rückgängig gemacht werden.',
+        cardEmptyWord: 'Das Wort darf nicht leer sein.',
+        deckProgressTitleLabel: '{name} Fortschritt',
+        deckProgressNoCards: 'Noch keine Karten.',
+        deckProgressTotalWords: 'Gesamtwörter',
+        deckProgressNew: 'Neu',
+        deckProgressTrouble: 'Schwierig',
+        deckProgressLearning: 'Lernend',
+        deckProgressLearned: 'Gelernt',
+        deckProgressMastered: 'Gemeistert',
+        deckProgressAvgTime: 'Durchschnittliche Antwortzeit (s)',
+        deckProgressErrorsLabel: 'Fehler',
+        deckProgressTroubleTitle: 'Schwierige Wörter',
+        deckProgressPracticeTrouble: '🪄 Schwierige Wörter üben',
+        deckProgressPracticeTroubleDisabled: '🪄 Schwierige Wörter üben',
+        formatNever: 'Nie',
+        formatNotAvailable: 'k. A.',
+        practiceOptionWordLabel: 'Wortschreibung üben',
+        practiceOptionWordDesc: 'Einzelne Wörter buchstabieren, während du sie hörst.',
+        practiceOptionDictationLabel: 'Diktattext üben',
+        practiceOptionDictationDesc: 'Höre den gesamten Text und schreibe dann jeden Satz.',
+        practiceOptionsEmpty: 'Noch keine Übungsoptionen verfügbar.',
+        practiceOptionsEmptySelection: 'Keine Übungseinträge für diese Auswahl verfügbar.',
+        practiceOptionsTitleSuffix: '{name} üben',
+        importedPackName: 'Importiertes Paket',
+        importClipboardUnavailable: 'Zwischenablagezugriff ist nicht verfügbar.',
+        importClipboardEmpty: 'Die Zwischenablage ist leer.',
+        importClipboardInvalid: 'Die Zwischenablage enthält kein gültiges Paket-JSON.',
+        importPastePrompt: 'Bitte zuerst Paket-JSON einfügen.',
+        importInvalidPack: 'Ungültiges Paket-JSON',
+        importInvalidFile: 'Ungültige Datei',
+        importInvalidPackFile: 'Ungültige Paketdatei',
+        backupShareCopied: 'Backup-JSON in die Zwischenablage kopiert.',
+        resetAppConfirm: 'Alle Daten löschen? Das kann nicht rückgängig gemacht werden.',
+        sessionTargetMinutesHint: 'Zielminuten für eine Heute-Sitzung.',
+        sessionTargetWordsHint: 'Zielanzahl Wörter pro Sitzung (inklusive Diktat).',
+        sessionTargetPacksHint: 'Zielanzahl Pakete pro Sitzung.',
+        sessionTargetAria: 'Sitzungsziel {type}',
+        formatSessionWord: { one: '{count} Wort', other: '{count} Wörter' },
+        formatSessionMinute: { one: '{count} Minute', other: '{count} Minuten' },
+        formatSessionPack: { one: '{count} Paket', other: '{count} Pakete' },
+        formatSessionCard: { one: '{count} Karte', other: '{count} Karten' },
+        formatSessionSentence: { one: '{count} Diktatsatz', other: '{count} Diktatsätze' },
+        formatSessionDictationText: 'Diktattext',
+        formatSessionNoItems: 'Keine Elemente',
+        practicePreviewDictationText: 'Diktattext',
+        practicePreviewDictationSentence: 'Diktatsatz',
+        practicePreviewTypeDictation: 'Diktat',
+        practicePreviewTypeWord: 'Wort',
+        practicePreviewWord: 'Wort',
+        practicePreviewUnknownPack: 'Unbekanntes Paket',
+        positiveFeedback: ['Gut gemacht!', 'Tolle Arbeit!', 'Du hast es!', 'Perfekt!', 'Geschmeidig!']
+    }
+};
+
+const UI_LANGUAGES = ['en', 'es', 'de'];
+
+function interpolate(template, vars = {}) {
+    return String(template).replace(/\{(\w+)\}/g, (match, key) => {
+        if (vars[key] === undefined) return match;
+        return String(vars[key]);
+    });
+}
+
+function getUiLanguageFromFilter(filter) {
+    const normalized = normalizeLangCode(filter);
+    if (!normalized || normalized === 'all') return 'en';
+    const base = normalized.split('-')[0];
+    return UI_LANGUAGES.includes(base) ? base : 'en';
+}
+
+function getUiLanguage() {
+    const preference = app?.settings?.appLanguage || 'filter';
+    if (preference === 'filter') {
+        return getUiLanguageFromFilter(app?.settings?.languageFilter);
+    }
+    return UI_LANGUAGES.includes(preference) ? preference : 'en';
+}
+
+function t(key, vars = {}) {
+    const lang = getUiLanguage();
+    const entry = TRANSLATIONS[lang]?.[key] ?? TRANSLATIONS.en?.[key];
+    if (Array.isArray(entry)) {
+        return entry;
+    }
+    if (typeof entry === 'function') {
+        return entry(vars);
+    }
+    if (entry === undefined) return key;
+    return interpolate(entry, vars);
+}
+
+function tPlural(key, count, vars = {}) {
+    const lang = getUiLanguage();
+    const forms = TRANSLATIONS[lang]?.[key] ?? TRANSLATIONS.en?.[key];
+    if (!forms || typeof forms !== 'object') {
+        return t(key, { ...vars, count });
+    }
+    const rule = new Intl.PluralRules(lang).select(count);
+    const template = forms[rule] || forms.other || forms.one;
+    return interpolate(template, { ...vars, count });
+}
+
+function applyTranslations() {
+    document.documentElement.lang = getUiLanguage();
+    document.title = 'SpellCraft';
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+        const key = el.dataset.i18n;
+        if (!key) return;
+        el.innerHTML = t(key);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+        const key = el.dataset.i18nPlaceholder;
+        if (!key) return;
+        el.placeholder = t(key);
+    });
+    document.querySelectorAll('[data-i18n-aria-label]').forEach((el) => {
+        const key = el.dataset.i18nAriaLabel;
+        if (!key) return;
+        el.setAttribute('aria-label', t(key));
+    });
+    document.querySelectorAll('[data-i18n-alt]').forEach((el) => {
+        const key = el.dataset.i18nAlt;
+        if (!key) return;
+        el.setAttribute('alt', t(key));
+    });
+    document.querySelectorAll('[data-status-key]').forEach((el) => {
+        const key = el.dataset.statusKey;
+        if (!key) return;
+        el.textContent = t(key);
+    });
+    updateSessionTargetUI(app?.settings?.sessionTargetType || 'minutes');
+}
+
+function refreshLocalizedViews() {
+    updateLanguageFilterOptions();
+    updateLanguageFilterUI();
+    renderDeckList();
+    renderProgress();
+    if (!currentSession.isActive) {
+        renderPracticeHome();
+    }
+    if (document.getElementById('view-deck-progress')?.classList.contains('active') && activeDeckIdForEdit) {
+        renderDeckProgress(activeDeckIdForEdit);
+    }
+    if (document.getElementById('cards-modal')?.classList.contains('open')) {
+        renderCardList();
+    }
+    if (activePracticeDeckId) {
+        const deck = app.decks.find(d => d.id === activePracticeDeckId);
+        if (deck) renderPracticeOptions(deck);
+    }
+}
+
 function getLanguageFlag(lang) {
     const normalized = normalizeLangCode(lang);
     if (!normalized || normalized === 'all') return '🌐';
@@ -1725,14 +2695,14 @@ function getLanguageFlag(lang) {
 
 function getLanguageLabel(lang) {
     const normalized = normalizeLangCode(lang);
-    if (!normalized || normalized === 'all') return 'All languages';
+    if (!normalized || normalized === 'all') return t('languageFilterAll');
     const labels = {
-        'en-us': 'English (US)',
-        'en-gb': 'English (UK)',
-        'es-es': 'Spanish',
-        'fr-fr': 'French',
-        'de-de': 'German',
-        'it-it': 'Italian'
+        'en-us': t('languageEnglishUS'),
+        'en-gb': t('languageEnglishUK'),
+        'es-es': t('languageSpanish'),
+        'fr-fr': t('languageFrench'),
+        'de-de': t('languageGerman'),
+        'it-it': t('languageItalian')
     };
     return labels[normalized] || lang;
 }
@@ -1765,7 +2735,7 @@ function updateLanguageFilterOptions() {
     if (!menu) return;
     const filter = app.settings.languageFilter || 'all';
     const options = [
-        { value: 'all', label: 'All languages', flag: '🌐' },
+        { value: 'all', label: t('languageFilterAll'), flag: '🌐' },
         ...getAvailableLanguages()
     ];
     menu.innerHTML = options.map(option => `
@@ -1818,6 +2788,11 @@ function setLanguageFilter(value) {
     saveData();
     updateLanguageFilterUI();
     updateLanguageFilterOptions();
+    if ((app.settings.appLanguage || 'filter') === 'filter') {
+        applyTranslations();
+        refreshLocalizedViews();
+        return;
+    }
     renderDeckList();
     renderProgress();
     if (!currentSession.isActive) {
@@ -2051,7 +3026,7 @@ function buildSentenceSegmentsWithPunctuation(sentence, pauseMs, pauseTwoWordsMs
 
 function speakSegments(segments, lang, profile = AUDIO_PROFILE_DEFAULTS) {
     if (!('speechSynthesis' in window)) {
-        alert("Your browser does not support Audio. Please try Chrome or Safari.");
+        alert(t('audioNotSupportedAlert'));
         return;
     }
 
@@ -2192,7 +3167,7 @@ function testAudio() {
         lang = app.decks.length > 0 ? app.decks[0].lang : lang;
     }
     const profile = getAudioProfile('sentence');
-    speak("This is a test of the audio system.", lang, profile);
+    speak(t('audioTestSentence'), lang, profile);
 }
 
 // --- PERSISTENCE ---
@@ -2224,6 +3199,7 @@ function loadData() {
             deck.dictationStatsReady = deck.cards.some(card => (card.correctCount || 0) + (card.incorrectCount || 0) > 0);
         }
     });
+    applyTranslations();
     renderDeckList();
     updateLanguageFilterOptions();
     updateLanguageFilterUI();
@@ -2269,7 +3245,7 @@ function startPractice(deckIds) {
     }
 
     if (entries.length === 0) {
-        alert("No cards available in the selected packs.");
+        alert(t('alertNoCardsSelected'));
         return;
     }
 
@@ -2298,7 +3274,7 @@ function startPracticeEntries(entries, selectedDecks = []) {
 function startPracticeFromSelection() {
     const selected = currentSession.selectedDeckIds || [];
     if (!selected.length) {
-        alert("Select at least one pack to practice.");
+        alert(t('alertSelectPack'));
         return;
     }
     startPractice(selected);
@@ -2311,7 +3287,7 @@ function startTodayPractice() {
 function startTodaySession() {
     const sessionPlan = getTodaySessionPlan();
     if (sessionPlan.isComplete || sessionPlan.currentEntries.length === 0) {
-        alert("No session items available right now.");
+        alert(t('alertNoSessionItems'));
         return;
     }
     const selectedDecks = [];
@@ -2398,7 +3374,7 @@ function addSampleDeck() {
 
 function endPracticeSession() {
     if (!currentSession.isActive) return;
-    if (!confirm("End this practice session early?")) return;
+    if (!confirm(t('confirmEndSession'))) return;
     const remainingDeckIds = new Set(currentSession.queue.map(entry => entry.deck.id));
     currentSession.decks.forEach(deck => {
         deck.uncompleted = remainingDeckIds.has(deck.id);
@@ -2628,15 +3604,15 @@ function getSessionDeckSummaries(entries) {
 function formatSessionDeckSummary(summary) {
     const parts = [];
     if (summary.wordCount) {
-        parts.push(`${summary.wordCount} word${summary.wordCount === 1 ? '' : 's'}`);
+        parts.push(tPlural('formatSessionWord', summary.wordCount, { count: summary.wordCount }));
     }
     if (summary.dictationText) {
-        parts.push('dictation text');
+        parts.push(t('formatSessionDictationText'));
     }
     if (summary.dictationSentences) {
-        parts.push(`${summary.dictationSentences} dictation sentence${summary.dictationSentences === 1 ? '' : 's'}`);
+        parts.push(tPlural('formatSessionSentence', summary.dictationSentences, { count: summary.dictationSentences }));
     }
-    return parts.length ? parts.join(' • ') : 'No items';
+    return parts.length ? parts.join(' • ') : t('formatSessionNoItems');
 }
 
 function getTodaySessionPlan(now = Date.now()) {
@@ -2681,14 +3657,14 @@ function renderPracticeHome() {
     if (app.decks.length === 0) {
         container.innerHTML = `
             <div class="card" style="text-align:center;">
-                <h2 style="margin-top:0;">Welcome to SpellCraft</h2>
+                <h2 style="margin-top:0;">${t('practiceWelcomeTitle')}</h2>
                 <p style="color: var(--text-sub); margin-bottom:1.5rem;">
-                    Choose a starting point to set up your first pack.
+                    ${t('practiceWelcomeSubtitle')}
                 </p>
                 <div style="display:grid; gap:var(--space-1);">
-                    <button class="btn-primary" onclick="addSampleDeck()">Try a sample pack</button>
-                    <button class="btn-secondary" onclick="openPasteList()">Paste list</button>
-                    <button class="btn-secondary" onclick="triggerBackupRestore()">Restore backup</button>
+                    <button class="btn-primary" onclick="addSampleDeck()">${t('practiceWelcomeSample')}</button>
+                    <button class="btn-secondary" onclick="openPasteList()">${t('practiceWelcomePaste')}</button>
+                    <button class="btn-secondary" onclick="triggerBackupRestore()">${t('practiceWelcomeRestore')}</button>
                 </div>
             </div>
         `;
@@ -2698,11 +3674,11 @@ function renderPracticeHome() {
     if (filteredDecks.length === 0) {
         container.innerHTML = `
             <div class="card" style="text-align:center;">
-                <h2 style="margin-top:0;">No packs in this language</h2>
+                <h2 style="margin-top:0;">${t('practiceNoPacksTitle')}</h2>
                 <p style="color: var(--text-sub); margin-bottom:1.5rem;">
-                    Try a different language filter to see your packs.
+                    ${t('practiceNoPacksSubtitle')}
                 </p>
-                <button class="btn-secondary" onclick="toggleLanguageFilter()">Change language filter</button>
+                <button class="btn-secondary" onclick="toggleLanguageFilter()">${t('practiceChangeLanguageFilter')}</button>
             </div>
         `;
         return;
@@ -2715,50 +3691,50 @@ function renderPracticeHome() {
         const deck = summary.deck;
         const progress = getDeckLearningProgress(deck);
         const progressLabel = progress.allLearned
-            ? `100% known, mastering ${progress.masteryPercent}%`
+            ? t('practiceProgressAllLearned', { percent: progress.masteryPercent })
             : (progress.learnedPercent === 0
-                ? `Learning ${progress.learningPercent}% • Learned ${progress.learnedPercent}%`
-                : `Learned ${progress.learnedPercent}%`);
+                ? t('practiceProgressLearning', { learning: progress.learningPercent, learned: progress.learnedPercent })
+                : t('practiceProgressLearnedOnly', { learned: progress.learnedPercent }));
         return `
             <div class="deck-item">
                 <div class="deck-info">
                     <h3>${deck.name}</h3>
-                    <small>${deck.lang} • ${deck.cards.length} cards • ${formatSessionDeckSummary(summary)}</small>
+                    <small>${deck.lang} • ${tPlural('formatSessionCard', deck.cards.length, { count: deck.cards.length })} • ${formatSessionDeckSummary(summary)}</small>
                     <small class="deck-progress">${progressLabel}</small>
                 </div>
             </div>
         `;
     }).join('');
     const sessionLabel = sessionPlan.totalSessions > 1 && !sessionPlan.isComplete
-        ? `Session ${sessionPlan.sessionIndex + 1} of ${sessionPlan.totalSessions}`
-        : 'Today’s session';
+        ? t('practiceSessionLabel', { current: sessionPlan.sessionIndex + 1, total: sessionPlan.totalSessions })
+        : t('practiceSessionTodayLabel');
     const sessionMetrics = sessionPlan.currentEntries.length
-        ? `~${Math.max(1, Math.round(sessionPlan.metrics.totalMinutes))} min • ${sessionPlan.metrics.totalWords} words • ${sessionPlan.metrics.deckCount} pack${sessionPlan.metrics.deckCount === 1 ? '' : 's'}`
+        ? `~${tPlural('formatSessionMinute', Math.max(1, Math.round(sessionPlan.metrics.totalMinutes)), { count: Math.max(1, Math.round(sessionPlan.metrics.totalMinutes)) })} • ${tPlural('formatSessionWord', sessionPlan.metrics.totalWords, { count: sessionPlan.metrics.totalWords })} • ${tPlural('formatSessionPack', sessionPlan.metrics.deckCount, { count: sessionPlan.metrics.deckCount })}`
         : '';
     const sessionTargetLabel = sessionPlan.targetType === 'minutes'
-        ? `${sessionPlan.targetValue} minute${sessionPlan.targetValue === 1 ? '' : 's'}`
+        ? tPlural('formatSessionMinute', sessionPlan.targetValue, { count: sessionPlan.targetValue })
         : sessionPlan.targetType === 'words'
-            ? `${sessionPlan.targetValue} word${sessionPlan.targetValue === 1 ? '' : 's'}`
-            : `${sessionPlan.targetValue} pack${sessionPlan.targetValue === 1 ? '' : 's'}`;
+            ? tPlural('formatSessionWord', sessionPlan.targetValue, { count: sessionPlan.targetValue })
+            : tPlural('formatSessionPack', sessionPlan.targetValue, { count: sessionPlan.targetValue });
 
     container.innerHTML = `
         <button class="btn-primary" ${isStartDisabled ? 'disabled' : ''} onclick="startTodaySession()">
-            ${sessionPlan.isComplete ? 'All sessions completed' : `Start ${sessionPlan.totalSessions > 1 ? 'session ' + (sessionPlan.sessionIndex + 1) : 'today’s session'}`}
+            ${sessionPlan.isComplete ? t('practiceAllSessionsCompleted') : (sessionPlan.totalSessions > 1 ? t('practiceStartSession', { index: sessionPlan.sessionIndex + 1 }) : t('practiceStartTodaySession'))}
         </button>
         <div class="card">
             <div class="practice-pack-header">
                 <h3 style="margin:0;">${sessionLabel}</h3>
-                <div class="text-small" style="color:var(--text-sub);">${sessionTargetLabel} minimum</div>
+                <div class="text-small" style="color:var(--text-sub);">${t('practiceMinimumLabel', { label: sessionTargetLabel })}</div>
             </div>
             ${sessionPlan.isComplete
-                ? '<div class="practice-preview-note">You completed all planned sessions for today.</div>'
+                ? `<div class="practice-preview-note">${t('practiceAllSessionsDone')}</div>`
                 : sessionPlan.currentEntries.length === 0
-                    ? '<div class="practice-preview-note">No packs due today.</div>'
+                    ? `<div class="practice-preview-note">${t('practiceNoPacksDue')}</div>`
                     : sessionDeckItems}
-            ${sessionMetrics ? `<div class="practice-preview-note">Estimated: ${sessionMetrics}</div>` : ''}
+            ${sessionMetrics ? `<div class="practice-preview-note">${t('practiceEstimatedLabel', { metrics: sessionMetrics })}</div>` : ''}
         </div>
         <div style="display:grid; gap:var(--space-1);">
-            <button class="btn-secondary" onclick="navTo('words')">Go to Packs</button>
+            <button class="btn-secondary" onclick="navTo('words')">${t('practiceGoToPacks')}</button>
         </div>
     `;
 }
@@ -2776,7 +3752,7 @@ function getHintMarkup(word) {
     const safeWord = String(word).trim();
     const firstLetter = safeWord.charAt(0).toUpperCase();
     const lengthHint = safeWord.split('').map(() => '_').join(' ');
-    return `<div class="practice-hint">Hint: starts with <strong>${firstLetter}</strong> • ${lengthHint}</div>`;
+    return `<div class="practice-hint">${t('practiceHint')} <strong>${firstLetter}</strong> • ${lengthHint}</div>`;
 }
 
 function nextCard() {
@@ -2796,18 +3772,18 @@ function nextCard() {
             troubleEntries
         };
         const troubleButton = troubleEntries.length > 0
-            ? `<button class="btn-secondary" onclick="startTroublePractice()">Practice trouble words</button>`
+            ? `<button class="btn-secondary" onclick="startTroublePractice()">${t('practiceTroubleWords')}</button>`
             : '';
         document.getElementById('practice-container').innerHTML = `
             <div class="card" style="text-align:center">
-                <h2 style="margin-top:0;">Completed</h2>
-                <p style="color:var(--text-sub); margin-bottom:1.5rem;">You finished this session.</p>
+                <h2 style="margin-top:0;">${t('practiceCompletedTitle')}</h2>
+                <p style="color:var(--text-sub); margin-bottom:1.5rem;">${t('practiceCompletedSubtitle')}</p>
                 <div style="display:grid; gap:8px; text-align:left; margin-bottom:1.5rem;">
-                    <div><strong>Accuracy:</strong> ${accuracy}%</div>
-                    <div><strong>Time:</strong> ${formatDuration(durationMs)}</div>
+                    <div><strong>${t('practiceAccuracy')}:</strong> ${accuracy}%</div>
+                    <div><strong>${t('practiceTime')}:</strong> ${formatDuration(durationMs)}</div>
                 </div>
                 <div style="display:grid; gap:var(--space-1);">
-                    <button class="btn-primary" onclick="navTo('practice'); renderPracticeHome();">Practice More</button>
+                    <button class="btn-primary" onclick="navTo('practice'); renderPracticeHome();">${t('practiceMore')}</button>
                     ${troubleButton}
                 </div>
             </div>`;
@@ -2861,20 +3837,23 @@ function nextCard() {
     const dictationNotice = isDictation ? `
         <p class="dictation-notice">
             ${isDictationText
-                ? `Dictation text with ${entry.sentenceCount || 1} sentence${entry.sentenceCount === 1 ? '' : 's'}. Listen once, then continue to sentence practice.`
-                : `Dictation sentence ${entry.sentenceIndex} of ${entry.sentenceCount}. Listen and type the full sentence.`}
+                ? t('dictationTextNotice', {
+                    count: entry.sentenceCount || 1,
+                    sentenceLabel: tPlural('dictationNoticeSentenceLabel', entry.sentenceCount || 1, { count: entry.sentenceCount || 1 })
+                })
+                : t('dictationSentenceNotice', { current: entry.sentenceIndex, total: entry.sentenceCount })}
         </p>
         <div class="dictation-repeat-status" id="dictation-repeat-status"></div>
     ` : '';
     const feedbackMarkup = isDictationText ? '' : '<div class="feedback-area" id="feedback"></div>';
     const inputMarkup = isDictationText
         ? ''
-        : `<input type="text" id="p-input" class="word-input" placeholder="${isDictation ? 'Type sentence here' : 'Type word here'}">`;
+        : `<input type="text" id="p-input" class="word-input" placeholder="${isDictation ? t('inputTypeSentence') : t('inputTypeWord')}">`;
     const actionMarkup = isDictationText
-        ? `<button class="btn-primary practice-action" onclick="advanceDictationTextIntro()">Next</button>`
-        : `<button id="btn-check" class="btn-primary practice-action" onclick="checkAnswer()">Check</button>`;
+        ? `<button class="btn-primary practice-action" onclick="advanceDictationTextIntro()">${t('practiceNext')}</button>`
+        : `<button id="btn-check" class="btn-primary practice-action" onclick="checkAnswer()">${t('practiceCheck')}</button>`;
     const audioButtonMarkup = `
-        <div class="audio-trigger${hasSentence ? ' audio-trigger-inline' : ''}" onclick="playCurrent()" role="button" aria-label="Play audio">
+        <div class="audio-trigger${hasSentence ? ' audio-trigger-inline' : ''}" onclick="playCurrent()" role="button" aria-label="${t('ariaPlayAudio')}">
             <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
         </div>
     `;
@@ -2896,11 +3875,11 @@ function nextCard() {
     const html = `
         <div class="card practice-wrapper">
             <div class="practice-header">
-                <button class="btn-secondary practice-end" onclick="endPracticeSession()">End Session</button>
+                <button class="btn-secondary practice-end" onclick="endPracticeSession()">${t('practiceEndSession')}</button>
             </div>
             <div class="practice-progress">
                 <div class="practice-progress-header">
-                    <span>Progress</span>
+                    <span>${t('practiceProgressLabel')}</span>
                     <span>${currentIndex} / ${totalCount}</span>
                 </div>
                 <div class="progress-track" aria-hidden="true">
@@ -2994,7 +3973,7 @@ function updateDictationRepeatStatus(entry) {
     const playedOnce = Boolean(entry.dictationPlayedOnce);
     if (entry.mode === 'dictation-text') {
         if (statusEl) {
-            statusEl.textContent = 'Audio plays once. Tap Next to continue.';
+            statusEl.textContent = t('dictationAudioOnce');
         }
         if (audioBtn) {
             if (playedOnce) {
@@ -3006,16 +3985,16 @@ function updateDictationRepeatStatus(entry) {
         return;
     }
     if (!playedOnce) {
-        if (statusEl) statusEl.textContent = 'First listen is playing.';
+        if (statusEl) statusEl.textContent = t('dictationFirstListen');
         if (audioBtn) audioBtn.classList.remove('disabled');
         return;
     }
     if (repeatsLeft > 0) {
-        if (statusEl) statusEl.textContent = `Repeats left: ${repeatsLeft}`;
+        if (statusEl) statusEl.textContent = t('dictationRepeatsLeft', { count: repeatsLeft });
         if (audioBtn) audioBtn.classList.remove('disabled');
         return;
     }
-    if (statusEl) statusEl.textContent = 'No repeats left.';
+    if (statusEl) statusEl.textContent = t('dictationNoRepeats');
     if (audioBtn) audioBtn.classList.add('disabled');
 }
 
@@ -3145,13 +4124,7 @@ function checkAnswer() {
     document.getElementById('btn-check').classList.add('hidden');
     input.disabled = true;
     const feedback = document.getElementById('feedback');
-    const positiveFeedback = [
-        'Nice work!',
-        'Great job!',
-        'You got it!',
-        'Nailed it!',
-        'Smooth!'
-    ];
+    const positiveFeedback = t('positiveFeedback');
     const extraPraise = positiveFeedback[Math.floor(Math.random() * positiveFeedback.length)];
     // Update performance statistics
     const card = currentSession.currentCard;
@@ -3183,25 +4156,25 @@ function checkAnswer() {
     const typedValue = input.value ? input.value : '';
     const diffLines = getWordDiffLines(currentSession.currentCard.word, typedValue, app.settings.strictness);
     const feedbackHeader = isCorrect
-        ? `<div class="feedback-positive">Correct!</div><div class="feedback-sub">${extraPraise}</div>`
-        : `<div class="feedback-positive feedback-negative">Keep going!</div><div class="feedback-sub">Review the correct spelling below.</div>`;
+        ? `<div class="feedback-positive">${t('feedbackPositive')}</div><div class="feedback-sub">${extraPraise}</div>`
+        : `<div class="feedback-positive feedback-negative">${t('feedbackKeepGoing')}</div><div class="feedback-sub">${t('feedbackReviewSpelling')}</div>`;
     input.style.color = isCorrect ? 'var(--success)' : 'var(--error)';
     setPracticeFeedbackMode(true);
     feedback.innerHTML = `
         ${feedbackHeader}
         <div class="feedback-block">
             <div class="feedback-line">
-                <span class="feedback-label">Correct word:</span>
+                <span class="feedback-label">${t('feedbackCorrectWord')}</span>
                 <span class="feedback-value">${diffLines.correctMarkup}</span>
             </div>
             <div class="feedback-line">
-                <span class="feedback-label">Written word:</span>
+                <span class="feedback-label">${t('feedbackWrittenWord')}</span>
                 <span class="feedback-value">${diffLines.writtenMarkup}</span>
             </div>
         </div>
         <div class="feedback-actions">
-            ${isCorrect ? '' : '<button class="btn-secondary" onclick="retryCurrentCard()">Try again</button>'}
-            <button class="btn-primary" onclick="advanceWordEntry()">Next word</button>
+            ${isCorrect ? '' : `<button class="btn-secondary" onclick="retryCurrentCard()">${t('feedbackTryAgain')}</button>`}
+            <button class="btn-primary" onclick="advanceWordEntry()">${t('feedbackNextWord')}</button>
         </div>
     `;
 }
@@ -3235,26 +4208,27 @@ function checkDictationAnswer(userRaw) {
     saveData();
     const diffLines = getSentenceDiffLines(correctSentence, userRaw, 'strict');
     const mistakeList = mistakeCards.map(card => card.word).join(', ');
+    const reviewWords = mistakeList || t('dictationSentenceReviewFallback');
     input.style.color = isCorrect ? 'var(--success)' : 'var(--error)';
     setPracticeFeedbackMode(true);
     feedback.innerHTML = `
-        <div class="feedback-positive${isCorrect ? '' : ' feedback-negative'}">${isCorrect ? 'Sentence correct!' : 'Sentence check'}</div>
-        <div class="feedback-sub">${isCorrect ? 'Nice work finishing that dictation.' : `Review these words: <strong>${mistakeList || 'Check the sentence again'}</strong>.`}</div>
+        <div class="feedback-positive${isCorrect ? '' : ' feedback-negative'}">${isCorrect ? t('dictationSentenceCorrect') : t('dictationSentenceCheck')}</div>
+        <div class="feedback-sub">${isCorrect ? t('dictationSentencePraise') : t('dictationSentenceReview', { words: reviewWords })}</div>
         <div class="feedback-block">
             <div class="feedback-line">
-                <span class="feedback-label">Correct sentence:</span>
+                <span class="feedback-label">${t('feedbackCorrectSentence')}</span>
                 <span class="feedback-value">${diffLines.correctMarkup}</span>
             </div>
             <div class="feedback-line">
-                <span class="feedback-label">Written sentence:</span>
+                <span class="feedback-label">${t('feedbackWrittenSentence')}</span>
                 <span class="feedback-value">${diffLines.writtenMarkup}</span>
             </div>
         </div>
-        <div class="dictation-score">Score: <strong>${isCorrect ? '100' : analysis.score}%</strong></div>
+        <div class="dictation-score">${t('dictationScoreLabel')}: <strong>${isCorrect ? '100' : analysis.score}%</strong></div>
         ${isCorrect ? '' : `<ul class="dictation-error-list">${buildDictationErrorListMarkup(analysis)}</ul>`}
         <div class="feedback-actions">
-            ${isCorrect ? '' : '<button class="btn-secondary" onclick="retryCurrentCard()">Try again</button>'}
-            <button class="btn-primary" onclick="advanceCurrentEntry()">Next sentence</button>
+            ${isCorrect ? '' : `<button class="btn-secondary" onclick="retryCurrentCard()">${t('feedbackTryAgain')}</button>`}
+            <button class="btn-primary" onclick="advanceCurrentEntry()">${t('feedbackNextSentence')}</button>
         </div>
     `;
 }
@@ -3289,23 +4263,23 @@ function checkDictationTextAnswer(userRaw) {
     input.style.color = isCorrect ? 'var(--success)' : 'var(--error)';
     setPracticeFeedbackMode(true);
     feedback.innerHTML = `
-        <div class="feedback-positive${isCorrect ? '' : ' feedback-negative'}">${isCorrect ? 'Text correct!' : 'Text check'}</div>
-        <div class="feedback-sub">${isCorrect ? 'Great work completing the full dictation.' : 'Review the highlighted differences below.'}</div>
+        <div class="feedback-positive${isCorrect ? '' : ' feedback-negative'}">${isCorrect ? t('dictationTextCorrect') : t('dictationTextCheck')}</div>
+        <div class="feedback-sub">${isCorrect ? t('dictationTextPraise') : t('dictationTextReview')}</div>
         <div class="feedback-block">
             <div class="feedback-line">
-                <span class="feedback-label">Correct text:</span>
+                <span class="feedback-label">${t('feedbackCorrectText')}</span>
                 <span class="feedback-value">${diffLines.correctMarkup}</span>
             </div>
             <div class="feedback-line">
-                <span class="feedback-label">Written text:</span>
+                <span class="feedback-label">${t('feedbackWrittenText')}</span>
                 <span class="feedback-value">${diffLines.writtenMarkup}</span>
             </div>
         </div>
-        <div class="dictation-score">Score: <strong>${isCorrect ? '100' : analysis.score}%</strong></div>
+        <div class="dictation-score">${t('dictationScoreLabel')}: <strong>${isCorrect ? '100' : analysis.score}%</strong></div>
         ${isCorrect ? '' : `<ul class="dictation-error-list">${buildDictationErrorListMarkup(analysis)}</ul>`}
         <div class="feedback-actions">
-            ${isCorrect ? '' : '<button class="btn-secondary" onclick="retryCurrentCard()">Try again</button>'}
-            <button class="btn-primary" onclick="advanceCurrentEntry()">Finish</button>
+            ${isCorrect ? '' : `<button class="btn-secondary" onclick="retryCurrentCard()">${t('feedbackTryAgain')}</button>`}
+            <button class="btn-primary" onclick="advanceCurrentEntry()">${t('feedbackFinish')}</button>
         </div>
     `;
     mistakeCards.forEach(card => {
@@ -3397,29 +4371,29 @@ function renderDeckList() {
     
     if (app.decks.length === 0) {
         list.innerHTML = `<div style="text-align:center; padding:var(--space-4); color:var(--text-sub);">
-            No packs yet.<br>Click "+ New Pack" to create one.
+            ${t('deckListEmpty')}
         </div>`;
         return;
     }
     if (filteredDecks.length === 0) {
         list.innerHTML = `<div style="text-align:center; padding:var(--space-4); color:var(--text-sub);">
-            No packs match this language filter.
+            ${t('deckListNoMatch')}
         </div>`;
         return;
     }
 
     filteredDecks.forEach(deck => {
         const dueCount = getDueCount(deck);
-        const dictationLabel = isDictationDeck(deck) ? ' • Dictation text' : '';
+        const dictationLabel = isDictationDeck(deck) ? t('deckListDictationLabel') : '';
         const div = document.createElement('div');
         div.className = 'deck-item';
         div.innerHTML = `
             <div class="deck-info">
                 <h3>${deck.name}</h3>
-                <small>${deck.lang} • ${deck.cards.length} cards • ${dueCount} due${dictationLabel}</small>
+                <small>${deck.lang} • ${tPlural('formatSessionCard', deck.cards.length, { count: deck.cards.length })} • ${dueCount} ${tPlural('deckListDueLabel', dueCount, { count: dueCount })}${dictationLabel}</small>
             </div>
             <div style="display:flex; gap:8px;">
-                <button class="btn-primary btn-details" onclick="openDeckActions('${deck.id}')">Details</button>
+                <button class="btn-primary btn-details" onclick="openDeckActions('${deck.id}')">${t('deckListDetails')}</button>
             </div>
         `;
         list.appendChild(div);
@@ -3437,11 +4411,11 @@ function renderProgress() {
     progressTroubleEntries = [];
     const filteredDecks = getFilteredDecks();
     if (app.decks.length === 0) {
-        overviewEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">No data yet.</div>';
+        overviewEl.innerHTML = `<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">${t('progressNoData')}</div>`;
         return;
     }
     if (filteredDecks.length === 0) {
-        overviewEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">No data for this language filter.</div>';
+        overviewEl.innerHTML = `<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">${t('progressNoDataFiltered')}</div>`;
         return;
     }
     let total = 0;
@@ -3472,18 +4446,18 @@ function renderProgress() {
     const troubleCandidates = troubleList.filter(item => item.incorrect > 0 || item.avgTime > 0);
     const troubleCount = troubleCandidates.length;
     let overviewHTML = `
-        <h3 style="margin-top:0;">Mastery</h3>
+        <h3 style="margin-top:0;">${t('progressMasteryTitle')}</h3>
         <div class="progress-metrics">
             <div class="progress-metric">
-                <div class="progress-metric-label">Mastered</div>
+                <div class="progress-metric-label">${t('progressMastered')}</div>
                 <div class="progress-metric-value">${masteryPercent}%</div>
             </div>
             <div class="progress-metric">
-                <div class="progress-metric-label">Due today</div>
+                <div class="progress-metric-label">${t('progressDueToday')}</div>
                 <div class="progress-metric-value">${dueTotal}</div>
             </div>
             <div class="progress-metric">
-                <div class="progress-metric-label">Trouble count</div>
+                <div class="progress-metric-label">${t('progressTroubleCount')}</div>
                 <div class="progress-metric-value">${troubleCount}</div>
             </div>
         </div>
@@ -3496,8 +4470,8 @@ function renderProgress() {
     });
     const topTrouble = troubleCandidates.slice(0,5);
     progressTroubleEntries = topTrouble.map(item => ({ deck: item.deckRef, card: item.cardRef }));
-    let detailsHTML = '<h3 style="margin-top:0;">Trouble words</h3>';
-    detailsHTML += '<p class="text-small" style="color:var(--text-sub);">Tackle these to level up your mastery.</p>';
+    let detailsHTML = `<h3 style="margin-top:0;">${t('progressTroubleTitle')}</h3>`;
+    detailsHTML += `<p class="text-small" style="color:var(--text-sub);">${t('progressTroubleHint')}</p>`;
     if (topTrouble.length > 0) {
         detailsHTML += '<div class="progress-trouble-list">';
         topTrouble.forEach(item => {
@@ -3506,16 +4480,16 @@ function renderProgress() {
                 <div class="progress-trouble-item">
                     <div>
                         <strong>${item.word}</strong>
-                        <div class="text-small" style="color:var(--text-sub);">${item.deck} • ${item.incorrect} errors • Avg ${avgTimeLabel}</div>
+                        <div class="text-small" style="color:var(--text-sub);">${item.deck} • ${tPlural('progressErrorsLabel', item.incorrect, { count: item.incorrect })} • ${t('progressAverageLabel', { value: avgTimeLabel })}</div>
                     </div>
                 </div>
             `;
         });
         detailsHTML += '</div>';
     } else {
-        detailsHTML += '<div class="text-small" style="color:var(--text-sub); margin-bottom:var(--space-2);">No trouble words yet. Keep practicing!</div>';
+        detailsHTML += `<div class="text-small" style="color:var(--text-sub); margin-bottom:var(--space-2);">${t('progressNoTrouble')}</div>`;
     }
-    detailsHTML += `<button class="btn-primary" onclick="startProgressTroublePractice()" ${topTrouble.length ? '' : 'disabled'}>Practice trouble words</button>`;
+    detailsHTML += `<button class="btn-primary" onclick="startProgressTroublePractice()" ${topTrouble.length ? '' : 'disabled'}>${t('progressPracticeTrouble')}</button>`;
     detailsEl.innerHTML = detailsHTML;
 }
 
@@ -3538,7 +4512,7 @@ function openDeckModal(panel = 'create') {
     document.getElementById('new-deck-text').value = '';
     const isImport = panel === 'import';
     if (title) {
-        title.textContent = isImport ? 'Import a Word Pack' : 'Create a Word Pack';
+        title.textContent = isImport ? t('deckModalImportTitle') : t('deckModalCreateTitle');
     }
     if (toggle) {
         toggle.classList.add('hidden');
@@ -3578,26 +4552,26 @@ async function pasteDeckJsonFromClipboard() {
     const textArea = document.getElementById('import-deck-json');
     if (!textArea) return;
     if (!navigator.clipboard?.readText) {
-        alert("Clipboard access is not available.");
+        alert(t('importClipboardUnavailable'));
         return;
     }
     try {
         const raw = await navigator.clipboard.readText();
         const trimmed = raw.trim();
         if (!trimmed) {
-            alert("Clipboard is empty.");
+            alert(t('importClipboardEmpty'));
             return;
         }
         const data = JSON.parse(trimmed);
         const decks = normalizeImportedDecks(data);
         if (!decks.length) {
-            alert("Clipboard does not contain valid pack JSON.");
+            alert(t('importClipboardInvalid'));
             return;
         }
         textArea.value = trimmed;
         focusDeckPaste();
     } catch (err) {
-        alert("Clipboard does not contain valid pack JSON.");
+        alert(t('importClipboardInvalid'));
     }
 }
 function importDeckFromPaste() {
@@ -3605,14 +4579,14 @@ function importDeckFromPaste() {
     if (!textArea) return;
     const raw = textArea.value.trim();
     if (!raw) {
-        alert("Paste pack JSON first.");
+        alert(t('importPastePrompt'));
         return;
     }
     try {
         const data = JSON.parse(raw);
         const decks = normalizeImportedDecks(data);
         if (!decks.length) {
-            alert("Invalid pack JSON");
+            alert(t('importInvalidPack'));
             return;
         }
         app.decks.push(...decks);
@@ -3625,7 +4599,7 @@ function importDeckFromPaste() {
         textArea.value = '';
         closeDeckModal();
     } catch (err) {
-        alert("Invalid pack JSON");
+        alert(t('importInvalidPack'));
     }
 }
 function buildCardEntry(word, sentence = '') {
@@ -3779,7 +4753,7 @@ function populateSentencesFromText(deck) {
 function openDeckActions(deckId) {
     activeDeckIdForEdit = deckId;
     const deck = app.decks.find(d => d.id === deckId);
-    document.getElementById('deck-actions-title').textContent = deck ? deck.name : 'Pack Actions';
+    document.getElementById('deck-actions-title').textContent = deck ? deck.name : t('deckActionsTitle');
     closeDeckEditOptionsModal();
     closeDeckExportOptionsModal();
     document.getElementById('deck-actions-modal').classList.add('open');
@@ -3850,11 +4824,11 @@ function renderPracticeOptions(deck) {
     const noteEl = document.getElementById('practice-options-note');
     const startBtn = document.getElementById('practice-options-start');
     if (!listEl || !titleEl || !noteEl || !startBtn) return;
-    titleEl.textContent = deck ? `${deck.name} practice` : 'Practice options';
+    titleEl.textContent = deck ? t('practiceOptionsTitleSuffix', { name: deck.name }) : t('practiceOptionsTitle');
     listEl.innerHTML = '';
     const options = getDeckPracticeOptions(deck);
     if (!options.length) {
-        listEl.innerHTML = '<div class="text-small" style="color: var(--text-sub);">No practice options available yet.</div>';
+        listEl.innerHTML = `<div class="text-small" style="color: var(--text-sub);">${t('practiceOptionsEmpty')}</div>`;
         noteEl.textContent = '';
         startBtn.disabled = true;
         return;
@@ -3889,7 +4863,7 @@ function startPracticeFromOptions() {
     if (!deck) return;
     const entries = buildPracticeEntriesForMode(deck, selectedPracticeMode);
     if (!entries.length) {
-        alert("No practice items available for this selection.");
+        alert(t('practiceOptionsEmptySelection'));
         return;
     }
     if (isDictationDeck(deck)) {
@@ -3950,7 +4924,7 @@ function saveDeckMeta() {
     const langSelect = document.getElementById('edit-deck-lang');
     const newName = nameInput.value.trim();
     if (!newName) {
-        alert("Pack name can't be empty.");
+        alert(t('deckMetaEmptyName'));
         return;
     }
     deck.name = newName;
@@ -4001,7 +4975,7 @@ function clearDeckCompletion(deckId) {
 function resetDeckStats() {
     const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
     if (!deck) return;
-    if (!confirm(`Reset stats for "${deck.name}"? This will mark all words as new.`)) return;
+    if (!confirm(t('deckResetConfirm', { name: deck.name }))) return;
     deck.cards.forEach(card => {
         card.due = 0;
         card.interval = 0;
@@ -4053,7 +5027,7 @@ async function shareDeckJson() {
     if (navigator.share) {
         try {
             await navigator.share({
-                title: `${deck.name || 'Word Pack'} JSON`,
+                title: `${deck.name || t('deckShareTitleFallback')} JSON`,
                 text: str
             });
         } catch (error) {
@@ -4062,14 +5036,14 @@ async function shareDeckJson() {
             }
         }
     } else {
-        alert('Word pack JSON copied to clipboard.');
+        alert(t('deckShareCopied'));
     }
 }
 
 function deleteDeck() {
     const deck = app.decks.find(d => d.id === activeDeckIdForEdit);
     if (!deck) return;
-    if (!confirm(`Delete "${deck.name}"? This cannot be undone.`)) return;
+    if (!confirm(t('deckDeleteConfirm', { name: deck.name }))) return;
     app.decks = app.decks.filter(d => d.id !== activeDeckIdForEdit);
     currentSession.selectedDeckIds = currentSession.selectedDeckIds.filter(id => id !== activeDeckIdForEdit);
     saveData();
@@ -4088,7 +5062,7 @@ function renderCardList() {
     container.innerHTML = '';
     
     if(deck.cards.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#999; padding:var(--space-3);">No cards yet</div>';
+        container.innerHTML = `<div style="text-align:center; color:#999; padding:var(--space-3);">${t('deckModalNoCards')}</div>`;
         return;
     }
 
@@ -4134,7 +5108,7 @@ function saveCardEdits() {
     const audioInput = document.getElementById('edit-card-audio');
     const nextWord = wordInput.value.trim();
     if (!nextWord) {
-        alert("Word can't be empty.");
+        alert(t('cardEmptyWord'));
         return;
     }
     const card = deck.cards[activeCardIndexForEdit];
@@ -4266,11 +5240,11 @@ function renderDeckProgress(deckId) {
     const titleEl = document.getElementById('deck-progress-title');
     if (!deck || !overviewEl || !detailsEl || !titleEl) return;
     activeDeckIdForEdit = deckId;
-    titleEl.textContent = `${deck.name} Progress`;
+    titleEl.textContent = t('deckProgressTitleLabel', { name: deck.name });
     overviewEl.innerHTML = '';
     detailsEl.innerHTML = '';
     if (deck.cards.length === 0) {
-        overviewEl.innerHTML = '<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">No cards yet.</div>';
+        overviewEl.innerHTML = `<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">${t('deckProgressNoCards')}</div>`;
         navTo('deck-progress');
         return;
     }
@@ -4304,15 +5278,15 @@ function renderDeckProgress(deckId) {
             avgTime: card.avgTime || 0
         });
     });
-    const avgTime = countTime > 0 ? (sumTime / countTime).toFixed(1) : 'N/A';
+    const avgTime = countTime > 0 ? (sumTime / countTime).toFixed(1) : t('formatNotAvailable');
     let overviewHTML = '<table style="width:100%; border-collapse:collapse; font-size:0.95rem;">';
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Total words</th><td style="padding:8px 4px; text-align:right;">${total}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">New</th><td style="padding:8px 4px; text-align:right;">${newWords}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Trouble</th><td style="padding:8px 4px; text-align:right;">${troubleCount}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Learning</th><td style="padding:8px 4px; text-align:right;">${learning}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Learned</th><td style="padding:8px 4px; text-align:right;">${learned}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Mastered</th><td style="padding:8px 4px; text-align:right;">${mastered}</td></tr>`;
-    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">Average response time (s)</th><td style="padding:8px 4px; text-align:right;">${avgTime}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressTotalWords')}</th><td style="padding:8px 4px; text-align:right;">${total}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressNew')}</th><td style="padding:8px 4px; text-align:right;">${newWords}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressTrouble')}</th><td style="padding:8px 4px; text-align:right;">${troubleCount}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressLearning')}</th><td style="padding:8px 4px; text-align:right;">${learning}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressLearned')}</th><td style="padding:8px 4px; text-align:right;">${learned}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressMastered')}</th><td style="padding:8px 4px; text-align:right;">${mastered}</td></tr>`;
+    overviewHTML += `<tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressAvgTime')}</th><td style="padding:8px 4px; text-align:right;">${avgTime}</td></tr>`;
     overviewHTML += '</table>';
     overviewEl.innerHTML = overviewHTML;
     troubleList.sort((a,b) => {
@@ -4323,19 +5297,19 @@ function renderDeckProgress(deckId) {
     deckTroubleEntries = troubleCandidates.map(item => ({ deck, card: item.cardRef }));
     const topTrouble = troubleCandidates.slice(0,10);
     if (topTrouble.length > 0) {
-        let detailsHTML = '<h3 style="margin-top:0;">Trouble Words</h3>';
+        let detailsHTML = `<h3 style="margin-top:0;">${t('deckProgressTroubleTitle')}</h3>`;
         detailsHTML += '<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">';
-        detailsHTML += '<tr><th style="text-align:left; padding:4px;">Word</th><th style="text-align:left; padding:4px;">Errors</th><th style="text-align:right; padding:4px;">Avg time (s)</th></tr>';
+        detailsHTML += `<tr><th style="text-align:left; padding:4px;">${t('cardWordLabel')}</th><th style="text-align:left; padding:4px;">${t('deckProgressErrorsLabel')}</th><th style="text-align:right; padding:4px;">${t('deckProgressAvgTime')}</th></tr>`;
         topTrouble.forEach(item => {
             detailsHTML += `<tr><td style="padding:4px;">${item.word}</td><td style="padding:4px;">${item.incorrect}</td><td style="padding:4px; text-align:right;">${item.avgTime.toFixed ? item.avgTime.toFixed(1) : item.avgTime}</td></tr>`;
         });
         detailsHTML += '</table>';
-        detailsHTML += `<button class="btn-primary" style="margin-top:var(--space-2);" onclick="startDeckTroublePractice()">🪄 Practice trouble words</button>`;
+        detailsHTML += `<button class="btn-primary" style="margin-top:var(--space-2);" onclick="startDeckTroublePractice()">${t('deckProgressPracticeTrouble')}</button>`;
         detailsEl.innerHTML = detailsHTML;
     } else {
         detailsEl.innerHTML = `
-            <div style="padding:var(--space-2); color:var(--text-sub);">No trouble words yet. Keep practicing!</div>
-            <button class="btn-primary" style="margin-top:var(--space-2);" onclick="startDeckTroublePractice()" disabled>🪄 Practice trouble words</button>
+            <div style="padding:var(--space-2); color:var(--text-sub);">${t('progressNoTrouble')}</div>
+            <button class="btn-primary" style="margin-top:var(--space-2);" onclick="startDeckTroublePractice()" disabled>${t('deckProgressPracticeTroubleDisabled')}</button>
         `;
     }
     navTo('deck-progress');
@@ -4423,17 +5397,17 @@ function getTodayPreviewEntries(entries) {
 }
 
 function formatPracticePreviewEntry(entry) {
-    const pack = escapeHtml(entry.deck?.name || 'Unknown pack');
+    const pack = escapeHtml(entry.deck?.name || t('practicePreviewUnknownPack'));
     if (entry.mode === 'dictation-text') {
-        const text = truncatePreviewText(entry.text || 'Dictation text');
-        return { type: 'Dictation', text: escapeHtml(text), pack };
+        const text = truncatePreviewText(entry.text || t('practicePreviewDictationText'));
+        return { type: t('practicePreviewTypeDictation'), text: escapeHtml(text), pack };
     }
     if (entry.mode === 'dictation') {
-        const text = truncatePreviewText(entry.sentence || 'Dictation sentence');
-        return { type: 'Dictation', text: escapeHtml(text), pack };
+        const text = truncatePreviewText(entry.sentence || t('practicePreviewDictationSentence'));
+        return { type: t('practicePreviewTypeDictation'), text: escapeHtml(text), pack };
     }
-    const word = entry.card?.word || 'Word';
-    return { type: 'Word', text: escapeHtml(word), pack };
+    const word = entry.card?.word || t('practicePreviewWord');
+    return { type: t('practicePreviewTypeWord'), text: escapeHtml(word), pack };
 }
 
 function truncatePreviewText(text, limit = 80) {
@@ -4463,9 +5437,9 @@ function createSampleDeck() {
 }
 
 function formatLastPracticed(timestamp) {
-    if (!timestamp) return 'Never';
+    if (!timestamp) return t('formatNever');
     const date = new Date(timestamp);
-    if (Number.isNaN(date.getTime())) return 'Never';
+    if (Number.isNaN(date.getTime())) return t('formatNever');
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
@@ -4486,15 +5460,15 @@ function getDeckPracticeOptions(deck) {
     const options = [
         {
             mode: 'word',
-            label: 'Practice word spelling',
-            description: 'Spell individual words as you hear them.',
+            label: t('practiceOptionWordLabel'),
+            description: t('practiceOptionWordDesc'),
             show: hasWords,
             available: hasWords
         },
         {
             mode: 'dictation',
-            label: 'Practice dictation text',
-            description: 'Listen to the full text, then spell each sentence.',
+            label: t('practiceOptionDictationLabel'),
+            description: t('practiceOptionDictationDesc'),
             show: hasText,
             available: hasText
         }
@@ -5101,7 +6075,7 @@ function normalizeImportedDecks(raw) {
         })).filter(card => card.word) : [];
         const normalizedDeck = {
             id: existingId ? deck.id : generateDeckId(),
-            name: deck.name ? String(deck.name) : 'Imported Pack',
+            name: deck.name ? String(deck.name) : t('importedPackName'),
             lang: deck.lang ? String(deck.lang) : 'en-US',
             cards: normalizedCards,
             uncompleted: Boolean(deck.uncompleted),
@@ -5116,6 +6090,24 @@ function normalizeImportedDecks(raw) {
 
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function updateSessionTargetUI(type) {
+    const hintEl = document.getElementById('setting-session-target-hint');
+    const valueEl = document.getElementById('setting-session-target-value');
+    if (!hintEl || !valueEl) return;
+    const labels = {
+        minutes: t('sessionTargetMinutesHint'),
+        words: t('sessionTargetWordsHint'),
+        packs: t('sessionTargetPacksHint')
+    };
+    const typeLabels = {
+        minutes: t('sessionTargetMinutes'),
+        words: t('sessionTargetWords'),
+        packs: t('sessionTargetPacks')
+    };
+    hintEl.textContent = labels[type] || labels.minutes;
+    valueEl.setAttribute('aria-label', t('sessionTargetAria', { type: typeLabels[type] || typeLabels.minutes }));
 }
 
 function initSettingsListeners() {
@@ -5133,19 +6125,6 @@ function initSettingsListeners() {
             valueEl.textContent = nextValue;
             saveData();
         });
-    };
-
-    const updateSessionTargetUI = (type) => {
-        const hintEl = document.getElementById('setting-session-target-hint');
-        const valueEl = document.getElementById('setting-session-target-value');
-        if (!hintEl || !valueEl) return;
-        const labels = {
-            minutes: 'Target minutes for one Today session.',
-            words: 'Target number of words per session (including dictation).',
-            packs: 'Target number of packs per session.'
-        };
-        hintEl.textContent = labels[type] || labels.minutes;
-        valueEl.setAttribute('aria-label', `Session target ${type}`);
     };
 
     initAudioProfileSlider('dictationText', 'setting-speed-text', 'speed-text-val', 'speed', AUDIO_PROFILE_DEFAULTS.speed);
@@ -5176,6 +6155,17 @@ function initSettingsListeners() {
             btn.setAttribute('aria-expanded', String(isOpen));
         });
     });
+
+    const appLanguageEl = document.getElementById('setting-app-language');
+    if (appLanguageEl) {
+        appLanguageEl.value = app.settings.appLanguage || 'filter';
+        appLanguageEl.addEventListener('change', (e) => {
+            app.settings.appLanguage = e.target.value || 'filter';
+            saveData();
+            applyTranslations();
+            refreshLocalizedViews();
+        });
+    }
 
     const voiceModeEl = document.getElementById('setting-voice-mode');
     if (voiceModeEl) {
@@ -5309,8 +6299,8 @@ async function shareBackupJson() {
         try {
             const canShareFile = navigator.canShare && navigator.canShare({ files: [backupFile] });
             const shareData = canShareFile
-                ? { title: 'SpellCraft Backup JSON', files: [backupFile] }
-                : { title: 'SpellCraft Backup JSON', text: str };
+                ? { title: t('backupShareTitle'), files: [backupFile] }
+                : { title: t('backupShareTitle'), text: str };
             await navigator.share(shareData);
             return;
         } catch (error) {
@@ -5319,7 +6309,7 @@ async function shareBackupJson() {
             }
         }
     }
-    alert('Backup JSON copied to clipboard.');
+    alert(t('backupShareCopied'));
 }
 
 document.getElementById('import-file').addEventListener('change', function(e) {
@@ -5338,10 +6328,10 @@ document.getElementById('import-file').addEventListener('change', function(e) {
             }
             decks = normalizeImportedDecks(data);
             if (!decks.length) {
-                alert("Invalid file");
+                alert(t('importInvalidFile'));
                 return;
             }
-        } catch(err) { alert("Invalid file"); }
+        } catch(err) { alert(t('importInvalidFile')); }
         if (!decks.length) return;
         app.decks.push(...decks);
         const newestDeck = decks[decks.length - 1];
@@ -5363,7 +6353,7 @@ document.getElementById('import-deck-file').addEventListener('change', function(
             const data = JSON.parse(event.target.result);
             const decks = normalizeImportedDecks(data);
             if (!decks.length) {
-                alert("Invalid pack file");
+                alert(t('importInvalidPackFile'));
                 return;
             }
             app.decks.push(...decks);
@@ -5375,7 +6365,7 @@ document.getElementById('import-deck-file').addEventListener('change', function(
             renderDeckList();
             closeDeckModal();
         } catch (err) {
-            alert("Invalid pack file");
+            alert(t('importInvalidPackFile'));
         }
     };
     reader.readAsText(file);
@@ -5383,7 +6373,7 @@ document.getElementById('import-deck-file').addEventListener('change', function(
 });
 
 function resetApp() {
-    if(confirm("Delete all data? This cannot be undone.")) {
+    if(confirm(t('resetAppConfirm'))) {
         localStorage.removeItem('spellcraft_data_v2');
         location.reload();
     }
