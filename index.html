@@ -1364,8 +1364,20 @@
         <div class="deck-actions">
             <button class="btn-secondary" disabled data-i18n="newPackChooseLibrary">Choose from library</button>
             <button class="btn-primary" onclick="openDeckModal('create')" data-i18n="newPackCreateManual">Create Word Pack (manual)</button>
+            <button class="btn-secondary" onclick="startPhotoPackFlow()" data-i18n="newPackCreatePhoto">Create Word Pack (Take Photo)</button>
             <button class="btn-secondary" onclick="openDeckModal('import')" data-i18n="newPackImportJson">Import Word Pack (json)</button>
         </div>
+    </div>
+</div>
+
+<input type="file" id="pack-photo-input" class="hidden" accept="image/*" capture="environment">
+
+<div id="photo-pack-modal" class="modal-overlay">
+    <div class="modal" style="text-align:center;">
+        <h3 data-i18n="photoPackProcessingTitle">Reading photo...</h3>
+        <p id="photo-pack-status" class="text-small" style="color:var(--text-sub); margin-bottom:0;" data-i18n="photoPackProcessingHint">
+            Analyzing the text and preparing your new pack.
+        </p>
     </div>
 </div>
 
@@ -1661,6 +1673,10 @@ const speechPlayback = {
 };
 let activePracticeDeckId = null;
 let selectedPracticeMode = null;
+const GEMINI_API_KEY = "AIzaSyDQ7QN9Y19wrAMO2UgZD8STbpl6keia5-c";
+const GEMINI_MODEL = "gemini-2.5-flash";
+const geminiModulePromise = import("https://esm.run/@google/genai");
+let geminiClient = null;
 
 // --- AUDIO ENGINE (ROBUST VERSION) ---
 let availableVoices = [];
@@ -1795,7 +1811,15 @@ const TRANSLATIONS = {
         newPackTitle: 'New Pack',
         newPackChooseLibrary: 'Choose from library',
         newPackCreateManual: 'Create Word Pack (manual)',
+        newPackCreatePhoto: 'Create Word Pack (Take Photo)',
         newPackImportJson: 'Import Word Pack (json)',
+        photoPackProcessingTitle: 'Reading photo...',
+        photoPackProcessingHint: 'Analyzing the text and preparing your new pack.',
+        photoPackUnavailable: 'Photo capture is not available on this device.',
+        photoPackNoFile: 'No photo selected.',
+        photoPackError: 'Sorry, something went wrong while reading the photo.',
+        photoPackParseError: 'Could not understand the photo response. Please try again.',
+        photoPackFallbackTitle: 'Photo Word Pack',
         deckModalCreateTitle: 'Create a Word Pack',
         deckModalImportTitle: 'Import a Word Pack',
         deckModalCreateTab: 'Create',
@@ -2080,7 +2104,15 @@ const TRANSLATIONS = {
         newPackTitle: 'Nuevo paquete',
         newPackChooseLibrary: 'Elegir de la biblioteca',
         newPackCreateManual: 'Crear paquete (manual)',
+        newPackCreatePhoto: 'Crear paquete (tomar foto)',
         newPackImportJson: 'Importar paquete (json)',
+        photoPackProcessingTitle: 'Leyendo foto...',
+        photoPackProcessingHint: 'Analizando el texto y preparando tu paquete.',
+        photoPackUnavailable: 'La captura de fotos no está disponible en este dispositivo.',
+        photoPackNoFile: 'No se seleccionó ninguna foto.',
+        photoPackError: 'Hubo un problema al leer la foto.',
+        photoPackParseError: 'No se pudo entender la respuesta de la foto. Inténtalo de nuevo.',
+        photoPackFallbackTitle: 'Paquete desde foto',
         deckModalCreateTitle: 'Crear un paquete de palabras',
         deckModalImportTitle: 'Importar un paquete de palabras',
         deckModalCreateTab: 'Crear',
@@ -2361,7 +2393,15 @@ const TRANSLATIONS = {
         newPackTitle: 'Neues Paket',
         newPackChooseLibrary: 'Aus Bibliothek wählen',
         newPackCreateManual: 'Wortpaket erstellen (manuell)',
+        newPackCreatePhoto: 'Wortpaket erstellen (Foto aufnehmen)',
         newPackImportJson: 'Wortpaket importieren (json)',
+        photoPackProcessingTitle: 'Foto wird gelesen...',
+        photoPackProcessingHint: 'Text wird analysiert und dein Paket vorbereitet.',
+        photoPackUnavailable: 'Fotoaufnahme ist auf diesem Gerät nicht verfügbar.',
+        photoPackNoFile: 'Kein Foto ausgewählt.',
+        photoPackError: 'Beim Lesen des Fotos ist ein Problem aufgetreten.',
+        photoPackParseError: 'Die Fotoantwort konnte nicht verstanden werden. Bitte versuche es erneut.',
+        photoPackFallbackTitle: 'Wortpaket aus Foto',
         deckModalCreateTitle: 'Wortpaket erstellen',
         deckModalImportTitle: 'Wortpaket importieren',
         deckModalCreateTab: 'Erstellen',
@@ -4505,6 +4545,147 @@ function openNewPackModal() {
 }
 function closeNewPackModal() {
     document.getElementById('new-pack-modal').classList.remove('open');
+}
+function openPhotoPackModal() {
+    document.getElementById('photo-pack-modal').classList.add('open');
+}
+function closePhotoPackModal() {
+    document.getElementById('photo-pack-modal').classList.remove('open');
+}
+function setPhotoPackStatus(messageKey) {
+    const status = document.getElementById('photo-pack-status');
+    if (!status) return;
+    status.dataset.statusKey = messageKey;
+    status.textContent = t(messageKey);
+}
+function startPhotoPackFlow() {
+    closeNewPackModal();
+    const input = document.getElementById('pack-photo-input');
+    if (!input) {
+        alert(t('photoPackUnavailable'));
+        return;
+    }
+    input.value = '';
+    input.click();
+}
+async function getGeminiClient() {
+    if (geminiClient) return geminiClient;
+    const module = await geminiModulePromise;
+    geminiClient = new module.GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    return geminiClient;
+}
+function fileToInlineData(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve({
+            data: reader.result.split(',')[1],
+            mimeType: file.type
+        });
+        reader.readAsDataURL(file);
+    });
+}
+function extractJsonFromText(text) {
+    if (!text) return null;
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try {
+        return JSON.parse(match[0]);
+    } catch (error) {
+        return null;
+    }
+}
+function normalizeGeminiLanguage(value) {
+    const options = ['en-US', 'en-GB', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'];
+    if (!value) return 'en-US';
+    if (options.includes(value)) return value;
+    const normalized = value.toLowerCase();
+    if (normalized.includes('spanish') || normalized.startsWith('es')) return 'es-ES';
+    if (normalized.includes('french') || normalized.startsWith('fr')) return 'fr-FR';
+    if (normalized.includes('german') || normalized.startsWith('de')) return 'de-DE';
+    if (normalized.includes('italian') || normalized.startsWith('it')) return 'it-IT';
+    if (normalized.includes('british') || normalized.includes('uk')) return 'en-GB';
+    return 'en-US';
+}
+function buildDeckTextFromGemini(payload) {
+    if (!payload) return '';
+    const format = (payload.format || '').toLowerCase();
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const text = (payload.text || '').trim();
+    if (format === 'word_list' || format === 'sentence_list') {
+        const cleaned = items.map(item => String(item || '').trim()).filter(Boolean);
+        if (!cleaned.length) return '';
+        return `{${cleaned.join('; ')}}`;
+    }
+    if (text) return text;
+    if (items.length) {
+        const cleaned = items.map(item => String(item || '').trim()).filter(Boolean);
+        return cleaned.length ? cleaned.join(' ') : '';
+    }
+    return '';
+}
+async function handlePhotoPackFile(file) {
+    if (!file) {
+        alert(t('photoPackNoFile'));
+        return;
+    }
+    openPhotoPackModal();
+    setPhotoPackStatus('photoPackProcessingHint');
+    const ai = await getGeminiClient();
+    const imgData = await fileToInlineData(file);
+    const prompt = `You are helping create a spelling word pack from a photo.
+Extract the text, correct any spelling mistakes, and interpret it as ONE of:
+- a list of words
+- a list of sentences
+- dictation text
+If unsure, treat it as dictation text.
+Respond with ONLY JSON in this exact schema:
+{
+  "title": "short descriptive title",
+  "language": "en-US|en-GB|es-ES|fr-FR|de-DE|it-IT",
+  "format": "word_list|sentence_list|dictation",
+  "items": ["item1", "item2"],
+  "text": "dictation text when format is dictation"
+}`;
+    let responseText = '';
+    try {
+        const response = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: [{
+                role: "user",
+                parts: [
+                    { text: prompt },
+                    { inlineData: imgData }
+                ]
+            }]
+        });
+        responseText = response.text || '';
+    } catch (error) {
+        console.error(error);
+        closePhotoPackModal();
+        alert(t('photoPackError'));
+        return;
+    }
+    const payload = extractJsonFromText(responseText);
+    if (!payload) {
+        closePhotoPackModal();
+        alert(t('photoPackParseError'));
+        return;
+    }
+    const title = (payload.title || '').trim() || t('photoPackFallbackTitle');
+    const language = normalizeGeminiLanguage(payload.language);
+    const deckText = buildDeckTextFromGemini(payload);
+    openDeckModal('create');
+    document.getElementById('new-deck-name').value = title;
+    document.getElementById('new-deck-lang').value = language;
+    document.getElementById('new-deck-text').value = deckText;
+    closePhotoPackModal();
+}
+const packPhotoInput = document.getElementById('pack-photo-input');
+if (packPhotoInput) {
+    packPhotoInput.addEventListener('change', (event) => {
+        const file = event.target.files ? event.target.files[0] : null;
+        handlePhotoPackFile(file);
+    });
 }
 function openDeckModal(panel = 'create') {
     closeNewPackModal();
