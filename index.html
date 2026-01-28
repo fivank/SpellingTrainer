@@ -1233,6 +1233,11 @@
             <p class="text-small" style="color: var(--text-sub);" data-i18n="settingsGeminiModelHint">
                 Choose a free-tier Gemini model for photo import.
             </p>
+            <label for="setting-gemini-api-key" data-i18n="settingsGeminiApiKeyLabel">Gemini API key</label>
+            <input id="setting-gemini-api-key" type="password" autocomplete="off" inputmode="text" placeholder="Paste your Gemini API key" style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; margin:6px 0 var(--space-1);" data-i18n-placeholder="settingsGeminiApiKeyPlaceholder">
+            <p class="text-small" style="color: var(--text-sub);" data-i18n="settingsGeminiApiKeyHint">
+                Required for photo import. Stored only in this browser.
+            </p>
             <label for="setting-photo-prompt" data-i18n="settingsPhotoPromptLabel">Photo import prompt</label>
             <textarea id="setting-photo-prompt" rows="6" placeholder="Describe how the AI should interpret photo text." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical; margin:6px 0 var(--space-1);" data-i18n-placeholder="settingsPhotoPromptPlaceholder"></textarea>
             <p class="text-small" style="color: var(--text-sub);" data-i18n="settingsPhotoPromptHint">
@@ -1705,7 +1710,9 @@ let app = {
         /* prompt used for photo word pack import */
         photoPrompt: DEFAULT_PHOTO_PROMPT,
         /* Gemini model used for photo import */
-        geminiModel: 'gemini-2.5-flash'
+        geminiModel: 'gemini-2.5-flash',
+        /* user-provided Gemini API key */
+        geminiApiKey: ''
     }
 };
 
@@ -1742,7 +1749,6 @@ const speechPlayback = {
 };
 let activePracticeDeckId = null;
 let selectedPracticeMode = null;
-const GEMINI_API_KEY = "AIzaSyDQ7QN9Y19wrAMO2UgZD8STbpl6keia5-c";
 const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_MODELS = [
     "gemini-2.5-flash",
@@ -1754,6 +1760,7 @@ const PHOTO_MIN_DIMENSION = 320;
 const PHOTO_MAX_DIMENSION = 1800;
 const geminiModulePromise = import("https://esm.run/@google/genai");
 let geminiClient = null;
+let geminiClientKey = null;
 
 // --- AUDIO ENGINE (ROBUST VERSION) ---
 let availableVoices = [];
@@ -1859,6 +1866,9 @@ const TRANSLATIONS = {
         settingsAiTitle: 'AI Features',
         settingsGeminiModelLabel: 'Gemini model',
         settingsGeminiModelHint: 'Choose a free-tier Gemini model for photo import.',
+        settingsGeminiApiKeyLabel: 'Gemini API key',
+        settingsGeminiApiKeyPlaceholder: 'Paste your Gemini API key',
+        settingsGeminiApiKeyHint: 'Required for photo import. Stored only in this browser.',
         settingsPhotoPromptLabel: 'Photo import prompt',
         settingsPhotoPromptPlaceholder: 'Extract the text exactly as shown in the photo.',
         settingsPhotoPromptHint: 'Used when SpellCraft reads text from a photo for a word pack.',
@@ -1911,6 +1921,7 @@ const TRANSLATIONS = {
         photoPackLoadError: 'We could not load that photo. Please choose another image.',
         photoPackParseError: 'Could not understand the photo response. Please try again.',
         photoPackResolutionError: 'That photo is too small. Please use an image at least {min}px on each side.',
+        photoPackMissingApiKey: 'Add a Gemini API key in Settings → AI Features to use photo import.',
         photoPackFallbackTitle: 'Photo Word Pack',
         deckModalCreateTitle: 'Create a Word Pack',
         deckModalImportTitle: 'Import a Word Pack',
@@ -2167,6 +2178,9 @@ const TRANSLATIONS = {
         settingsAiTitle: 'Funciones de IA',
         settingsGeminiModelLabel: 'Modelo Gemini',
         settingsGeminiModelHint: 'Elige un modelo Gemini gratuito para la importación de fotos.',
+        settingsGeminiApiKeyLabel: 'Clave API de Gemini',
+        settingsGeminiApiKeyPlaceholder: 'Pega tu clave API de Gemini',
+        settingsGeminiApiKeyHint: 'Se requiere para importar fotos. Se guarda solo en este navegador.',
         settingsPhotoPromptLabel: 'Prompt de importación de fotos',
         settingsPhotoPromptPlaceholder: 'Extrae el texto exactamente como aparece en la foto.',
         settingsPhotoPromptHint: 'Se usa cuando SpellCraft lee texto de una foto para un paquete.',
@@ -2219,6 +2233,7 @@ const TRANSLATIONS = {
         photoPackLoadError: 'No se pudo cargar esa foto. Elige otra imagen.',
         photoPackParseError: 'No se pudo entender la respuesta de la foto. Inténtalo de nuevo.',
         photoPackResolutionError: 'La foto es demasiado pequeña. Usa una imagen de al menos {min}px por lado.',
+        photoPackMissingApiKey: 'Agrega una clave API de Gemini en Ajustes → Funciones de IA para importar fotos.',
         photoPackFallbackTitle: 'Paquete desde foto',
         deckModalCreateTitle: 'Crear un paquete de palabras',
         deckModalImportTitle: 'Importar un paquete de palabras',
@@ -2471,6 +2486,9 @@ const TRANSLATIONS = {
         settingsAiTitle: 'KI-Funktionen',
         settingsGeminiModelLabel: 'Gemini-Modell',
         settingsGeminiModelHint: 'Wähle ein kostenloses Gemini-Modell für den Fotoimport.',
+        settingsGeminiApiKeyLabel: 'Gemini-API-Schlüssel',
+        settingsGeminiApiKeyPlaceholder: 'Füge deinen Gemini-API-Schlüssel ein',
+        settingsGeminiApiKeyHint: 'Erforderlich für den Fotoimport. Wird nur in diesem Browser gespeichert.',
         settingsPhotoPromptLabel: 'Foto-Import-Prompt',
         settingsPhotoPromptPlaceholder: 'Extrahiere den Text genau so, wie er im Foto steht.',
         settingsPhotoPromptHint: 'Wird verwendet, wenn SpellCraft Text aus einem Foto für ein Wortpaket liest.',
@@ -2523,6 +2541,7 @@ const TRANSLATIONS = {
         photoPackLoadError: 'Dieses Foto konnte nicht geladen werden. Bitte wähle ein anderes Bild.',
         photoPackParseError: 'Die Fotoantwort konnte nicht verstanden werden. Bitte versuche es erneut.',
         photoPackResolutionError: 'Das Foto ist zu klein. Bitte verwende ein Bild mit mindestens {min}px pro Seite.',
+        photoPackMissingApiKey: 'Füge in Einstellungen → KI-Funktionen einen Gemini-API-Schlüssel hinzu, um den Fotoimport zu nutzen.',
         photoPackFallbackTitle: 'Wortpaket aus Foto',
         deckModalCreateTitle: 'Wortpaket erstellen',
         deckModalImportTitle: 'Wortpaket importieren',
@@ -4691,9 +4710,12 @@ function startPhotoPackFlow() {
     input.click();
 }
 async function getGeminiClient() {
-    if (geminiClient) return geminiClient;
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) return null;
+    if (geminiClient && geminiClientKey === apiKey) return geminiClient;
     const module = await geminiModulePromise;
-    geminiClient = new module.GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    geminiClient = new module.GoogleGenAI({ apiKey });
+    geminiClientKey = apiKey;
     return geminiClient;
 }
 function fileToInlineData(file) {
@@ -4712,6 +4734,9 @@ function stripCodeFences(text) {
 function getPhotoPrompt() {
     const stored = (app.settings.photoPrompt || '').trim();
     return stored || DEFAULT_PHOTO_PROMPT;
+}
+function getGeminiApiKey() {
+    return (app.settings.geminiApiKey || '').trim();
 }
 function getGeminiModel() {
     const candidate = app.settings.geminiModel;
@@ -4877,9 +4902,18 @@ async function processPhotoPackImage(photoData) {
         alert(t('photoPackResolutionError', { min: PHOTO_MIN_DIMENSION }));
         return;
     }
+    if (!getGeminiApiKey()) {
+        alert(t('photoPackMissingApiKey'));
+        return;
+    }
     openPhotoPackModal();
     setPhotoPackStatus('photoPackProcessingHint');
     const ai = await getGeminiClient();
+    if (!ai) {
+        closePhotoPackModal();
+        alert(t('photoPackMissingApiKey'));
+        return;
+    }
     const imgData = await fileToInlineData(photoData.blob);
     const prompt = getPhotoPrompt();
     let responseText = '';
@@ -6673,12 +6707,22 @@ function initSettingsListeners() {
 
     const photoPromptEl = document.getElementById('setting-photo-prompt');
     const geminiModelEl = document.getElementById('setting-gemini-model');
+    const geminiApiKeyEl = document.getElementById('setting-gemini-api-key');
     if (geminiModelEl) {
         const storedModel = app.settings.geminiModel || DEFAULT_GEMINI_MODEL;
         geminiModelEl.value = GEMINI_MODELS.includes(storedModel) ? storedModel : DEFAULT_GEMINI_MODEL;
         geminiModelEl.addEventListener('change', (e) => {
             const selected = e.target.value;
             app.settings.geminiModel = GEMINI_MODELS.includes(selected) ? selected : DEFAULT_GEMINI_MODEL;
+            saveData();
+        });
+    }
+    if (geminiApiKeyEl) {
+        geminiApiKeyEl.value = app.settings.geminiApiKey || '';
+        geminiApiKeyEl.addEventListener('input', (e) => {
+            app.settings.geminiApiKey = String(e.target.value || '').trim();
+            geminiClient = null;
+            geminiClientKey = null;
             saveData();
         });
     }
