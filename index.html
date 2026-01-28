@@ -112,6 +112,24 @@
         display: block;
     }
 
+    .photo-edit-canvas {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 12px;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        background: #111827;
+        display: block;
+        margin: 0 auto;
+        touch-action: none;
+    }
+
+    .photo-edit-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+        margin-top: var(--space-2);
+    }
+
     /* --- LAYOUT --- */
     header {
         padding: var(--space-2);
@@ -1205,6 +1223,16 @@
 
         <div class="card">
             <h3 data-i18n="settingsAiTitle">AI Features</h3>
+            <label for="setting-gemini-model" data-i18n="settingsGeminiModelLabel">Gemini model</label>
+            <select id="setting-gemini-model" style="width:100%; margin:6px 0 var(--space-1);">
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+            </select>
+            <p class="text-small" style="color: var(--text-sub);" data-i18n="settingsGeminiModelHint">
+                Choose a free-tier Gemini model for photo import.
+            </p>
             <label for="setting-photo-prompt" data-i18n="settingsPhotoPromptLabel">Photo import prompt</label>
             <textarea id="setting-photo-prompt" rows="6" placeholder="Describe how the AI should interpret photo text." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical; margin:6px 0 var(--space-1);" data-i18n-placeholder="settingsPhotoPromptPlaceholder"></textarea>
             <p class="text-small" style="color: var(--text-sub);" data-i18n="settingsPhotoPromptHint">
@@ -1382,7 +1410,7 @@
     </div>
 </div>
 
-<input type="file" id="pack-photo-input" class="hidden" accept="image/*" capture="environment">
+<input type="file" id="pack-photo-input" class="hidden" accept="image/*">
 
 <div id="photo-pack-modal" class="modal-overlay">
     <div class="modal" style="text-align:center;">
@@ -1390,6 +1418,28 @@
         <p id="photo-pack-status" class="text-small" style="color:var(--text-sub); margin-bottom:0;" data-i18n="photoPackProcessingHint">
             Analyzing the text and preparing your new pack.
         </p>
+    </div>
+</div>
+
+<div id="photo-edit-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 data-i18n="photoEditTitle">Edit photo</h3>
+            <button class="btn-icon" onclick="closePhotoEditModal()">✕</button>
+        </div>
+        <canvas id="photo-edit-canvas" class="photo-edit-canvas"></canvas>
+        <p class="text-small" style="color: var(--text-sub); margin-top: var(--space-1);" data-i18n="photoEditHint">
+            Drag to crop the image, then rotate if needed.
+        </p>
+        <div class="photo-edit-controls">
+            <button class="btn-secondary" type="button" id="photo-edit-rotate-left" data-i18n="photoEditRotateLeft">Rotate left</button>
+            <button class="btn-secondary" type="button" id="photo-edit-rotate-right" data-i18n="photoEditRotateRight">Rotate right</button>
+            <button class="btn-secondary" type="button" id="photo-edit-reset-crop" data-i18n="photoEditResetCrop">Reset crop</button>
+        </div>
+        <div style="display:flex; gap:var(--space-1); margin-top:var(--space-2);">
+            <button class="btn-secondary" onclick="closePhotoEditModal()" style="flex:1" data-i18n="actionCancel">Cancel</button>
+            <button class="btn-primary" id="photo-edit-use" style="flex:1" data-i18n="photoEditUsePhoto">Use photo</button>
+        </div>
     </div>
 </div>
 
@@ -1606,20 +1656,9 @@
 </div>
 
 <script>
-const DEFAULT_PHOTO_PROMPT = `You are helping create a spelling word pack from a photo.
-Extract the text, fix obvious OCR mistakes, and interpret it as ONE of:
-- a list of words
-- a list of sentences
-- dictation text (full passage)
-If unsure, treat it as dictation text. Keep the full text even if it is long.
-Return ONLY JSON (no Markdown, no commentary) in this exact schema:
-{
-  "title": "short descriptive title",
-  "language": "en-US|en-GB|es-ES|fr-FR|de-DE|it-IT",
-  "format": "word_list|sentence_list|dictation",
-  "items": ["item1", "item2"],
-  "text": "dictation text when format is dictation"
-}`;
+const DEFAULT_PHOTO_PROMPT = `Extract the text from this photo exactly as it appears.
+Do not summarize or rewrite. Preserve line breaks and punctuation.
+Return ONLY the extracted text with no extra commentary or formatting.`;
 /**
  * APP DATA
  */
@@ -1664,7 +1703,9 @@ let app = {
         /* prioritize a newly added pack in today's queue */
         todayPriority: null,
         /* prompt used for photo word pack import */
-        photoPrompt: DEFAULT_PHOTO_PROMPT
+        photoPrompt: DEFAULT_PHOTO_PROMPT,
+        /* Gemini model used for photo import */
+        geminiModel: 'gemini-2.5-flash'
     }
 };
 
@@ -1702,7 +1743,13 @@ const speechPlayback = {
 let activePracticeDeckId = null;
 let selectedPracticeMode = null;
 const GEMINI_API_KEY = "AIzaSyDQ7QN9Y19wrAMO2UgZD8STbpl6keia5-c";
-const GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro"
+];
 const geminiModulePromise = import("https://esm.run/@google/genai");
 let geminiClient = null;
 
@@ -1808,10 +1855,18 @@ const TRANSLATIONS = {
         sessionTargetPacks: 'Word packs',
         sessionTargetHint: 'Set the minimum size for a Today session.',
         settingsAiTitle: 'AI Features',
+        settingsGeminiModelLabel: 'Gemini model',
+        settingsGeminiModelHint: 'Choose a free-tier Gemini model for photo import.',
         settingsPhotoPromptLabel: 'Photo import prompt',
-        settingsPhotoPromptPlaceholder: 'Describe how the AI should interpret photo text.',
-        settingsPhotoPromptHint: 'Used when SpellCraft reads text from a photo to build a word pack.',
+        settingsPhotoPromptPlaceholder: 'Extract the text exactly as shown in the photo.',
+        settingsPhotoPromptHint: 'Used when SpellCraft reads text from a photo for a word pack.',
         settingsPhotoPromptReset: 'Reset photo prompt',
+        photoEditTitle: 'Edit photo',
+        photoEditHint: 'Drag to crop the image, then rotate if needed.',
+        photoEditRotateLeft: 'Rotate left',
+        photoEditRotateRight: 'Rotate right',
+        photoEditResetCrop: 'Reset crop',
+        photoEditUsePhoto: 'Use photo',
         settingsAudioDiagnosticsTitle: 'Audio Diagnostics',
         settingsAudioDiagnosticsHint: "If audio isn't working, check here.",
         audioStatusChecking: 'Checking...',
@@ -2106,10 +2161,18 @@ const TRANSLATIONS = {
         sessionTargetPacks: 'Paquetes de palabras',
         sessionTargetHint: 'Establece el tamaño mínimo para una sesión de Hoy.',
         settingsAiTitle: 'Funciones de IA',
+        settingsGeminiModelLabel: 'Modelo Gemini',
+        settingsGeminiModelHint: 'Elige un modelo Gemini gratuito para la importación de fotos.',
         settingsPhotoPromptLabel: 'Prompt de importación de fotos',
-        settingsPhotoPromptPlaceholder: 'Describe cómo la IA debe interpretar el texto de la foto.',
-        settingsPhotoPromptHint: 'Se usa cuando SpellCraft lee texto de una foto para crear un paquete.',
+        settingsPhotoPromptPlaceholder: 'Extrae el texto exactamente como aparece en la foto.',
+        settingsPhotoPromptHint: 'Se usa cuando SpellCraft lee texto de una foto para un paquete.',
         settingsPhotoPromptReset: 'Restablecer prompt de foto',
+        photoEditTitle: 'Editar foto',
+        photoEditHint: 'Arrastra para recortar la imagen y gira si hace falta.',
+        photoEditRotateLeft: 'Girar a la izquierda',
+        photoEditRotateRight: 'Girar a la derecha',
+        photoEditResetCrop: 'Restablecer recorte',
+        photoEditUsePhoto: 'Usar foto',
         settingsAudioDiagnosticsTitle: 'Diagnóstico de audio',
         settingsAudioDiagnosticsHint: 'Si el audio no funciona, revisa aquí.',
         audioStatusChecking: 'Comprobando...',
@@ -2400,10 +2463,18 @@ const TRANSLATIONS = {
         sessionTargetPacks: 'Wortpakete',
         sessionTargetHint: 'Lege die Mindestgröße für eine Heute-Sitzung fest.',
         settingsAiTitle: 'KI-Funktionen',
+        settingsGeminiModelLabel: 'Gemini-Modell',
+        settingsGeminiModelHint: 'Wähle ein kostenloses Gemini-Modell für den Fotoimport.',
         settingsPhotoPromptLabel: 'Foto-Import-Prompt',
-        settingsPhotoPromptPlaceholder: 'Beschreibe, wie die KI den Fototext interpretieren soll.',
+        settingsPhotoPromptPlaceholder: 'Extrahiere den Text genau so, wie er im Foto steht.',
         settingsPhotoPromptHint: 'Wird verwendet, wenn SpellCraft Text aus einem Foto für ein Wortpaket liest.',
         settingsPhotoPromptReset: 'Foto-Prompt zurücksetzen',
+        photoEditTitle: 'Foto bearbeiten',
+        photoEditHint: 'Zum Zuschneiden ziehen und bei Bedarf drehen.',
+        photoEditRotateLeft: 'Nach links drehen',
+        photoEditRotateRight: 'Nach rechts drehen',
+        photoEditResetCrop: 'Zuschnitt zurücksetzen',
+        photoEditUsePhoto: 'Foto verwenden',
         settingsAudioDiagnosticsTitle: 'Audio-Diagnose',
         settingsAudioDiagnosticsHint: 'Wenn Audio nicht funktioniert, prüfe hier.',
         audioStatusChecking: 'Prüfen...',
@@ -4622,137 +4693,145 @@ function fileToInlineData(file) {
         const reader = new FileReader();
         reader.onloadend = () => resolve({
             data: reader.result.split(',')[1],
-            mimeType: file.type
+            mimeType: file.type || 'image/jpeg'
         });
         reader.readAsDataURL(file);
     });
 }
-function extractJsonFromText(text) {
-    if (!text) return null;
-    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    if (fenced && fenced[1]) {
-        const parsed = safeParseJson(fenced[1].trim());
-        if (parsed) return parsed;
-    }
-    const jsonBlock = findJsonBlock(text);
-    if (!jsonBlock) return null;
-    return safeParseJson(jsonBlock);
-}
-function safeParseJson(candidate) {
-    if (!candidate) return null;
-    try {
-        return JSON.parse(candidate);
-    } catch (error) {
-        return null;
-    }
-}
-function findJsonBlock(text) {
-    const start = text.indexOf('{');
-    if (start === -1) return null;
-    let depth = 0;
-    let inString = false;
-    let isEscaped = false;
-    for (let i = start; i < text.length; i += 1) {
-        const char = text[i];
-        if (inString) {
-            if (isEscaped) {
-                isEscaped = false;
-                continue;
-            }
-            if (char === '\\') {
-                isEscaped = true;
-                continue;
-            }
-            if (char === '"') {
-                inString = false;
-            }
-            continue;
-        }
-        if (char === '"') {
-            inString = true;
-            continue;
-        }
-        if (char === '{') depth += 1;
-        if (char === '}') {
-            depth -= 1;
-            if (depth === 0) {
-                return text.slice(start, i + 1);
-            }
-        }
-    }
-    return null;
-}
 function stripCodeFences(text) {
     return String(text || '').replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-}
-function cleanListItem(value) {
-    return String(value || '')
-        .replace(/^\s*(?:[-•*]|\d+[.)\]]?)\s*/g, '')
-        .trim();
-}
-function normalizeGeminiItems(items) {
-    if (!Array.isArray(items)) return [];
-    return items.map(item => {
-        if (item && typeof item === 'object') {
-            if (item.word) return item.word;
-            if (item.text) return item.text;
-            if (item.item) return item.item;
-        }
-        return item;
-    }).map(cleanListItem).filter(Boolean);
-}
-function parseItemsFromText(text) {
-    if (!text) return [];
-    const raw = String(text)
-        .split(/\r?\n|;/)
-        .flatMap(chunk => chunk.split(','));
-    return raw.map(cleanListItem).filter(Boolean);
-}
-function normalizeGeminiLanguage(value) {
-    const options = ['en-US', 'en-GB', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'];
-    if (!value) return 'en-US';
-    if (options.includes(value)) return value;
-    const normalized = value.toLowerCase();
-    if (normalized.includes('spanish') || normalized.startsWith('es')) return 'es-ES';
-    if (normalized.includes('french') || normalized.startsWith('fr')) return 'fr-FR';
-    if (normalized.includes('german') || normalized.startsWith('de')) return 'de-DE';
-    if (normalized.includes('italian') || normalized.startsWith('it')) return 'it-IT';
-    if (normalized.includes('british') || normalized.includes('uk')) return 'en-GB';
-    return 'en-US';
-}
-function buildDeckTextFromGemini(payload) {
-    if (!payload) return '';
-    const format = (payload.format || '').toLowerCase();
-    const items = normalizeGeminiItems(payload.items);
-    const text = (payload.text || '').trim();
-    if (format === 'word_list' || format === 'sentence_list') {
-        const cleaned = items.length ? items : parseItemsFromText(text);
-        if (!cleaned.length) return '';
-        return `{${cleaned.join('; ')}}`;
-    }
-    if (text) return text;
-    if (items.length) {
-        const cleaned = items.map(item => String(item || '').trim()).filter(Boolean);
-        return cleaned.length ? cleaned.join(' ') : '';
-    }
-    return '';
 }
 function getPhotoPrompt() {
     const stored = (app.settings.photoPrompt || '').trim();
     return stored || DEFAULT_PHOTO_PROMPT;
 }
-function buildFallbackPayloadFromText(text) {
-    const cleaned = stripCodeFences(text).trim();
-    if (!cleaned) return null;
-    return {
-        title: '',
-        language: 'en-US',
-        format: 'dictation',
-        items: [],
-        text: cleaned
-    };
+function getGeminiModel() {
+    const candidate = app.settings.geminiModel;
+    return GEMINI_MODELS.includes(candidate) ? candidate : DEFAULT_GEMINI_MODEL;
 }
-async function handlePhotoPackFile(file) {
+const photoEditState = {
+    image: null,
+    rotation: 0,
+    cropRect: null,
+    isDragging: false,
+    dragStart: null,
+    displayWidth: 0,
+    displayHeight: 0,
+    rotatedWidth: 0,
+    rotatedHeight: 0
+};
+function openPhotoEditModal() {
+    document.getElementById('photo-edit-modal').classList.add('open');
+}
+function closePhotoEditModal() {
+    document.getElementById('photo-edit-modal').classList.remove('open');
+    photoEditState.image = null;
+    photoEditState.rotation = 0;
+    photoEditState.cropRect = null;
+    photoEditState.isDragging = false;
+    photoEditState.dragStart = null;
+}
+function getRotatedCanvas(image, rotation) {
+    const canvas = document.createElement('canvas');
+    const radians = (rotation * Math.PI) / 180;
+    const swapSides = Math.abs(rotation) % 180 === 90;
+    canvas.width = swapSides ? image.height : image.width;
+    canvas.height = swapSides ? image.width : image.height;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(radians);
+    ctx.drawImage(image, -image.width / 2, -image.height / 2);
+    return canvas;
+}
+function normalizeCropRect(rect, maxWidth, maxHeight) {
+    if (!rect) return null;
+    const endX = rect.x + rect.width;
+    const endY = rect.y + rect.height;
+    const x = Math.max(0, Math.min(rect.x, endX));
+    const y = Math.max(0, Math.min(rect.y, endY));
+    const width = Math.min(maxWidth - x, Math.abs(rect.width));
+    const height = Math.min(maxHeight - y, Math.abs(rect.height));
+    if (width < 4 || height < 4) return null;
+    return { x, y, width, height };
+}
+function renderPhotoEditPreview() {
+    const canvas = document.getElementById('photo-edit-canvas');
+    if (!canvas || !photoEditState.image) return;
+    const rotatedCanvas = getRotatedCanvas(photoEditState.image, photoEditState.rotation);
+    const maxWidth = Math.min(canvas.parentElement.clientWidth, 520);
+    const maxHeight = Math.min(window.innerHeight * 0.45, 420);
+    const scale = Math.min(maxWidth / rotatedCanvas.width, maxHeight / rotatedCanvas.height, 1);
+    const displayWidth = Math.max(1, Math.floor(rotatedCanvas.width * scale));
+    const displayHeight = Math.max(1, Math.floor(rotatedCanvas.height * scale));
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, displayWidth, displayHeight);
+    ctx.drawImage(rotatedCanvas, 0, 0, displayWidth, displayHeight);
+    photoEditState.displayWidth = displayWidth;
+    photoEditState.displayHeight = displayHeight;
+    photoEditState.rotatedWidth = rotatedCanvas.width;
+    photoEditState.rotatedHeight = rotatedCanvas.height;
+    const crop = normalizeCropRect(photoEditState.cropRect, displayWidth, displayHeight);
+    if (crop) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.fillRect(0, 0, displayWidth, displayHeight);
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillRect(crop.x, crop.y, crop.width, crop.height);
+        ctx.restore();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(crop.x, crop.y, crop.width, crop.height);
+    }
+}
+function loadPhotoForEditing(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+                photoEditState.image = img;
+                photoEditState.rotation = 0;
+                photoEditState.cropRect = null;
+                openPhotoEditModal();
+                renderPhotoEditPreview();
+                resolve(true);
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+async function getPhotoEditBlob() {
+    if (!photoEditState.image) return null;
+    const rotatedCanvas = getRotatedCanvas(photoEditState.image, photoEditState.rotation);
+    const crop = normalizeCropRect(
+        photoEditState.cropRect,
+        photoEditState.displayWidth || rotatedCanvas.width,
+        photoEditState.displayHeight || rotatedCanvas.height
+    );
+    let outputCanvas = rotatedCanvas;
+    if (crop) {
+        const scaleX = rotatedCanvas.width / (photoEditState.displayWidth || rotatedCanvas.width);
+        const scaleY = rotatedCanvas.height / (photoEditState.displayHeight || rotatedCanvas.height);
+        const cropX = Math.round(crop.x * scaleX);
+        const cropY = Math.round(crop.y * scaleY);
+        const cropW = Math.max(1, Math.round(crop.width * scaleX));
+        const cropH = Math.max(1, Math.round(crop.height * scaleY));
+        outputCanvas = document.createElement('canvas');
+        outputCanvas.width = cropW;
+        outputCanvas.height = cropH;
+        const ctx = outputCanvas.getContext('2d');
+        ctx.drawImage(rotatedCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+    }
+    return new Promise((resolve) => {
+        outputCanvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92);
+    });
+}
+async function processPhotoPackImage(file) {
     if (!file) {
         alert(t('photoPackNoFile'));
         return;
@@ -4765,7 +4844,7 @@ async function handlePhotoPackFile(file) {
     let responseText = '';
     try {
         const response = await ai.models.generateContent({
-            model: GEMINI_MODEL,
+            model: getGeminiModel(),
             contents: [{
                 role: "user",
                 parts: [
@@ -4781,37 +4860,108 @@ async function handlePhotoPackFile(file) {
         alert(t('photoPackError'));
         return;
     }
-    let payload = extractJsonFromText(responseText);
-    if (!payload) {
-        payload = buildFallbackPayloadFromText(responseText);
-    }
-    if (!payload) {
-        closePhotoPackModal();
-        alert(t('photoPackParseError'));
-        return;
-    }
-    const title = (payload.title || '').trim() || t('photoPackFallbackTitle');
-    const language = normalizeGeminiLanguage(payload.language);
-    let deckText = buildDeckTextFromGemini(payload);
-    if (!deckText) {
-        deckText = stripCodeFences(responseText);
-    }
+    const deckText = stripCodeFences(responseText).trim();
     if (!deckText) {
         closePhotoPackModal();
         alert(t('photoPackParseError'));
         return;
     }
     openDeckModal('create');
-    document.getElementById('new-deck-name').value = title;
-    document.getElementById('new-deck-lang').value = language;
+    document.getElementById('new-deck-name').value = t('photoPackFallbackTitle');
     document.getElementById('new-deck-text').value = deckText;
     closePhotoPackModal();
+}
+async function handlePhotoPackFile(file) {
+    if (!file) {
+        alert(t('photoPackNoFile'));
+        return;
+    }
+    await loadPhotoForEditing(file);
 }
 const packPhotoInput = document.getElementById('pack-photo-input');
 if (packPhotoInput) {
     packPhotoInput.addEventListener('change', (event) => {
         const file = event.target.files ? event.target.files[0] : null;
         handlePhotoPackFile(file);
+    });
+}
+const photoEditCanvas = document.getElementById('photo-edit-canvas');
+if (photoEditCanvas) {
+    const getCanvasPoint = (event) => {
+        const rect = photoEditCanvas.getBoundingClientRect();
+        const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
+        const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
+        return { x, y };
+    };
+    photoEditCanvas.addEventListener('pointerdown', (event) => {
+        if (!photoEditState.image) return;
+        photoEditCanvas.setPointerCapture(event.pointerId);
+        const start = getCanvasPoint(event);
+        photoEditState.isDragging = true;
+        photoEditState.dragStart = start;
+        photoEditState.cropRect = { x: start.x, y: start.y, width: 1, height: 1 };
+        renderPhotoEditPreview();
+    });
+    photoEditCanvas.addEventListener('pointermove', (event) => {
+        if (!photoEditState.isDragging || !photoEditState.dragStart) return;
+        const current = getCanvasPoint(event);
+        photoEditState.cropRect = {
+            x: photoEditState.dragStart.x,
+            y: photoEditState.dragStart.y,
+            width: current.x - photoEditState.dragStart.x,
+            height: current.y - photoEditState.dragStart.y
+        };
+        renderPhotoEditPreview();
+    });
+    const endDrag = () => {
+        if (!photoEditState.isDragging) return;
+        photoEditState.isDragging = false;
+        photoEditState.dragStart = null;
+        photoEditState.cropRect = normalizeCropRect(
+            photoEditState.cropRect,
+            photoEditState.displayWidth,
+            photoEditState.displayHeight
+        );
+        renderPhotoEditPreview();
+    };
+    photoEditCanvas.addEventListener('pointerup', endDrag);
+    photoEditCanvas.addEventListener('pointerleave', endDrag);
+}
+const photoEditRotateLeft = document.getElementById('photo-edit-rotate-left');
+if (photoEditRotateLeft) {
+    photoEditRotateLeft.addEventListener('click', () => {
+        if (!photoEditState.image) return;
+        photoEditState.rotation = (photoEditState.rotation - 90 + 360) % 360;
+        photoEditState.cropRect = null;
+        renderPhotoEditPreview();
+    });
+}
+const photoEditRotateRight = document.getElementById('photo-edit-rotate-right');
+if (photoEditRotateRight) {
+    photoEditRotateRight.addEventListener('click', () => {
+        if (!photoEditState.image) return;
+        photoEditState.rotation = (photoEditState.rotation + 90) % 360;
+        photoEditState.cropRect = null;
+        renderPhotoEditPreview();
+    });
+}
+const photoEditResetCrop = document.getElementById('photo-edit-reset-crop');
+if (photoEditResetCrop) {
+    photoEditResetCrop.addEventListener('click', () => {
+        photoEditState.cropRect = null;
+        renderPhotoEditPreview();
+    });
+}
+const photoEditUse = document.getElementById('photo-edit-use');
+if (photoEditUse) {
+    photoEditUse.addEventListener('click', async () => {
+        const blob = await getPhotoEditBlob();
+        if (!blob) {
+            alert(t('photoPackNoFile'));
+            return;
+        }
+        closePhotoEditModal();
+        await processPhotoPackImage(blob);
     });
 }
 function openDeckModal(panel = 'create') {
@@ -6481,6 +6631,16 @@ function initSettingsListeners() {
     }
 
     const photoPromptEl = document.getElementById('setting-photo-prompt');
+    const geminiModelEl = document.getElementById('setting-gemini-model');
+    if (geminiModelEl) {
+        const storedModel = app.settings.geminiModel || DEFAULT_GEMINI_MODEL;
+        geminiModelEl.value = GEMINI_MODELS.includes(storedModel) ? storedModel : DEFAULT_GEMINI_MODEL;
+        geminiModelEl.addEventListener('change', (e) => {
+            const selected = e.target.value;
+            app.settings.geminiModel = GEMINI_MODELS.includes(selected) ? selected : DEFAULT_GEMINI_MODEL;
+            saveData();
+        });
+    }
     if (photoPromptEl) {
         photoPromptEl.value = app.settings.photoPrompt || DEFAULT_PHOTO_PROMPT;
         photoPromptEl.addEventListener('change', (e) => {
