@@ -1205,8 +1205,19 @@
 
         <div class="card">
             <h3 data-i18n="settingsAiTitle">AI Features</h3>
+            <label for="setting-gemini-model" data-i18n="settingsGeminiModelLabel">Gemini model</label>
+            <select id="setting-gemini-model" style="width:100%; margin:6px 0 var(--space-1);">
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash 8B</option>
+            </select>
+            <p class="text-small" style="color: var(--text-sub);" data-i18n="settingsGeminiModelHint">
+                Choose a Gemini model that works with your free key.
+            </p>
             <label for="setting-photo-prompt" data-i18n="settingsPhotoPromptLabel">Photo import prompt</label>
-            <textarea id="setting-photo-prompt" rows="6" placeholder="Describe how the AI should interpret photo text." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical; margin:6px 0 var(--space-1);" data-i18n-placeholder="settingsPhotoPromptPlaceholder"></textarea>
+            <textarea id="setting-photo-prompt" rows="6" placeholder="Describe how the AI should extract photo text." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical; margin:6px 0 var(--space-1);" data-i18n-placeholder="settingsPhotoPromptPlaceholder"></textarea>
             <p class="text-small" style="color: var(--text-sub);" data-i18n="settingsPhotoPromptHint">
                 Used when SpellCraft reads text from a photo to build a word pack.
             </p>
@@ -1382,7 +1393,7 @@
     </div>
 </div>
 
-<input type="file" id="pack-photo-input" class="hidden" accept="image/*" capture="environment">
+<input type="file" id="pack-photo-input" class="hidden" accept="image/*">
 
 <div id="photo-pack-modal" class="modal-overlay">
     <div class="modal" style="text-align:center;">
@@ -1390,6 +1401,33 @@
         <p id="photo-pack-status" class="text-small" style="color:var(--text-sub); margin-bottom:0;" data-i18n="photoPackProcessingHint">
             Analyzing the text and preparing your new pack.
         </p>
+    </div>
+</div>
+
+<div id="photo-edit-modal" class="modal-overlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 data-i18n="photoEditTitle">Edit photo</h3>
+            <button class="btn-icon" onclick="closePhotoEditModal()">✕</button>
+        </div>
+        <p class="text-small" style="color: var(--text-sub);" data-i18n="photoEditHint">
+            Drag to crop. Use the slider to zoom before importing.
+        </p>
+        <div style="background:#f3f4f6; border-radius:12px; padding:12px; margin:12px 0;">
+            <canvas id="photo-edit-canvas" width="320" height="320" style="width:100%; max-width:360px; height:auto; display:block; margin:0 auto; border-radius:12px; background:#ffffff; touch-action:none;"></canvas>
+        </div>
+        <label style="display:block; margin-bottom:10px;">
+            <span data-i18n="photoEditZoomLabel">Zoom</span>
+            <input type="range" id="photo-edit-zoom" min="1" max="3" step="0.05" value="1" style="width:100%; margin-top:6px;">
+        </label>
+        <div style="display:flex; gap:var(--space-1); margin-bottom:12px;">
+            <button class="btn-secondary" type="button" id="photo-edit-rotate-left" data-i18n="photoEditRotateLeft">Rotate left</button>
+            <button class="btn-secondary" type="button" id="photo-edit-rotate-right" data-i18n="photoEditRotateRight">Rotate right</button>
+        </div>
+        <div style="display:flex; gap:var(--space-1);">
+            <button class="btn-secondary" type="button" onclick="closePhotoEditModal()" style="flex:1" data-i18n="photoEditCancel">Cancel</button>
+            <button class="btn-primary" type="button" id="photo-edit-apply" style="flex:1" data-i18n="photoEditUse">Use photo</button>
+        </div>
     </div>
 </div>
 
@@ -1606,20 +1644,9 @@
 </div>
 
 <script>
-const DEFAULT_PHOTO_PROMPT = `You are helping create a spelling word pack from a photo.
-Extract the text, fix obvious OCR mistakes, and interpret it as ONE of:
-- a list of words
-- a list of sentences
-- dictation text (full passage)
-If unsure, treat it as dictation text. Keep the full text even if it is long.
-Return ONLY JSON (no Markdown, no commentary) in this exact schema:
-{
-  "title": "short descriptive title",
-  "language": "en-US|en-GB|es-ES|fr-FR|de-DE|it-IT",
-  "format": "word_list|sentence_list|dictation",
-  "items": ["item1", "item2"],
-  "text": "dictation text when format is dictation"
-}`;
+const DEFAULT_PHOTO_PROMPT = `Extract the text from this photo exactly as it appears.
+Do not summarize, fix, or reformat anything.
+Return only the raw text with original line breaks.`;
 /**
  * APP DATA
  */
@@ -1664,7 +1691,9 @@ let app = {
         /* prioritize a newly added pack in today's queue */
         todayPriority: null,
         /* prompt used for photo word pack import */
-        photoPrompt: DEFAULT_PHOTO_PROMPT
+        photoPrompt: DEFAULT_PHOTO_PROMPT,
+        /* selected Gemini model for photo import */
+        geminiModel: DEFAULT_GEMINI_MODEL
     }
 };
 
@@ -1702,7 +1731,14 @@ const speechPlayback = {
 let activePracticeDeckId = null;
 let selectedPracticeMode = null;
 const GEMINI_API_KEY = "AIzaSyDQ7QN9Y19wrAMO2UgZD8STbpl6keia5-c";
-const GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODELS = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b'
+];
 const geminiModulePromise = import("https://esm.run/@google/genai");
 let geminiClient = null;
 
@@ -1808,9 +1844,11 @@ const TRANSLATIONS = {
         sessionTargetPacks: 'Word packs',
         sessionTargetHint: 'Set the minimum size for a Today session.',
         settingsAiTitle: 'AI Features',
+        settingsGeminiModelLabel: 'Gemini model',
+        settingsGeminiModelHint: 'Choose a Gemini model that works with your free key.',
         settingsPhotoPromptLabel: 'Photo import prompt',
-        settingsPhotoPromptPlaceholder: 'Describe how the AI should interpret photo text.',
-        settingsPhotoPromptHint: 'Used when SpellCraft reads text from a photo to build a word pack.',
+        settingsPhotoPromptPlaceholder: 'Describe how the AI should extract photo text.',
+        settingsPhotoPromptHint: 'Output is pasted directly into the “Dictation Text or Word List” field.',
         settingsPhotoPromptReset: 'Reset photo prompt',
         settingsAudioDiagnosticsTitle: 'Audio Diagnostics',
         settingsAudioDiagnosticsHint: "If audio isn't working, check here.",
@@ -1853,6 +1891,13 @@ const TRANSLATIONS = {
         photoPackError: 'Sorry, something went wrong while reading the photo.',
         photoPackParseError: 'Could not understand the photo response. Please try again.',
         photoPackFallbackTitle: 'Photo Word Pack',
+        photoEditTitle: 'Edit photo',
+        photoEditHint: 'Drag to crop. Use the slider to zoom before importing.',
+        photoEditZoomLabel: 'Zoom',
+        photoEditRotateLeft: 'Rotate left',
+        photoEditRotateRight: 'Rotate right',
+        photoEditCancel: 'Cancel',
+        photoEditUse: 'Use photo',
         deckModalCreateTitle: 'Create a Word Pack',
         deckModalImportTitle: 'Import a Word Pack',
         deckModalCreateTab: 'Create',
@@ -2106,9 +2151,11 @@ const TRANSLATIONS = {
         sessionTargetPacks: 'Paquetes de palabras',
         sessionTargetHint: 'Establece el tamaño mínimo para una sesión de Hoy.',
         settingsAiTitle: 'Funciones de IA',
+        settingsGeminiModelLabel: 'Modelo de Gemini',
+        settingsGeminiModelHint: 'Elige un modelo Gemini compatible con tu clave gratuita.',
         settingsPhotoPromptLabel: 'Prompt de importación de fotos',
-        settingsPhotoPromptPlaceholder: 'Describe cómo la IA debe interpretar el texto de la foto.',
-        settingsPhotoPromptHint: 'Se usa cuando SpellCraft lee texto de una foto para crear un paquete.',
+        settingsPhotoPromptPlaceholder: 'Describe cómo la IA debe extraer el texto de la foto.',
+        settingsPhotoPromptHint: 'La salida se pega directamente en el campo “Texto de dictado o lista de palabras”.',
         settingsPhotoPromptReset: 'Restablecer prompt de foto',
         settingsAudioDiagnosticsTitle: 'Diagnóstico de audio',
         settingsAudioDiagnosticsHint: 'Si el audio no funciona, revisa aquí.',
@@ -2151,6 +2198,13 @@ const TRANSLATIONS = {
         photoPackError: 'Hubo un problema al leer la foto.',
         photoPackParseError: 'No se pudo entender la respuesta de la foto. Inténtalo de nuevo.',
         photoPackFallbackTitle: 'Paquete desde foto',
+        photoEditTitle: 'Editar foto',
+        photoEditHint: 'Arrastra para recortar. Usa el control para hacer zoom antes de importar.',
+        photoEditZoomLabel: 'Zoom',
+        photoEditRotateLeft: 'Girar a la izquierda',
+        photoEditRotateRight: 'Girar a la derecha',
+        photoEditCancel: 'Cancelar',
+        photoEditUse: 'Usar foto',
         deckModalCreateTitle: 'Crear un paquete de palabras',
         deckModalImportTitle: 'Importar un paquete de palabras',
         deckModalCreateTab: 'Crear',
@@ -2400,9 +2454,11 @@ const TRANSLATIONS = {
         sessionTargetPacks: 'Wortpakete',
         sessionTargetHint: 'Lege die Mindestgröße für eine Heute-Sitzung fest.',
         settingsAiTitle: 'KI-Funktionen',
+        settingsGeminiModelLabel: 'Gemini-Modell',
+        settingsGeminiModelHint: 'Wähle ein Gemini-Modell, das mit deinem Gratis-Schlüssel funktioniert.',
         settingsPhotoPromptLabel: 'Foto-Import-Prompt',
-        settingsPhotoPromptPlaceholder: 'Beschreibe, wie die KI den Fototext interpretieren soll.',
-        settingsPhotoPromptHint: 'Wird verwendet, wenn SpellCraft Text aus einem Foto für ein Wortpaket liest.',
+        settingsPhotoPromptPlaceholder: 'Beschreibe, wie die KI den Fototext extrahieren soll.',
+        settingsPhotoPromptHint: 'Die Ausgabe wird direkt in das Feld „Diktattext oder Wortliste“ eingefügt.',
         settingsPhotoPromptReset: 'Foto-Prompt zurücksetzen',
         settingsAudioDiagnosticsTitle: 'Audio-Diagnose',
         settingsAudioDiagnosticsHint: 'Wenn Audio nicht funktioniert, prüfe hier.',
@@ -2445,6 +2501,13 @@ const TRANSLATIONS = {
         photoPackError: 'Beim Lesen des Fotos ist ein Problem aufgetreten.',
         photoPackParseError: 'Die Fotoantwort konnte nicht verstanden werden. Bitte versuche es erneut.',
         photoPackFallbackTitle: 'Wortpaket aus Foto',
+        photoEditTitle: 'Foto bearbeiten',
+        photoEditHint: 'Zum Zuschneiden ziehen. Nutze den Regler für den Zoom vor dem Import.',
+        photoEditZoomLabel: 'Zoom',
+        photoEditRotateLeft: 'Nach links drehen',
+        photoEditRotateRight: 'Nach rechts drehen',
+        photoEditCancel: 'Abbrechen',
+        photoEditUse: 'Foto verwenden',
         deckModalCreateTitle: 'Wortpaket erstellen',
         deckModalImportTitle: 'Wortpaket importieren',
         deckModalCreateTab: 'Erstellen',
@@ -4611,6 +4674,98 @@ function startPhotoPackFlow() {
     input.value = '';
     input.click();
 }
+let photoEditState = null;
+function openPhotoEditModal(file) {
+    if (!file) {
+        alert(t('photoPackNoFile'));
+        return;
+    }
+    const modal = document.getElementById('photo-edit-modal');
+    const canvas = document.getElementById('photo-edit-canvas');
+    const zoomInput = document.getElementById('photo-edit-zoom');
+    if (!modal || !canvas || !zoomInput) {
+        handlePhotoPackFile(file);
+        return;
+    }
+    const img = new Image();
+    const imageUrl = URL.createObjectURL(file);
+    photoEditState = {
+        file,
+        img,
+        imageUrl,
+        rotation: 0,
+        zoom: 1,
+        offsetX: 0,
+        offsetY: 0,
+        isDragging: false,
+        lastX: 0,
+        lastY: 0
+    };
+    zoomInput.value = '1';
+    img.onload = () => {
+        photoEditState.rotation = 0;
+        photoEditState.zoom = 1;
+        photoEditState.offsetX = 0;
+        photoEditState.offsetY = 0;
+        renderPhotoEditCanvas();
+    };
+    img.src = imageUrl;
+    modal.classList.add('open');
+}
+function closePhotoEditModal() {
+    const modal = document.getElementById('photo-edit-modal');
+    if (modal) modal.classList.remove('open');
+    if (photoEditState && photoEditState.imageUrl) {
+        URL.revokeObjectURL(photoEditState.imageUrl);
+    }
+    photoEditState = null;
+}
+function getPhotoEditCanvas() {
+    return document.getElementById('photo-edit-canvas');
+}
+function renderPhotoEditCanvas() {
+    if (!photoEditState) return;
+    const canvas = getPhotoEditCanvas();
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx || !photoEditState.img.complete) return;
+    const { img, rotation, zoom, offsetX, offsetY } = photoEditState;
+    const normalizedRotation = Math.abs(rotation) % (Math.PI * 2);
+    const isRotated = Math.abs(normalizedRotation - Math.PI / 2) < 0.001
+        || Math.abs(normalizedRotation - (Math.PI * 3) / 2) < 0.001;
+    const rotatedWidth = isRotated ? img.height : img.width;
+    const rotatedHeight = isRotated ? img.width : img.height;
+    const baseScale = Math.min(canvas.width / rotatedWidth, canvas.height / rotatedHeight);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(canvas.width / 2 + offsetX, canvas.height / 2 + offsetY);
+    ctx.rotate(rotation);
+    ctx.scale(baseScale * zoom, baseScale * zoom);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    ctx.restore();
+}
+function rotatePhotoEdit(direction) {
+    if (!photoEditState) return;
+    photoEditState.rotation += direction * (Math.PI / 2);
+    photoEditState.offsetX = 0;
+    photoEditState.offsetY = 0;
+    renderPhotoEditCanvas();
+}
+async function applyPhotoEdits() {
+    if (!photoEditState) return;
+    const canvas = getPhotoEditCanvas();
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+        if (!blob) {
+            closePhotoEditModal();
+            return;
+        }
+        const filename = photoEditState.file ? photoEditState.file.name : 'photo.jpg';
+        const editedFile = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+        closePhotoEditModal();
+        handlePhotoPackFile(editedFile);
+    }, 'image/jpeg', 0.92);
+}
 async function getGeminiClient() {
     if (geminiClient) return geminiClient;
     const module = await geminiModulePromise;
@@ -4762,10 +4917,13 @@ async function handlePhotoPackFile(file) {
     const ai = await getGeminiClient();
     const imgData = await fileToInlineData(file);
     const prompt = getPhotoPrompt();
+    const selectedModel = GEMINI_MODELS.includes(app.settings.geminiModel)
+        ? app.settings.geminiModel
+        : DEFAULT_GEMINI_MODEL;
     let responseText = '';
     try {
         const response = await ai.models.generateContent({
-            model: GEMINI_MODEL,
+            model: selectedModel,
             contents: [{
                 role: "user",
                 parts: [
@@ -4781,29 +4939,19 @@ async function handlePhotoPackFile(file) {
         alert(t('photoPackError'));
         return;
     }
-    let payload = extractJsonFromText(responseText);
-    if (!payload) {
-        payload = buildFallbackPayloadFromText(responseText);
-    }
-    if (!payload) {
-        closePhotoPackModal();
-        alert(t('photoPackParseError'));
-        return;
-    }
-    const title = (payload.title || '').trim() || t('photoPackFallbackTitle');
-    const language = normalizeGeminiLanguage(payload.language);
-    let deckText = buildDeckTextFromGemini(payload);
-    if (!deckText) {
-        deckText = stripCodeFences(responseText);
-    }
+    const deckText = stripCodeFences(responseText).trim();
     if (!deckText) {
         closePhotoPackModal();
         alert(t('photoPackParseError'));
         return;
     }
     openDeckModal('create');
-    document.getElementById('new-deck-name').value = title;
-    document.getElementById('new-deck-lang').value = language;
+    const defaultTitle = t('photoPackFallbackTitle');
+    const defaultLanguage = app.settings.languageFilter && app.settings.languageFilter !== 'all'
+        ? app.settings.languageFilter
+        : 'en-US';
+    document.getElementById('new-deck-name').value = defaultTitle;
+    document.getElementById('new-deck-lang').value = defaultLanguage;
     document.getElementById('new-deck-text').value = deckText;
     closePhotoPackModal();
 }
@@ -4811,7 +4959,54 @@ const packPhotoInput = document.getElementById('pack-photo-input');
 if (packPhotoInput) {
     packPhotoInput.addEventListener('change', (event) => {
         const file = event.target.files ? event.target.files[0] : null;
-        handlePhotoPackFile(file);
+        openPhotoEditModal(file);
+    });
+}
+const photoEditCanvas = document.getElementById('photo-edit-canvas');
+if (photoEditCanvas) {
+    photoEditCanvas.addEventListener('pointerdown', (event) => {
+        if (!photoEditState) return;
+        photoEditState.isDragging = true;
+        photoEditState.lastX = event.clientX;
+        photoEditState.lastY = event.clientY;
+    });
+    photoEditCanvas.addEventListener('pointermove', (event) => {
+        if (!photoEditState || !photoEditState.isDragging) return;
+        const deltaX = event.clientX - photoEditState.lastX;
+        const deltaY = event.clientY - photoEditState.lastY;
+        photoEditState.offsetX += deltaX;
+        photoEditState.offsetY += deltaY;
+        photoEditState.lastX = event.clientX;
+        photoEditState.lastY = event.clientY;
+        renderPhotoEditCanvas();
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((eventName) => {
+        photoEditCanvas.addEventListener(eventName, () => {
+            if (!photoEditState) return;
+            photoEditState.isDragging = false;
+        });
+    });
+}
+const photoEditZoom = document.getElementById('photo-edit-zoom');
+if (photoEditZoom) {
+    photoEditZoom.addEventListener('input', (event) => {
+        if (!photoEditState) return;
+        photoEditState.zoom = Number(event.target.value) || 1;
+        renderPhotoEditCanvas();
+    });
+}
+const photoEditRotateLeft = document.getElementById('photo-edit-rotate-left');
+if (photoEditRotateLeft) {
+    photoEditRotateLeft.addEventListener('click', () => rotatePhotoEdit(-1));
+}
+const photoEditRotateRight = document.getElementById('photo-edit-rotate-right');
+if (photoEditRotateRight) {
+    photoEditRotateRight.addEventListener('click', () => rotatePhotoEdit(1));
+}
+const photoEditApply = document.getElementById('photo-edit-apply');
+if (photoEditApply) {
+    photoEditApply.addEventListener('click', () => {
+        applyPhotoEdits();
     });
 }
 function openDeckModal(panel = 'create') {
@@ -6485,6 +6680,19 @@ function initSettingsListeners() {
         photoPromptEl.value = app.settings.photoPrompt || DEFAULT_PHOTO_PROMPT;
         photoPromptEl.addEventListener('change', (e) => {
             app.settings.photoPrompt = e.target.value;
+            saveData();
+        });
+    }
+    const geminiModelEl = document.getElementById('setting-gemini-model');
+    if (geminiModelEl) {
+        const initialModel = GEMINI_MODELS.includes(app.settings.geminiModel)
+            ? app.settings.geminiModel
+            : DEFAULT_GEMINI_MODEL;
+        geminiModelEl.value = initialModel;
+        app.settings.geminiModel = initialModel;
+        geminiModelEl.addEventListener('change', (e) => {
+            const nextValue = e.target.value;
+            app.settings.geminiModel = GEMINI_MODELS.includes(nextValue) ? nextValue : DEFAULT_GEMINI_MODEL;
             saveData();
         });
     }
