@@ -1204,6 +1204,18 @@
         </div>
 
         <div class="card">
+            <h3 data-i18n="settingsAiTitle">AI Features</h3>
+            <label for="setting-photo-prompt" data-i18n="settingsPhotoPromptLabel">Photo import prompt</label>
+            <textarea id="setting-photo-prompt" rows="6" placeholder="Describe how the AI should interpret photo text." style="width:100%; padding:var(--space-2); border:2px solid #e5e7eb; border-radius:var(--radius-sm); font-size:0.95rem; font-family:inherit; background:#f9fafb; resize:vertical; margin:6px 0 var(--space-1);" data-i18n-placeholder="settingsPhotoPromptPlaceholder"></textarea>
+            <p class="text-small" style="color: var(--text-sub);" data-i18n="settingsPhotoPromptHint">
+                Used when SpellCraft reads text from a photo to build a word pack.
+            </p>
+            <button class="btn-secondary" type="button" id="setting-photo-prompt-reset" data-i18n="settingsPhotoPromptReset">
+                Reset photo prompt
+            </button>
+        </div>
+
+        <div class="card">
             <h3 data-i18n="settingsAudioDiagnosticsTitle">Audio Diagnostics</h3>
             <p style="font-size:0.9rem; color: var(--text-sub);" data-i18n="settingsAudioDiagnosticsHint">If audio isn't working, check here.</p>
             <div id="audio-status" class="status-badge status-err" data-status-key="audioStatusChecking">Checking...</div>
@@ -1594,6 +1606,20 @@
 </div>
 
 <script>
+const DEFAULT_PHOTO_PROMPT = `You are helping create a spelling word pack from a photo.
+Extract the text, fix obvious OCR mistakes, and interpret it as ONE of:
+- a list of words
+- a list of sentences
+- dictation text (full passage)
+If unsure, treat it as dictation text. Keep the full text even if it is long.
+Return ONLY JSON (no Markdown, no commentary) in this exact schema:
+{
+  "title": "short descriptive title",
+  "language": "en-US|en-GB|es-ES|fr-FR|de-DE|it-IT",
+  "format": "word_list|sentence_list|dictation",
+  "items": ["item1", "item2"],
+  "text": "dictation text when format is dictation"
+}`;
 /**
  * APP DATA
  */
@@ -1636,7 +1662,9 @@ let app = {
             completedSessions: 0
         },
         /* prioritize a newly added pack in today's queue */
-        todayPriority: null
+        todayPriority: null,
+        /* prompt used for photo word pack import */
+        photoPrompt: DEFAULT_PHOTO_PROMPT
     }
 };
 
@@ -1779,6 +1807,11 @@ const TRANSLATIONS = {
         sessionTargetWords: 'Words',
         sessionTargetPacks: 'Word packs',
         sessionTargetHint: 'Set the minimum size for a Today session.',
+        settingsAiTitle: 'AI Features',
+        settingsPhotoPromptLabel: 'Photo import prompt',
+        settingsPhotoPromptPlaceholder: 'Describe how the AI should interpret photo text.',
+        settingsPhotoPromptHint: 'Used when SpellCraft reads text from a photo to build a word pack.',
+        settingsPhotoPromptReset: 'Reset photo prompt',
         settingsAudioDiagnosticsTitle: 'Audio Diagnostics',
         settingsAudioDiagnosticsHint: "If audio isn't working, check here.",
         audioStatusChecking: 'Checking...',
@@ -2072,6 +2105,11 @@ const TRANSLATIONS = {
         sessionTargetWords: 'Palabras',
         sessionTargetPacks: 'Paquetes de palabras',
         sessionTargetHint: 'Establece el tamaño mínimo para una sesión de Hoy.',
+        settingsAiTitle: 'Funciones de IA',
+        settingsPhotoPromptLabel: 'Prompt de importación de fotos',
+        settingsPhotoPromptPlaceholder: 'Describe cómo la IA debe interpretar el texto de la foto.',
+        settingsPhotoPromptHint: 'Se usa cuando SpellCraft lee texto de una foto para crear un paquete.',
+        settingsPhotoPromptReset: 'Restablecer prompt de foto',
         settingsAudioDiagnosticsTitle: 'Diagnóstico de audio',
         settingsAudioDiagnosticsHint: 'Si el audio no funciona, revisa aquí.',
         audioStatusChecking: 'Comprobando...',
@@ -2361,6 +2399,11 @@ const TRANSLATIONS = {
         sessionTargetWords: 'Wörter',
         sessionTargetPacks: 'Wortpakete',
         sessionTargetHint: 'Lege die Mindestgröße für eine Heute-Sitzung fest.',
+        settingsAiTitle: 'KI-Funktionen',
+        settingsPhotoPromptLabel: 'Foto-Import-Prompt',
+        settingsPhotoPromptPlaceholder: 'Beschreibe, wie die KI den Fototext interpretieren soll.',
+        settingsPhotoPromptHint: 'Wird verwendet, wenn SpellCraft Text aus einem Foto für ein Wortpaket liest.',
+        settingsPhotoPromptReset: 'Foto-Prompt zurücksetzen',
         settingsAudioDiagnosticsTitle: 'Audio-Diagnose',
         settingsAudioDiagnosticsHint: 'Wenn Audio nicht funktioniert, prüfe hier.',
         audioStatusChecking: 'Prüfen...',
@@ -4586,13 +4629,84 @@ function fileToInlineData(file) {
 }
 function extractJsonFromText(text) {
     if (!text) return null;
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
+    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced && fenced[1]) {
+        const parsed = safeParseJson(fenced[1].trim());
+        if (parsed) return parsed;
+    }
+    const jsonBlock = findJsonBlock(text);
+    if (!jsonBlock) return null;
+    return safeParseJson(jsonBlock);
+}
+function safeParseJson(candidate) {
+    if (!candidate) return null;
     try {
-        return JSON.parse(match[0]);
+        return JSON.parse(candidate);
     } catch (error) {
         return null;
     }
+}
+function findJsonBlock(text) {
+    const start = text.indexOf('{');
+    if (start === -1) return null;
+    let depth = 0;
+    let inString = false;
+    let isEscaped = false;
+    for (let i = start; i < text.length; i += 1) {
+        const char = text[i];
+        if (inString) {
+            if (isEscaped) {
+                isEscaped = false;
+                continue;
+            }
+            if (char === '\\') {
+                isEscaped = true;
+                continue;
+            }
+            if (char === '"') {
+                inString = false;
+            }
+            continue;
+        }
+        if (char === '"') {
+            inString = true;
+            continue;
+        }
+        if (char === '{') depth += 1;
+        if (char === '}') {
+            depth -= 1;
+            if (depth === 0) {
+                return text.slice(start, i + 1);
+            }
+        }
+    }
+    return null;
+}
+function stripCodeFences(text) {
+    return String(text || '').replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+}
+function cleanListItem(value) {
+    return String(value || '')
+        .replace(/^\s*(?:[-•*]|\d+[.)\]]?)\s*/g, '')
+        .trim();
+}
+function normalizeGeminiItems(items) {
+    if (!Array.isArray(items)) return [];
+    return items.map(item => {
+        if (item && typeof item === 'object') {
+            if (item.word) return item.word;
+            if (item.text) return item.text;
+            if (item.item) return item.item;
+        }
+        return item;
+    }).map(cleanListItem).filter(Boolean);
+}
+function parseItemsFromText(text) {
+    if (!text) return [];
+    const raw = String(text)
+        .split(/\r?\n|;/)
+        .flatMap(chunk => chunk.split(','));
+    return raw.map(cleanListItem).filter(Boolean);
 }
 function normalizeGeminiLanguage(value) {
     const options = ['en-US', 'en-GB', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'];
@@ -4609,10 +4723,10 @@ function normalizeGeminiLanguage(value) {
 function buildDeckTextFromGemini(payload) {
     if (!payload) return '';
     const format = (payload.format || '').toLowerCase();
-    const items = Array.isArray(payload.items) ? payload.items : [];
+    const items = normalizeGeminiItems(payload.items);
     const text = (payload.text || '').trim();
     if (format === 'word_list' || format === 'sentence_list') {
-        const cleaned = items.map(item => String(item || '').trim()).filter(Boolean);
+        const cleaned = items.length ? items : parseItemsFromText(text);
         if (!cleaned.length) return '';
         return `{${cleaned.join('; ')}}`;
     }
@@ -4623,6 +4737,21 @@ function buildDeckTextFromGemini(payload) {
     }
     return '';
 }
+function getPhotoPrompt() {
+    const stored = (app.settings.photoPrompt || '').trim();
+    return stored || DEFAULT_PHOTO_PROMPT;
+}
+function buildFallbackPayloadFromText(text) {
+    const cleaned = stripCodeFences(text).trim();
+    if (!cleaned) return null;
+    return {
+        title: '',
+        language: 'en-US',
+        format: 'dictation',
+        items: [],
+        text: cleaned
+    };
+}
 async function handlePhotoPackFile(file) {
     if (!file) {
         alert(t('photoPackNoFile'));
@@ -4632,20 +4761,7 @@ async function handlePhotoPackFile(file) {
     setPhotoPackStatus('photoPackProcessingHint');
     const ai = await getGeminiClient();
     const imgData = await fileToInlineData(file);
-    const prompt = `You are helping create a spelling word pack from a photo.
-Extract the text, correct any spelling mistakes, and interpret it as ONE of:
-- a list of words
-- a list of sentences
-- dictation text
-If unsure, treat it as dictation text.
-Respond with ONLY JSON in this exact schema:
-{
-  "title": "short descriptive title",
-  "language": "en-US|en-GB|es-ES|fr-FR|de-DE|it-IT",
-  "format": "word_list|sentence_list|dictation",
-  "items": ["item1", "item2"],
-  "text": "dictation text when format is dictation"
-}`;
+    const prompt = getPhotoPrompt();
     let responseText = '';
     try {
         const response = await ai.models.generateContent({
@@ -4665,7 +4781,10 @@ Respond with ONLY JSON in this exact schema:
         alert(t('photoPackError'));
         return;
     }
-    const payload = extractJsonFromText(responseText);
+    let payload = extractJsonFromText(responseText);
+    if (!payload) {
+        payload = buildFallbackPayloadFromText(responseText);
+    }
     if (!payload) {
         closePhotoPackModal();
         alert(t('photoPackParseError'));
@@ -4673,7 +4792,15 @@ Respond with ONLY JSON in this exact schema:
     }
     const title = (payload.title || '').trim() || t('photoPackFallbackTitle');
     const language = normalizeGeminiLanguage(payload.language);
-    const deckText = buildDeckTextFromGemini(payload);
+    let deckText = buildDeckTextFromGemini(payload);
+    if (!deckText) {
+        deckText = stripCodeFences(responseText);
+    }
+    if (!deckText) {
+        closePhotoPackModal();
+        alert(t('photoPackParseError'));
+        return;
+    }
     openDeckModal('create');
     document.getElementById('new-deck-name').value = title;
     document.getElementById('new-deck-lang').value = language;
@@ -6350,6 +6477,23 @@ function initSettingsListeners() {
             saveData();
             applyTranslations();
             refreshLocalizedViews();
+        });
+    }
+
+    const photoPromptEl = document.getElementById('setting-photo-prompt');
+    if (photoPromptEl) {
+        photoPromptEl.value = app.settings.photoPrompt || DEFAULT_PHOTO_PROMPT;
+        photoPromptEl.addEventListener('change', (e) => {
+            app.settings.photoPrompt = e.target.value;
+            saveData();
+        });
+    }
+    const photoPromptResetEl = document.getElementById('setting-photo-prompt-reset');
+    if (photoPromptResetEl && photoPromptEl) {
+        photoPromptResetEl.addEventListener('click', () => {
+            app.settings.photoPrompt = DEFAULT_PHOTO_PROMPT;
+            photoPromptEl.value = DEFAULT_PHOTO_PROMPT;
+            saveData();
         });
     }
 
