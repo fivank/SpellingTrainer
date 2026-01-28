@@ -1750,6 +1750,8 @@ const GEMINI_MODELS = [
     "gemini-1.5-flash-8b",
     "gemini-1.5-pro"
 ];
+const PHOTO_MIN_DIMENSION = 320;
+const PHOTO_MAX_DIMENSION = 1800;
 const geminiModulePromise = import("https://esm.run/@google/genai");
 let geminiClient = null;
 
@@ -1906,7 +1908,9 @@ const TRANSLATIONS = {
         photoPackUnavailable: 'Photo capture is not available on this device.',
         photoPackNoFile: 'No photo selected.',
         photoPackError: 'Sorry, something went wrong while reading the photo.',
+        photoPackLoadError: 'We could not load that photo. Please choose another image.',
         photoPackParseError: 'Could not understand the photo response. Please try again.',
+        photoPackResolutionError: 'That photo is too small. Please use an image at least {min}px on each side.',
         photoPackFallbackTitle: 'Photo Word Pack',
         deckModalCreateTitle: 'Create a Word Pack',
         deckModalImportTitle: 'Import a Word Pack',
@@ -2212,7 +2216,9 @@ const TRANSLATIONS = {
         photoPackUnavailable: 'La captura de fotos no está disponible en este dispositivo.',
         photoPackNoFile: 'No se seleccionó ninguna foto.',
         photoPackError: 'Hubo un problema al leer la foto.',
+        photoPackLoadError: 'No se pudo cargar esa foto. Elige otra imagen.',
         photoPackParseError: 'No se pudo entender la respuesta de la foto. Inténtalo de nuevo.',
+        photoPackResolutionError: 'La foto es demasiado pequeña. Usa una imagen de al menos {min}px por lado.',
         photoPackFallbackTitle: 'Paquete desde foto',
         deckModalCreateTitle: 'Crear un paquete de palabras',
         deckModalImportTitle: 'Importar un paquete de palabras',
@@ -2514,7 +2520,9 @@ const TRANSLATIONS = {
         photoPackUnavailable: 'Fotoaufnahme ist auf diesem Gerät nicht verfügbar.',
         photoPackNoFile: 'Kein Foto ausgewählt.',
         photoPackError: 'Beim Lesen des Fotos ist ein Problem aufgetreten.',
+        photoPackLoadError: 'Dieses Foto konnte nicht geladen werden. Bitte wähle ein anderes Bild.',
         photoPackParseError: 'Die Fotoantwort konnte nicht verstanden werden. Bitte versuche es erneut.',
+        photoPackResolutionError: 'Das Foto ist zu klein. Bitte verwende ein Bild mit mindestens {min}px pro Seite.',
         photoPackFallbackTitle: 'Wortpaket aus Foto',
         deckModalCreateTitle: 'Wortpaket erstellen',
         deckModalImportTitle: 'Wortpaket importieren',
@@ -4754,6 +4762,19 @@ function normalizeCropRect(rect, maxWidth, maxHeight) {
     if (width < 4 || height < 4) return null;
     return { x, y, width, height };
 }
+function scaleCanvasToMaxDimension(canvas, maxDimension) {
+    if (!maxDimension) return canvas;
+    const { width, height } = canvas;
+    const maxSide = Math.max(width, height);
+    if (maxSide <= maxDimension) return canvas;
+    const scale = maxDimension / maxSide;
+    const scaledCanvas = document.createElement('canvas');
+    scaledCanvas.width = Math.max(1, Math.round(width * scale));
+    scaledCanvas.height = Math.max(1, Math.round(height * scale));
+    const ctx = scaledCanvas.getContext('2d');
+    ctx.drawImage(canvas, 0, 0, scaledCanvas.width, scaledCanvas.height);
+    return scaledCanvas;
+}
 function renderPhotoEditPreview() {
     const canvas = document.getElementById('photo-edit-canvas');
     if (!canvas || !photoEditState.image) return;
@@ -4800,6 +4821,11 @@ function loadPhotoForEditing(file) {
                 renderPhotoEditPreview();
                 resolve(true);
             };
+            img.onerror = () => {
+                console.warn('Unable to load selected image.');
+                alert(t('photoPackLoadError'));
+                resolve(false);
+            };
             img.src = reader.result;
         };
         reader.readAsDataURL(file);
@@ -4827,19 +4853,34 @@ async function getPhotoEditBlob() {
         const ctx = outputCanvas.getContext('2d');
         ctx.drawImage(rotatedCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
     }
+    const scaledCanvas = scaleCanvasToMaxDimension(outputCanvas, PHOTO_MAX_DIMENSION);
     return new Promise((resolve) => {
-        outputCanvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92);
+        scaledCanvas.toBlob((blob) => {
+            if (!blob) {
+                resolve(null);
+                return;
+            }
+            resolve({
+                blob,
+                width: scaledCanvas.width,
+                height: scaledCanvas.height
+            });
+        }, 'image/jpeg', 0.92);
     });
 }
-async function processPhotoPackImage(file) {
-    if (!file) {
+async function processPhotoPackImage(photoData) {
+    if (!photoData?.blob) {
         alert(t('photoPackNoFile'));
+        return;
+    }
+    if (photoData.width < PHOTO_MIN_DIMENSION || photoData.height < PHOTO_MIN_DIMENSION) {
+        alert(t('photoPackResolutionError', { min: PHOTO_MIN_DIMENSION }));
         return;
     }
     openPhotoPackModal();
     setPhotoPackStatus('photoPackProcessingHint');
     const ai = await getGeminiClient();
-    const imgData = await fileToInlineData(file);
+    const imgData = await fileToInlineData(photoData.blob);
     const prompt = getPhotoPrompt();
     let responseText = '';
     try {
@@ -4955,13 +4996,13 @@ if (photoEditResetCrop) {
 const photoEditUse = document.getElementById('photo-edit-use');
 if (photoEditUse) {
     photoEditUse.addEventListener('click', async () => {
-        const blob = await getPhotoEditBlob();
-        if (!blob) {
+        const photoData = await getPhotoEditBlob();
+        if (!photoData?.blob) {
             alert(t('photoPackNoFile'));
             return;
         }
         closePhotoEditModal();
-        await processPhotoPackImage(blob);
+        await processPhotoPackImage(photoData);
     });
 }
 function openDeckModal(panel = 'create') {
