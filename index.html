@@ -1663,7 +1663,11 @@
 <script>
 const DEFAULT_PHOTO_PROMPT = `Extract the text from this photo exactly as it appears.
 Do not summarize or rewrite. Preserve line breaks and punctuation.
-Return ONLY the extracted text with no extra commentary or formatting.`;
+Return a JSON object with keys:
+- "text": the extracted text exactly as shown
+- "language": the detected language as one of [en-US, en-GB, es-ES, fr-FR, de-DE, it-IT]
+- "title": a short, appropriate title (use an existing title from the text if present, otherwise create one)
+Return ONLY valid JSON with double quotes and no extra commentary or formatting.`;
 /**
  * APP DATA
  */
@@ -1758,6 +1762,16 @@ const GEMINI_MODELS = [
 ];
 const PHOTO_MIN_DIMENSION = 320;
 const PHOTO_MAX_DIMENSION = 1800;
+const PHOTO_LANGUAGE_CODES = ['en-US', 'en-GB', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'];
+const PHOTO_LANGUAGE_NAME_MAP = {
+    english: 'en-US',
+    'english (us)': 'en-US',
+    'english (uk)': 'en-GB',
+    spanish: 'es-ES',
+    french: 'fr-FR',
+    german: 'de-DE',
+    italian: 'it-IT'
+};
 const geminiModulePromise = import("https://esm.run/@google/genai");
 let geminiClient = null;
 let geminiClientKey = null;
@@ -4731,6 +4745,59 @@ function fileToInlineData(file) {
 function stripCodeFences(text) {
     return String(text || '').replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
 }
+function extractJsonCandidate(text) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) return '';
+    return text.slice(start, end + 1);
+}
+function resolvePhotoLanguage(lang) {
+    if (!lang) return '';
+    const normalized = normalizeLangCode(lang);
+    const directMatch = PHOTO_LANGUAGE_CODES.find(code => normalizeLangCode(code) === normalized);
+    if (directMatch) return directMatch;
+    const namedMatch = PHOTO_LANGUAGE_NAME_MAP[normalized];
+    return namedMatch || '';
+}
+function derivePhotoPackTitle(text) {
+    if (!text) return '';
+    const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    if (!lines.length) return '';
+    const candidate = lines[0];
+    if (candidate.length <= 36) return candidate;
+    return `${candidate.slice(0, 33).trim()}…`;
+}
+function parsePhotoPackResponse(responseText) {
+    const cleaned = stripCodeFences(responseText);
+    if (!cleaned) return { text: '' };
+    try {
+        const parsed = JSON.parse(cleaned);
+        if (parsed && typeof parsed === 'object') {
+            return {
+                text: String(parsed.text || ''),
+                title: String(parsed.title || ''),
+                language: String(parsed.language || '')
+            };
+        }
+    } catch (err) {
+        const jsonCandidate = extractJsonCandidate(cleaned);
+        if (jsonCandidate) {
+            try {
+                const parsed = JSON.parse(jsonCandidate);
+                if (parsed && typeof parsed === 'object') {
+                    return {
+                        text: String(parsed.text || ''),
+                        title: String(parsed.title || ''),
+                        language: String(parsed.language || '')
+                    };
+                }
+            } catch (innerErr) {
+                // Fall through to treat response as plain text
+            }
+        }
+    }
+    return { text: cleaned };
+}
 function getPhotoPrompt() {
     const stored = (app.settings.photoPrompt || '').trim();
     return stored || DEFAULT_PHOTO_PROMPT;
@@ -4935,15 +5002,23 @@ async function processPhotoPackImage(photoData) {
         alert(t('photoPackError'));
         return;
     }
-    const deckText = stripCodeFences(responseText).trim();
+    const parsedResponse = parsePhotoPackResponse(responseText);
+    const deckText = (parsedResponse.text || '').trim();
     if (!deckText) {
         closePhotoPackModal();
         alert(t('photoPackParseError'));
         return;
     }
     openDeckModal('create');
-    document.getElementById('new-deck-name').value = t('photoPackFallbackTitle');
+    const fallbackTitle = t('photoPackFallbackTitle');
+    const suggestedTitle = (parsedResponse.title || '').trim();
+    const title = suggestedTitle || derivePhotoPackTitle(deckText) || fallbackTitle;
+    document.getElementById('new-deck-name').value = title;
     document.getElementById('new-deck-text').value = deckText;
+    const language = resolvePhotoLanguage(parsedResponse.language);
+    if (language) {
+        document.getElementById('new-deck-lang').value = language;
+    }
     closePhotoPackModal();
 }
 async function handlePhotoPackFile(file) {
