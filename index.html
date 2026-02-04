@@ -1363,6 +1363,7 @@
     <div id="view-progress" class="view">
         <h2 data-i18n="progressTitle">Next Up!</h2>
         <p class="text-small" style="color:var(--text-sub);" data-i18n="progressSubtitle">Focus on the next step that grows your mastery.</p>
+        <p class="text-small" id="progress-language-note" style="color:var(--text-sub); display:none;"></p>
         <div class="card" id="progress-overview" style="margin-bottom:1rem;"></div>
         <div class="card" id="progress-details"></div>
     </div>
@@ -1920,6 +1921,16 @@ const TRANSLATIONS = {
         settingsResetData: 'Reset All Data',
         progressTitle: 'Next Up!',
         progressSubtitle: 'Focus on the next step that grows your mastery.',
+        progressLanguageNote: 'Stats shown for {language} packs.',
+        progressWordStatsTitle: 'All pack word stats',
+        progressPackStatsTitle: 'Pack stats',
+        progressPackTotal: 'Total packs',
+        progressPackEmpty: 'Empty packs',
+        progressPackNotStarted: 'Not started',
+        progressPackInProgress: 'In progress',
+        progressPackMastered: 'Mastered packs',
+        progressPackAverageSize: 'Average words per pack',
+        progressPackAverageMastery: 'Average mastery',
         deckProgressTitle: 'Pack Progress',
         deckResetStats: 'Reset Stats',
         newPackTitle: 'New Pack',
@@ -2232,6 +2243,16 @@ const TRANSLATIONS = {
         settingsResetData: 'Restablecer todos los datos',
         progressTitle: '¡Siguiente!',
         progressSubtitle: 'Concéntrate en el siguiente paso que mejora tu dominio.',
+        progressLanguageNote: 'Estadísticas para paquetes en {language}.',
+        progressWordStatsTitle: 'Estadísticas de palabras (todos los paquetes)',
+        progressPackStatsTitle: 'Estadísticas de paquetes',
+        progressPackTotal: 'Total de paquetes',
+        progressPackEmpty: 'Paquetes vacíos',
+        progressPackNotStarted: 'Sin empezar',
+        progressPackInProgress: 'En progreso',
+        progressPackMastered: 'Paquetes dominados',
+        progressPackAverageSize: 'Promedio de palabras por paquete',
+        progressPackAverageMastery: 'Dominio promedio',
         deckProgressTitle: 'Progreso del paquete',
         deckResetStats: 'Restablecer estadísticas',
         newPackTitle: 'Nuevo paquete',
@@ -2540,6 +2561,16 @@ const TRANSLATIONS = {
         settingsResetData: 'Alle Daten zurücksetzen',
         progressTitle: 'Als Nächstes!',
         progressSubtitle: 'Konzentriere dich auf den nächsten Schritt, der deine Meisterschaft steigert.',
+        progressLanguageNote: 'Statistiken für {language}-Pakete.',
+        progressWordStatsTitle: 'Wortstatistiken (alle Pakete)',
+        progressPackStatsTitle: 'Paketstatistiken',
+        progressPackTotal: 'Pakete gesamt',
+        progressPackEmpty: 'Leere Pakete',
+        progressPackNotStarted: 'Nicht begonnen',
+        progressPackInProgress: 'In Bearbeitung',
+        progressPackMastered: 'Gemeisterte Pakete',
+        progressPackAverageSize: 'Durchschnittliche Wörter pro Paket',
+        progressPackAverageMastery: 'Durchschnittliche Meisterschaft',
         deckProgressTitle: 'Paketfortschritt',
         deckResetStats: 'Statistiken zurücksetzen',
         newPackTitle: 'Neues Paket',
@@ -4604,11 +4635,22 @@ function renderDeckList() {
 function renderProgress() {
     const overviewEl = document.getElementById('progress-overview');
     const detailsEl = document.getElementById('progress-details');
+    const languageNoteEl = document.getElementById('progress-language-note');
     if (!overviewEl || !detailsEl) return;
     overviewEl.innerHTML = '';
     detailsEl.innerHTML = '';
     progressTroubleEntries = [];
     const filteredDecks = getFilteredDecks();
+    if (languageNoteEl) {
+        const filter = app.settings.languageFilter || 'all';
+        if (filter && filter !== 'all') {
+            languageNoteEl.textContent = t('progressLanguageNote', { language: getLanguageLabel(filter) });
+            languageNoteEl.style.display = 'block';
+        } else {
+            languageNoteEl.textContent = '';
+            languageNoteEl.style.display = 'none';
+        }
+    }
     if (app.decks.length === 0) {
         overviewEl.innerHTML = `<div style="padding:var(--space-2); color:var(--text-sub); text-align:center;">${t('progressNoData')}</div>`;
         return;
@@ -4618,18 +4660,53 @@ function renderProgress() {
         return;
     }
     let total = 0;
+    let newWords = 0;
+    let learning = 0;
+    let learned = 0;
     let mastered = 0;
-    let dueTotal = 0;
+    let troubleCount = 0;
+    let sumTime = 0;
+    let countTime = 0;
     const troubleList = [];
-    const now = Date.now();
+    let emptyPacks = 0;
+    let notStartedPacks = 0;
+    let inProgressPacks = 0;
+    let masteredPacks = 0;
+    let totalWordsInPacks = 0;
+    let sumMasteryPercent = 0;
+    let masteryPercentCount = 0;
     filteredDecks.forEach(deck => {
+        const deckTotal = deck.cards.length;
+        totalWordsInPacks += deckTotal;
+        let deckNew = 0;
+        let deckLearning = 0;
+        let deckLearned = 0;
+        let deckMastered = 0;
         deck.cards.forEach(card => {
             total++;
-            if (card.due <= now) {
-                dueTotal++;
+            const stage = getCardProgressStage(card);
+            if (stage === 'new') {
+                newWords++;
+                deckNew++;
             }
-            if (card.interval > 15) {
+            if (stage === 'learning') {
+                learning++;
+                deckLearning++;
+            }
+            if (stage === 'learned') {
+                learned++;
+                deckLearned++;
+            }
+            if (stage === 'mastered') {
                 mastered++;
+                deckMastered++;
+            }
+            if ((card.incorrectCount || 0) > 0) {
+                troubleCount++;
+            }
+            if (card.avgTime && card.avgTime > 0) {
+                sumTime += card.avgTime;
+                countTime++;
             }
             troubleList.push({
                 word: card.word,
@@ -4640,26 +4717,50 @@ function renderProgress() {
                 avgTime: card.avgTime || 0
             });
         });
+        if (deckTotal === 0) {
+            emptyPacks++;
+            return;
+        }
+        const deckMasteryPercent = Math.round((deckMastered / deckTotal) * 100);
+        sumMasteryPercent += deckMasteryPercent;
+        masteryPercentCount++;
+        if (deckMastered === deckTotal) {
+            masteredPacks++;
+        } else if (deckLearning === 0 && deckLearned === 0 && deckMastered === 0) {
+            notStartedPacks++;
+        } else {
+            inProgressPacks++;
+        }
     });
-    const masteryPercent = total ? Math.round((mastered / total) * 100) : 0;
+    const avgTime = countTime > 0 ? (sumTime / countTime).toFixed(1) : t('formatNotAvailable');
+    const avgWordsPerPack = filteredDecks.length > 0
+        ? (totalWordsInPacks / filteredDecks.length).toFixed(1)
+        : t('formatNotAvailable');
+    const avgMastery = masteryPercentCount > 0
+        ? `${Math.round(sumMasteryPercent / masteryPercentCount)}%`
+        : t('formatNotAvailable');
     const troubleCandidates = troubleList.filter(item => item.incorrect > 0 || item.avgTime > 0);
-    const troubleCount = troubleCandidates.length;
     let overviewHTML = `
-        <h3 style="margin-top:0;">${t('progressMasteryTitle')}</h3>
-        <div class="progress-metrics">
-            <div class="progress-metric">
-                <div class="progress-metric-label">${t('progressMastered')}</div>
-                <div class="progress-metric-value">${masteryPercent}%</div>
-            </div>
-            <div class="progress-metric">
-                <div class="progress-metric-label">${t('progressDueToday')}</div>
-                <div class="progress-metric-value">${dueTotal}</div>
-            </div>
-            <div class="progress-metric">
-                <div class="progress-metric-label">${t('progressTroubleCount')}</div>
-                <div class="progress-metric-value">${troubleCount}</div>
-            </div>
-        </div>
+        <h3 style="margin-top:0;">${t('progressWordStatsTitle')}</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+            <tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressTotalWords')}</th><td style="padding:8px 4px; text-align:right;">${total}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressNew')}</th><td style="padding:8px 4px; text-align:right;">${newWords}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressTrouble')}</th><td style="padding:8px 4px; text-align:right;">${troubleCount}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressLearning')}</th><td style="padding:8px 4px; text-align:right;">${learning}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressLearned')}</th><td style="padding:8px 4px; text-align:right;">${learned}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressMastered')}</th><td style="padding:8px 4px; text-align:right;">${mastered}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('deckProgressAvgTime')}</th><td style="padding:8px 4px; text-align:right;">${avgTime}</td></tr>
+        </table>
+        <h3 style="margin-top:var(--space-3);">${t('progressPackStatsTitle')}</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+            <tr><th style="text-align:left; padding:8px 4px;">${t('progressPackTotal')}</th><td style="padding:8px 4px; text-align:right;">${filteredDecks.length}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('progressPackEmpty')}</th><td style="padding:8px 4px; text-align:right;">${emptyPacks}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('progressPackNotStarted')}</th><td style="padding:8px 4px; text-align:right;">${notStartedPacks}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('progressPackInProgress')}</th><td style="padding:8px 4px; text-align:right;">${inProgressPacks}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('progressPackMastered')}</th><td style="padding:8px 4px; text-align:right;">${masteredPacks}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('progressPackAverageSize')}</th><td style="padding:8px 4px; text-align:right;">${avgWordsPerPack}</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px;">${t('progressPackAverageMastery')}</th><td style="padding:8px 4px; text-align:right;">${avgMastery}</td></tr>
+        </table>
     `;
     overviewEl.innerHTML = overviewHTML;
     // Trouble words
